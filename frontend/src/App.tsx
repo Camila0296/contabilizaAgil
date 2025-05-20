@@ -1,15 +1,17 @@
 import React from 'react';
-import './styles/App.css';
-import ExampleComponent from './components/ExampleComponent';
+import AuthPage from './components/AuthPage';
 
-const App: React.FC = () => {
-    return (
-        <div className="App">
-            <h1>My React Frontend</h1>
-            <ExampleComponent title="Título de ejemplo" description="Descripción de ejemplo" />
-
+function App() {
+  return (
+    <>
+      <header className="py-3 mb-4 border-bottom" style={{ background: 'var(--primary)', color: 'white' }}>
+        <div className="container d-flex flex-wrap justify-content-center">
+          <h1 style={{ fontWeight: 700, letterSpacing: 1 }}>Mi Aplicación Contable</h1>
         </div>
-    );
-};
+      </header>
+      <AuthPage />
+    </>
+  );
+}
 
 export default App;

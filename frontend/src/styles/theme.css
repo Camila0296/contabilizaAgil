@@ -1,0 +1,40 @@
+:root {
+  --primary-bg: #f5f6fa;
+  --primary: #22356f;
+  --secondary: #4f6d7a;
+  --accent: #27ae60;
+  --card-bg: #fff;
+  --text-main: #22356f;
+  --text-secondary: #4f6d7a;
+}
+
+body {
+  background: var(--primary-bg);
+  color: var(--text-main);
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(34, 53, 111, 0.07);
+  border: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  border: none;
+}
+
+.btn-primary:hover {
+  background: var(--secondary);
+}
+
+.btn-success {
+  background: var(--accent);
+  border: none;
+}
+
+.btn-success:hover {
+  background: #219150;
+}
