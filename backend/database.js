@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const URI = 'mongodb://localhost:27017/empleados';
+const URI = 'mongodb://localhost:27017/CABD';
 
 mongoose.connect(URI)
 

@@ -38,3 +38,72 @@ body {
 .btn-success:hover {
   background: #219150;
 }
+
+/* Barra lateral */
+.sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background: var(--primary, #22356f);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 2px 0 8px rgba(34,53,111,0.07);
+}
+.sidebar-logo {
+  padding: 2rem 1rem;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #31416a;
+  text-align: center;
+}
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  margin-top: 2rem;
+}
+.sidebar-link {
+  color: white;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.sidebar-link:hover {
+  background: var(--secondary, #4f6d7a);
+  color: #fff;
+}
+.sidebar-footer {
+  padding: 1rem;
+}
+
+/* Layout principal */
+.app-layout {
+  display: flex;
+}
+.main-content {
+  margin-left: 220px;
+  width: 100%;
+}
+
+/* Header con sidebar */
+.main-header {
+  background: var(--primary);
+  color: white;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #31416a;
+  transition: margin-left 0.2s;
+}
+.main-header.with-sidebar {
+  margin-left: 220px;
+}
+.main-title {
+  font-weight: 700;
+  letter-spacing: 1px;
+}

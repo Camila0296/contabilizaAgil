@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import Login from './Login';
 import Register from './Register';
 
-const AuthPage: React.FC = () => {
+interface AuthPageProps {
+  onLogin: () => void;
+}
+
+const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [showLogin, setShowLogin] = useState(true);
 
   return (
@@ -32,7 +36,11 @@ const AuthPage: React.FC = () => {
         <div className="row g-0">
           {/* Formulario */}
           <div className="col-md-6 p-5 d-flex flex-column justify-content-center">
-            {showLogin ? <Login /> : <Register />}
+            {showLogin ? (
+              <Login onLogin={onLogin} />
+            ) : (
+              <Register onRegisterSuccess={() => setShowLogin(true)} />
+            )}
             <div className="text-center mt-3">
               {showLogin ? (
                 <span>

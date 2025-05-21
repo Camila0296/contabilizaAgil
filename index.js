@@ -18,7 +18,14 @@ app.use(express.json()); // método que ayuda a convertir el código para que el
 app.use(cors({origin: 'http://localhost:4200'})); // método para comunicar con el cliente
 // rutas de nuestro servidor
 
-app.use('/api/empleados',require('./backend/routes/empleado.route'));
+// Importa y usa las rutas
+app.use('/api/auth', require('./backend/routes/auth.route'));
+app.use('/api/users', require('./backend/routes/user.route'));
+app.use('/api/facturas', require('./backend/routes/factura.route'));
+// ...existing code...
+app.use('/api/roles', require('./backend/routes/role.route'));
+// ...existing code...
+
 // Iniciando el servidor
 app.listen(app.get('port'), () => {// esta es una mejor manera de configurar el puerto
     console.log('server activo en el puerto', app.get('port'));
