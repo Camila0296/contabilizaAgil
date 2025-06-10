@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiFetch } from '../api';
 
 interface LoginProps {
   onLogin: () => void;
@@ -13,7 +14,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch('http://localhost:3000/api/auth/login', {
+      const res = await apiFetch('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -22,6 +23,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         onLogin();
       } else {
         const data = await res.json();
+        console.log(data);
         setError(data.error || 'Credenciales incorrectas');
       }
     } catch (err) {

@@ -1,17 +1,30 @@
 import React, { useState } from 'react';
 import AuthPage from './components/AuthPage';
 import Home from './components/Home';
+import Facturas from './components/Facturas';
 
-const Sidebar: React.FC<{ onLogout: () => void }> = ({ onLogout }) => (
+const Sidebar: React.FC<{ onLogout: () => void; onSection: (s: 'panel' | 'facturacion') => void; section: string }> = ({ onLogout, onSection, section }) => (
   <aside className="sidebar">
     <div>
       <div className="sidebar-logo">LOGO</div>
       <nav className="sidebar-nav">
-        <a className="sidebar-link" href="#">Panel</a>
-        <a className="sidebar-link" href="#">Facturación</a>
-        <a className="sidebar-link" href="#">Reportes</a>
-        <a className="sidebar-link" href="#">Clientes</a>
-        <a className="sidebar-link" href="#">Configuración</a>
+        <button
+          className={`sidebar-link${section === 'panel' ? ' active' : ''}`}
+          type="button"
+          onClick={() => onSection('panel')}
+        >
+          Panel
+        </button>
+        <button
+          className={`sidebar-link${section === 'facturacion' ? ' active' : ''}`}
+          type="button"
+          onClick={() => onSection('facturacion')}
+        >
+          Facturación
+        </button>
+        <button className="sidebar-link" type="button">Reportes</button>
+        <button className="sidebar-link" type="button">Clientes</button>
+        <button className="sidebar-link" type="button">Configuración</button>
       </nav>
     </div>
     <div className="sidebar-footer">
@@ -24,6 +37,7 @@ const Sidebar: React.FC<{ onLogout: () => void }> = ({ onLogout }) => (
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [section, setSection] = useState<'panel' | 'facturacion'>('panel');
 
   return (
     <>
@@ -34,9 +48,10 @@ function App() {
       </header>
       {isLoggedIn ? (
         <div className="app-layout">
-          <Sidebar onLogout={() => setIsLoggedIn(false)} />
+          <Sidebar onLogout={() => setIsLoggedIn(false)} onSection={setSection} section={section} />
           <main className="main-content">
-            <Home />
+            {section === 'panel' && <Home />}
+            {section === 'facturacion' && <Facturas />}
           </main>
         </div>
       ) : (

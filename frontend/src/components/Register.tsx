@@ -1,42 +1,41 @@
 import React, { useState } from 'react';
+import { apiFetch } from '../api';
 
 interface RegisterProps {
-  onRegisterSuccess: () => void;
+  onRegisterSuccess?: () => void;
 }
 
 const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
-  const [nombres, setNombres] = useState('');
-  const [apellidos, setApellidos] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [form, setForm] = useState({ nombres: '', apellidos: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (password !== confirmPassword) {
+    setSuccess('');
+    if (form.password !== form.confirmPassword) {
       setError('Las contraseñas no coinciden');
       return;
     }
     try {
-      const res = await fetch('http://localhost:3000/api/auth/register', {
+      const res = await apiFetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombres,
-          apellidos,
-          email,
-          password
-        })
+        body: JSON.stringify(form)
       });
       if (res.ok) {
-        onRegisterSuccess(); // Regresa al login
+        setSuccess('Usuario registrado correctamente');
+        if (onRegisterSuccess) onRegisterSuccess();
       } else {
         const data = await res.json();
-        setError(data.error || 'Error al registrar usuario');
+        setError(data.error || 'Error al registrar');
       }
-    } catch (err) {
+    } catch {
       setError('Error de conexión con el servidor');
     }
   };
@@ -45,13 +44,15 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
     <form onSubmit={handleSubmit}>
       <h2 className="mb-3 text-center">Registro</h2>
       {error && <div className="alert alert-danger">{error}</div>}
+      {success && <div className="alert alert-success">{success}</div>}
       <div className="mb-3">
         <label className="form-label">Nombres</label>
         <input
           type="text"
           className="form-control"
-          value={nombres}
-          onChange={e => setNombres(e.target.value)}
+          name="nombres"
+          value={form.nombres}
+          onChange={handleChange}
           required
         />
       </div>
@@ -60,8 +61,9 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
         <input
           type="text"
           className="form-control"
-          value={apellidos}
-          onChange={e => setApellidos(e.target.value)}
+          name="apellidos"
+          value={form.apellidos}
+          onChange={handleChange}
           required
         />
       </div>
@@ -70,8 +72,9 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
         <input
           type="email"
           className="form-control"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
+          name="email"
+          value={form.email}
+          onChange={handleChange}
           required
         />
       </div>
@@ -80,8 +83,9 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
         <input
           type="password"
           className="form-control"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
+          name="password"
+          value={form.password}
+          onChange={handleChange}
           required
         />
       </div>
@@ -90,8 +94,9 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
         <input
           type="password"
           className="form-control"
-          value={confirmPassword}
-          onChange={e => setConfirmPassword(e.target.value)}
+          name="confirmPassword"
+          value={form.confirmPassword}
+          onChange={handleChange}
           required
         />
       </div>
