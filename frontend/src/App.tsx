@@ -51,7 +51,7 @@ function App() {
           <Sidebar onLogout={() => setIsLoggedIn(false)} onSection={setSection} section={section} />
           <main className="main-content">
             {section === 'panel' && <Home />}
-            {section === 'facturacion' && <Facturas />}
+            {section === 'facturacion' && <Facturas userId={localStorage.getItem('userId')} />}
           </main>
         </div>
       ) : (

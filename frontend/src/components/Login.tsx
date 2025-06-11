@@ -20,6 +20,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         body: JSON.stringify({ email, password })
       });
       if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('userId', data.user._id); // Guarda el ID del usuario
         onLogin();
       } else {
         const data = await res.json();

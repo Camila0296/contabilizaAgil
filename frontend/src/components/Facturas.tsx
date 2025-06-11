@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
+import { showSuccess, showError } from '../utils/alerts';
 
 interface Factura {
   _id?: string;
@@ -19,144 +20,183 @@ interface Factura {
   usuario?: any;
 }
 
-const emptyFactura: Factura = {
+interface FacturasProps {
+  userId: string | null;
+}
+
+const initialForm: Factura = {
   numero: '',
   fecha: '',
   proveedor: '',
   monto: 0,
   puc: '',
   detalle: '',
-  naturaleza: 'credito',
-  impuestos: { iva: 0, retefuente: 0, ica: 0, reteiva: 0 }
+  naturaleza: 'debito',
+  impuestos: {
+    iva: 0,
+    retefuente: 0,
+    ica: 0,
+    reteiva: 0,
+  },
 };
 
-const Facturas: React.FC = () => {
+const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   const [facturas, setFacturas] = useState<Factura[]>([]);
-  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState<Factura>(initialForm);
   const [editing, setEditing] = useState<Factura | null>(null);
-  const [form, setForm] = useState<Factura>(emptyFactura);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  const fetchFacturas = async () => {
-    const res = await apiFetch('/facturas');
-    const data = await res.json();
-    setFacturas(data);
-  };
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     fetchFacturas();
   }, []);
 
+  const fetchFacturas = async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch('/facturas');
+      const data = await res.json();
+      setFacturas(data);
+    } catch {
+      showError('No se pudieron cargar las facturas');
+    }
+    setLoading(false);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    if (name.startsWith('impuestos.')) {
+      const impuesto = name.split('.')[1];
+      setForm(prev => ({
+        ...prev,
+        impuestos: { ...prev.impuestos, [impuesto]: Number(value) }
+      }));
+    } else if (name === 'monto') {
+      setForm(prev => ({ ...prev, [name]: Number(value) }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
   const openModal = (factura?: Factura) => {
+    if (factura) {
+      setEditing(factura);
+      setForm({ ...factura });
+    } else {
+      setEditing(null);
+      setForm(initialForm);
+    }
     setError('');
-    setEditing(factura || null);
-    setForm(factura ? { ...factura } : emptyFactura);
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditing(null);
-    setForm(emptyFactura);
+    setForm(initialForm);
     setError('');
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    if (name.startsWith('impuestos.')) {
-      const key = name.split('.')[1];
-      setForm(prev => ({
-        ...prev,
-        impuestos: { ...prev.impuestos, [key]: Number(value) }
-      }));
-    } else if (name === 'monto') {
-      setForm(prev => ({ ...prev, monto: Number(value) }));
-    } else {
-      setForm(prev => ({ ...prev, [name]: value }));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Validación básica
+    setError('');
     if (!form.numero || !form.fecha || !form.proveedor || !form.monto || !form.puc || !form.detalle) {
-      setError('Todos los campos son obligatorios');
+      setError('Por favor completa todos los campos obligatorios.');
       return;
     }
-    const method = editing ? 'PUT' : 'POST';
-    const url = editing ? `/facturas/${editing._id}` : '/facturas';
-    const res = await apiFetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
-    });
-    if (res.ok) {
-      fetchFacturas();
-      closeModal();
-    } else {
-      const data = await res.json();
-      setError(data.error || 'Error al guardar la factura');
+    if (!userId) {
+      setError('No se ha identificado el usuario.');
+      return;
+    }
+    try {
+      const method = editing ? 'PUT' : 'POST';
+      const url = editing ? `/facturas/${editing._id}` : '/facturas';
+      const facturaData = editing
+        ? { ...form }
+        : { ...form, usuario: userId };
+      const res = await apiFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(facturaData)
+      });
+      if (res.ok) {
+        showSuccess(editing ? 'Factura actualizada' : 'Factura creada');
+        closeModal();
+        fetchFacturas();
+      } else {
+        showError('No se pudo guardar la factura');
+      }
+    } catch {
+      showError('Error de conexión al guardar');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('¿Eliminar esta factura?')) return;
-    const res = await apiFetch(`/facturas/${id}`, { method: 'DELETE' });
-    if (res.ok) fetchFacturas();
+    try {
+      const res = await apiFetch(`/facturas/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showSuccess('Factura eliminada');
+        setFacturas(facturas.filter(f => f._id !== id));
+      } else {
+        showError('No se pudo eliminar la factura');
+      }
+    } catch {
+      showError('Error de conexión al eliminar');
+    }
   };
 
   return (
     <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h3 style={{ color: 'var(--primary)' }}>Facturas</h3>
-        <button className="btn btn-success" onClick={() => openModal()}>Nueva Factura</button>
-      </div>
+      <h3 className="mb-4" style={{ color: 'var(--primary)' }}>Facturas</h3>
+      <button className="btn btn-success mb-3" onClick={() => openModal()}>
+        + Agregar factura
+      </button>
       <div className="table-responsive">
-        <table className="table table-hover align-middle">
+        <table className="table table-hover modern-table">
           <thead>
             <tr>
-              <th>#</th>
+              <th>Número</th>
               <th>Fecha</th>
               <th>Proveedor</th>
               <th>Monto</th>
-              <th>PUC</th>
-              <th>Detalle</th>
-              <th>Naturaleza</th>
-              <th>IVA</th>
-              <th>Rtefuente</th>
-              <th>ICA</th>
-              <th>RteIVA</th>
-              <th>Acciones</th>
+              <th style={{ width: 120 }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {facturas.map(f => (
-              <tr key={f._id}>
-                <td>{f.numero}</td>
-                <td>{new Date(f.fecha).toLocaleDateString()}</td>
-                <td>{f.proveedor}</td>
-                <td>${f.monto.toLocaleString()}</td>
-                <td>{f.puc}</td>
-                <td>{f.detalle}</td>
-                <td>{f.naturaleza}</td>
-                <td>{f.impuestos.iva}</td>
-                <td>{f.impuestos.retefuente}</td>
-                <td>{f.impuestos.ica}</td>
-                <td>{f.impuestos.reteiva}</td>
-                <td>
-                  <button className="btn btn-sm btn-primary me-2" onClick={() => openModal(f)}>
-                    Editar
-                  </button>
-                  <button className="btn btn-sm btn-danger" onClick={() => handleDelete(f._id!)}>
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {facturas.length === 0 && (
+            {loading ? (
               <tr>
-                <td colSpan={12} className="text-center">No hay facturas registradas.</td>
+                <td colSpan={5} className="text-center">Cargando...</td>
               </tr>
+            ) : facturas.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center">No hay facturas registradas</td>
+              </tr>
+            ) : (
+              facturas.map(factura => (
+                <tr key={factura._id}>
+                  <td>{factura.numero}</td>
+                  <td>{new Date(factura.fecha).toLocaleDateString()}</td>
+                  <td>{factura.proveedor}</td>
+                  <td>${factura.monto.toLocaleString()}</td>
+                  <td>
+                    <button
+                      className="btn btn-sm btn-outline-primary me-2"
+                      title="Editar"
+                      onClick={() => openModal(factura)}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-danger"
+                      title="Eliminar"
+                      onClick={() => handleDelete(factura._id!)}
+                    >
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -164,12 +204,12 @@ const Facturas: React.FC = () => {
 
       {/* Modal flotante */}
       {showModal && (
-        <div className="modal fade show d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.3)' }}>
+        <div className="modal show d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.25)' }}>
           <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content">
               <form onSubmit={handleSubmit}>
                 <div className="modal-header">
-                  <h5 className="modal-title">{editing ? 'Editar Factura' : 'Nueva Factura'}</h5>
+                  <h5 className="modal-title">{editing ? 'Editar Factura' : 'Agregar Factura'}</h5>
                   <button type="button" className="btn-close" onClick={closeModal}></button>
                 </div>
                 <div className="modal-body">
@@ -181,7 +221,7 @@ const Facturas: React.FC = () => {
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">Fecha</label>
-                      <input type="date" className="form-control" name="fecha" value={form.fecha.slice(0,10)} onChange={handleChange} required />
+                      <input type="date" className="form-control" name="fecha" value={form.fecha} onChange={handleChange} required />
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">Proveedor</label>
@@ -189,7 +229,7 @@ const Facturas: React.FC = () => {
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">Monto</label>
-                      <input type="number" className="form-control" name="monto" value={form.monto} onChange={handleChange} required min={0} />
+                      <input type="number" className="form-control" name="monto" value={form.monto} onChange={handleChange} required />
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">PUC</label>
@@ -202,31 +242,31 @@ const Facturas: React.FC = () => {
                     <div className="col-md-4">
                       <label className="form-label">Naturaleza</label>
                       <select className="form-select" name="naturaleza" value={form.naturaleza} onChange={handleChange} required>
-                        <option value="credito">Crédito</option>
                         <option value="debito">Débito</option>
+                        <option value="credito">Crédito</option>
                       </select>
                     </div>
                     <div className="col-md-2">
                       <label className="form-label">IVA</label>
-                      <input type="number" className="form-control" name="impuestos.iva" value={form.impuestos.iva} onChange={handleChange} min={0} />
+                      <input type="number" className="form-control" name="impuestos.iva" value={form.impuestos.iva} onChange={handleChange} />
                     </div>
                     <div className="col-md-2">
-                      <label className="form-label">Rtefuente</label>
-                      <input type="number" className="form-control" name="impuestos.retefuente" value={form.impuestos.retefuente} onChange={handleChange} min={0} />
+                      <label className="form-label">ReteFuente</label>
+                      <input type="number" className="form-control" name="impuestos.retefuente" value={form.impuestos.retefuente} onChange={handleChange} />
                     </div>
                     <div className="col-md-2">
                       <label className="form-label">ICA</label>
-                      <input type="number" className="form-control" name="impuestos.ica" value={form.impuestos.ica} onChange={handleChange} min={0} />
+                      <input type="number" className="form-control" name="impuestos.ica" value={form.impuestos.ica} onChange={handleChange} />
                     </div>
                     <div className="col-md-2">
-                      <label className="form-label">RteIVA</label>
-                      <input type="number" className="form-control" name="impuestos.reteiva" value={form.impuestos.reteiva} onChange={handleChange} min={0} />
+                      <label className="form-label">ReteIVA</label>
+                      <input type="number" className="form-control" name="impuestos.reteiva" value={form.impuestos.reteiva} onChange={handleChange} />
                     </div>
                   </div>
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancelar</button>
-                  <button type="submit" className="btn btn-success">{editing ? 'Actualizar' : 'Crear'}</button>
+                  <button type="submit" className="btn btn-success">{editing ? 'Actualizar' : 'Agregar'}</button>
                 </div>
               </form>
             </div>

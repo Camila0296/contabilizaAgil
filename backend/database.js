@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 async function connectDB() {
-  let uri = process.env.MONGO_URI || 'mongodb://localhost:27017/CABD';
+  let uri = 'mongodb://localhost:27017/CABD';
 
   // Usa base en memoria si está en Codespaces o NODE_ENV=development
   if (process.env.CODESPACES || process.env.USE_MEM_MONGO === 'true' || process.env.NODE_ENV === 'development') {
