@@ -21,7 +21,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       });
       if (res.ok) {
         const data = await res.json();
-        localStorage.setItem('userId', data.user._id); // Guarda el ID del usuario
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userId', data.user.id);
         onLogin();
       } else {
         const data = await res.json();

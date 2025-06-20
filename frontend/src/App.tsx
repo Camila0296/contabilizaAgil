@@ -36,7 +36,8 @@ const Sidebar: React.FC<{ onLogout: () => void; onSection: (s: 'panel' | 'factur
 );
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const initialLoggedIn = Boolean(localStorage.getItem('token'));
+    const [isLoggedIn, setIsLoggedIn] = useState(initialLoggedIn);
   const [section, setSection] = useState<'panel' | 'facturacion'>('panel');
 
   return (
@@ -48,7 +49,11 @@ function App() {
       </header>
       {isLoggedIn ? (
         <div className="app-layout">
-          <Sidebar onLogout={() => setIsLoggedIn(false)} onSection={setSection} section={section} />
+          <Sidebar onLogout={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userId');
+            setIsLoggedIn(false);
+          }} onSection={setSection} section={section} />
           <main className="main-content">
             {section === 'panel' && <Home />}
             {section === 'facturacion' && <Facturas userId={localStorage.getItem('userId')} />}

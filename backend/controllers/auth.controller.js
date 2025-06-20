@@ -1,6 +1,7 @@
 const User = require('../models/user');
 const Role = require('../models/role');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const authCtrl = {};
 
@@ -8,8 +9,8 @@ const authCtrl = {};
 authCtrl.register = async (req, res) => {
   const { nombres, apellidos, email, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
-  const useperorRole = await Role.findOne({ name: "user" }) || await Role.findOne(); // Asigna el primer rol si no se envía
-    if (!userRole) {
+  const userRole = await Role.findOne({ name: "user" }) || await Role.findOne(); // Asigna el primer rol si no se envía
+  if (!userRole) {
     return res.status(500).json({ error: 'No hay roles definidos en la base de datos' });
   }
   const user = new User({
@@ -30,8 +31,11 @@ authCtrl.login = async (req, res) => {
   if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta' });
-  // Aquí puedes generar un token si usas JWT
-  res.json({ status: 'Login exitoso', user });
+  // Generar token JWT
+  const token = jwt.sign({ id: user._id, role: user.role.name }, process.env.JWT_SECRET || 'changeme', {
+    expiresIn: '8h'
+  });
+  res.json({ status: 'Login exitoso', token, user: { id: user._id, nombres: user.nombres, apellidos: user.apellidos, email: user.email, role: user.role.name } });
 };
 
 module.exports = authCtrl;
