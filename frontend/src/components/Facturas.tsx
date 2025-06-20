@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { apiFetch } from '../api';
 import { formatCurrency } from '../utils/format';
 import { showSuccess, showError } from '../utils/alerts';
+import Select from 'react-select';
+import pucAccounts from '../data/pucAccounts';
 
 interface Factura {
   _id?: string;
@@ -42,6 +44,16 @@ const initialForm: Factura = {
 };
 
 const Facturas: React.FC<FacturasProps> = ({ userId }) => {
+  // Opciones para react-select
+  const pucOptions = useMemo(
+    () => pucAccounts.map(acc => ({ value: acc.codigo, label: `${acc.codigo} - ${acc.nombre}` })),
+    []
+  );
+
+  const getPucLabel = (codigo: string) => {
+    const acc = pucAccounts.find(a => a.codigo === codigo);
+    return acc ? `${acc.codigo} - ${acc.nombre}` : codigo;
+  };
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [form, setForm] = useState<Factura>(initialForm);
   const [editing, setEditing] = useState<Factura | null>(null);
@@ -165,6 +177,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
               <th>Número</th>
               <th>Fecha</th>
               <th>Proveedor</th>
+              <th>PUC</th>
               <th>Monto</th>
               <th style={{ width: 120 }}>Acciones</th>
             </tr>
@@ -172,11 +185,11 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="text-center">Cargando...</td>
+                <td colSpan={6} className="text-center">Cargando...</td>
               </tr>
             ) : facturas.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center">No hay facturas registradas</td>
+                <td colSpan={6} className="text-center">No hay facturas registradas</td>
               </tr>
             ) : (
               facturas.map(factura => (
@@ -184,6 +197,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                   <td>{factura.numero}</td>
                   <td>{new Date(factura.fecha).toLocaleDateString()}</td>
                   <td>{factura.proveedor}</td>
+                  <td>{getPucLabel(factura.puc)}</td>
                   <td>{formatCurrency(factura.monto)}</td>
                   <td>
                     <button
@@ -242,7 +256,16 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">PUC</label>
-                      <input type="text" className="form-control" name="puc" value={form.puc} onChange={handleChange} required />
+                      <Select
+                          classNamePrefix="react-select"
+                          options={pucOptions}
+                          placeholder="Seleccione cuenta..."
+                          value={pucOptions.find(o => o.value === form.puc) || null}
+                          onChange={option =>
+                            setForm(prev => ({ ...prev, puc: option ? option.value : '' }))
+                          }
+                          isClearable
+                        />
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">Detalle</label>
