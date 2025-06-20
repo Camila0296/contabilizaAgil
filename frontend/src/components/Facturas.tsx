@@ -3,9 +3,12 @@ import { apiFetch } from '../api';
 import { formatCurrency } from '../utils/format';
 import { showSuccess, showError } from '../utils/alerts';
 import Select from 'react-select';
+import { retefuenteOptions, icaOptions } from '../data/withholdingOptions';
 import pucAccounts from '../data/pucAccounts';
 
 interface Factura {
+  retefuentePct: number;
+  icaPct: number;
   _id?: string;
   numero: string;
   fecha: string;
@@ -17,8 +20,10 @@ interface Factura {
   impuestos: {
     iva: number;
     retefuente: number;
+    // Porcentaje seleccionado para cada impuesto (solo frontend)
+    retefuentePct?: number;
+    icaPct?: number;
     ica: number;
-    reteiva: number;
   };
   usuario?: any;
 }
@@ -35,11 +40,12 @@ const initialForm: Factura = {
   puc: '',
   detalle: '',
   naturaleza: 'debito',
+  retefuentePct: 0,
+  icaPct: 0,
   impuestos: {
     iva: 0,
     retefuente: 0,
     ica: 0,
-    reteiva: 0,
   },
 };
 
@@ -87,11 +93,27 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
       }));
     } else if (name === 'monto') {
       const num = Number(value);
-      setForm(prev => ({
-        ...prev,
-        monto: num,
-        impuestos: { ...prev.impuestos, iva: +(num * 0.19).toFixed(2) }
-      }));
+      setForm(prev => {
+        const retefuenteVal = +(num * (prev.retefuentePct || 0) / 100).toFixed(2);
+        const icaVal = +(num * (prev.icaPct || 0) / 100).toFixed(2);
+        return {
+          ...prev,
+          monto: num,
+          impuestos: { ...prev.impuestos, iva: +(num * 0.19).toFixed(2), retefuente: retefuenteVal, ica: icaVal }
+        };
+      });
+    } else if (name === 'retefuentePct' || name === 'icaPct') {
+      const pct = Number(value); // porcentaje seleccionado
+      setForm(prev => {
+        const retefuenteVal = name === 'retefuentePct' ? +(prev.monto * pct / 100).toFixed(2) : +(prev.monto * (prev.retefuentePct || 0) / 100).toFixed(2);
+        const icaVal = name === 'icaPct' ? +(prev.monto * pct / 100).toFixed(2) : +(prev.monto * (prev.icaPct || 0) / 100).toFixed(2);
+        return {
+          ...prev,
+          [name]: pct,
+          impuestos: { ...prev.impuestos, retefuente: retefuenteVal, ica: icaVal }
+        };
+      });
+
     } else {
       setForm(prev => ({ ...prev, [name]: value }));
     }
@@ -179,17 +201,19 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
               <th>Proveedor</th>
               <th>PUC</th>
               <th>Monto</th>
+              <th>ReteFte</th>
+              <th>ICA</th>
               <th style={{ width: 120 }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center">Cargando...</td>
+                <td colSpan={8} className="text-center">Cargando...</td>
               </tr>
             ) : facturas.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center">No hay facturas registradas</td>
+                <td colSpan={8} className="text-center">No hay facturas registradas</td>
               </tr>
             ) : (
               facturas.map(factura => (
@@ -199,6 +223,8 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                   <td>{factura.proveedor}</td>
                   <td>{getPucLabel(factura.puc)}</td>
                   <td>{formatCurrency(factura.monto)}</td>
+                  <td>{formatCurrency(factura.impuestos.retefuente)} ({(factura.retefuentePct || 0).toFixed(2)}%)</td>
+                  <td>{formatCurrency(factura.impuestos.ica)} ({(factura.icaPct || 0).toFixed(3)}%)</td>
                   <td>
                     <button
                       className="btn btn-sm btn-outline-primary me-2"
@@ -286,16 +312,22 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     </div>
                     </div>
                     <div className="col-md-2">
-                      <label className="form-label">ReteFuente</label>
-                      <input type="number" className="form-control" name="impuestos.retefuente" value={form.impuestos.retefuente} onChange={handleChange} />
+                      <label className="form-label">ReteFuente %</label>
+                      <select className="form-select" name="retefuentePct" value={form.retefuentePct} onChange={handleChange}>
+                        {retefuenteOptions.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                      <small className="text-muted">{formatCurrency(form.impuestos.retefuente)}</small>
                     </div>
                     <div className="col-md-2">
-                      <label className="form-label">ICA</label>
-                      <input type="number" className="form-control" name="impuestos.ica" value={form.impuestos.ica} onChange={handleChange} />
-                    </div>
-                    <div className="col-md-2">
-                      <label className="form-label">ReteIVA</label>
-                      <input type="number" className="form-control" name="impuestos.reteiva" value={form.impuestos.reteiva} onChange={handleChange} />
+                      <label className="form-label">ICA %</label>
+                      <select className="form-select" name="icaPct" value={form.icaPct} onChange={handleChange}>
+                        {icaOptions.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                      <small className="text-muted">{formatCurrency(form.impuestos.ica)}</small>
                     </div>
                   </div>
                 </div>
