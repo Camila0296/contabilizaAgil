@@ -17,4 +17,23 @@ const FacturaSchema = new mongoose.Schema({
   usuario: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 });
 
+// Calcular IVA automáticamente al 19% antes de guardar o actualizar
+FacturaSchema.pre('save', function(next) {
+  if (this.monto != null) {
+    this.impuestos = this.impuestos || {};
+    this.impuestos.iva = +(this.monto * 0.19).toFixed(2);
+  }
+  next();
+});
+
+FacturaSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate();
+  if (update?.monto != null) {
+    update.impuestos = update.impuestos || {};
+    update.impuestos.iva = +(update.monto * 0.19).toFixed(2);
+    this.setUpdate(update);
+  }
+  next();
+});
+
 module.exports = mongoose.model('Factura', FacturaSchema);

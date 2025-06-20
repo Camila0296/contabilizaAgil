@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
+import { formatCurrency } from '../utils/format';
 import { showSuccess, showError } from '../utils/alerts';
 
 interface Factura {
@@ -73,7 +74,12 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
         impuestos: { ...prev.impuestos, [impuesto]: Number(value) }
       }));
     } else if (name === 'monto') {
-      setForm(prev => ({ ...prev, [name]: Number(value) }));
+      const num = Number(value);
+      setForm(prev => ({
+        ...prev,
+        monto: num,
+        impuestos: { ...prev.impuestos, iva: +(num * 0.19).toFixed(2) }
+      }));
     } else {
       setForm(prev => ({ ...prev, [name]: value }));
     }
@@ -178,7 +184,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                   <td>{factura.numero}</td>
                   <td>{new Date(factura.fecha).toLocaleDateString()}</td>
                   <td>{factura.proveedor}</td>
-                  <td>${factura.monto.toLocaleString()}</td>
+                  <td>{formatCurrency(factura.monto)}</td>
                   <td>
                     <button
                       className="btn btn-sm btn-outline-primary me-2"
@@ -229,7 +235,10 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">Monto</label>
+                      <div className="input-group">
+                      <span className="input-group-text">$</span>
                       <input type="number" className="form-control" name="monto" value={form.monto} onChange={handleChange} required />
+                    </div>
                     </div>
                     <div className="col-md-4">
                       <label className="form-label">PUC</label>
@@ -248,7 +257,10 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     </div>
                     <div className="col-md-2">
                       <label className="form-label">IVA</label>
-                      <input type="number" className="form-control" name="impuestos.iva" value={form.impuestos.iva} onChange={handleChange} />
+                      <div className="input-group">
+                      <span className="input-group-text">$</span>
+                      <input type="text" className="form-control" value={formatCurrency(form.impuestos.iva)} readOnly />
+                    </div>
                     </div>
                     <div className="col-md-2">
                       <label className="form-label">ReteFuente</label>
