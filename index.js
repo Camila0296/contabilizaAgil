@@ -3,6 +3,8 @@ const express = require('express');
 const morgan = require('morgan');
 
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./backend/swagger');
 
 const app = express(); // la constante app tendrá ahora todo el funcionamiento del servidor
 
@@ -29,6 +31,9 @@ app.use('/api/auth', require('./backend/routes/auth.route'));
 app.use('/api/users', require('./backend/routes/user.route'));
 app.use('/api/facturas', require('./backend/routes/factura.route'));
 app.use('/api/roles', require('./backend/routes/role.route'));
+
+// Documentación Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Iniciando el servidor
 app.listen(app.get('port'), '0.0.0.0', () => {
