@@ -55,6 +55,22 @@ userCtrl.updateUser = async (req, res) => {
   res.json({ status: 'Usuario actualizado' });
 };
 
+userCtrl.getMe = async (req, res) => {
+  const user = await User.findById(req.user.id).populate('role', 'name');
+  res.json(user);
+};
+
+userCtrl.updateMe = async (req, res) => {
+  const { nombres, apellidos, password } = req.body;
+  const update = { nombres, apellidos };
+  if (password) {
+    const bcrypt = require('bcryptjs');
+    update.password = await bcrypt.hash(password, 10);
+  }
+  await User.findByIdAndUpdate(req.user.id, update, { new: true });
+  res.json({ status: 'Perfil actualizado' });
+};
+
 userCtrl.approveUser = async (req, res) => {
   await User.findByIdAndUpdate(req.params.id, { approved: true, activo: true });
   res.json({ status: 'Usuario aprobado' });

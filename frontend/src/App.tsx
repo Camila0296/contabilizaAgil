@@ -4,8 +4,9 @@ import Home from './components/Home';
 import Facturas from './components/Facturas';
 import Usuarios from './components/Usuarios';
 import Aprobaciones from './components/Aprobaciones';
+import Perfil from './components/Perfil';
 
-type Section = 'panel' | 'facturacion' | 'reportes' | 'usuarios' | 'aprobaciones';
+type Section = 'panel' | 'facturacion' | 'reportes' | 'usuarios' | 'aprobaciones' | 'perfil';
 
 const Sidebar: React.FC<{ role: string | null; onLogout: () => void; onSection: (s: Section) => void; section: Section }> = ({ role, onLogout, onSection, section }) => {
   return (
@@ -35,6 +36,9 @@ const Sidebar: React.FC<{ role: string | null; onLogout: () => void; onSection: 
             onClick={() => onSection('reportes')}
           >
             Reportes
+          </button>
+          <button className={`sidebar-link${section === 'perfil' ? ' active' : ''}`} type="button" onClick={() => onSection('perfil')}>
+            Perfil
           </button>
           {role !== 'user' && (
             <>
@@ -88,6 +92,7 @@ function App() {
             {section === 'facturacion' && <Facturas userId={localStorage.getItem('userId')} />}
             {section === 'usuarios' && role !== 'user' && <Usuarios /> }
             {section === 'aprobaciones' && role !== 'user' && <Aprobaciones /> }
+            {section === 'perfil' && <Perfil /> }
           </main>
         </div>
       ) : (
