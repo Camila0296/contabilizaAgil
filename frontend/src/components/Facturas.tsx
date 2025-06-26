@@ -60,6 +60,14 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
     const acc = pucAccounts.find(a => a.codigo === codigo);
     return acc ? `${acc.codigo} - ${acc.nombre}` : codigo;
   };
+
+  // Convierte una fecha ISO (o string) al formato YYYY-MM-DD requerido por los inputs type="date"
+  const toInputDate = (isoDate: string) => {
+    if (!isoDate) return '';
+    const date = new Date(isoDate);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+  };
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [form, setForm] = useState<Factura>(initialForm);
   const [editing, setEditing] = useState<Factura | null>(null);
@@ -122,7 +130,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   const openModal = (factura?: Factura) => {
     if (factura) {
       setEditing(factura);
-      setForm({ ...factura });
+      setForm({ ...factura, fecha: toInputDate(factura.fecha) });
     } else {
       setEditing(null);
       setForm(initialForm);

@@ -23,6 +23,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         const data = await res.json();
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('role', (data.user.role || '').toLowerCase());
         onLogin();
       } else {
         const data = await res.json();

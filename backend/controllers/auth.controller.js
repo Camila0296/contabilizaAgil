@@ -18,7 +18,8 @@ authCtrl.register = async (req, res) => {
     apellidos,
     email,
     password: hashedPassword,
-    role: userRole._id
+    role: userRole._id,
+    approved: false
   });
   await user.save();
   res.json({ status: 'Usuario registrado' });
@@ -32,6 +33,7 @@ authCtrl.login = async (req, res) => {
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta' });
   // Generar token JWT
+  if (!user.approved) return res.status(403).json({ error: 'Cuenta pendiente de aprobación' });
   const token = jwt.sign({ id: user._id, role: user.role.name }, process.env.JWT_SECRET || 'changeme', {
     expiresIn: '8h'
   });
