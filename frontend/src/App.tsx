@@ -5,6 +5,7 @@ import Facturas from './components/Facturas';
 import Usuarios from './components/Usuarios';
 import Aprobaciones from './components/Aprobaciones';
 import Perfil from './components/Perfil';
+import Reportes from './components/Reportes';
 
 type Section = 'panel' | 'facturacion' | 'reportes' | 'usuarios' | 'aprobaciones' | 'perfil';
 
@@ -90,6 +91,7 @@ function App() {
           <main className="main-content">
             {section === 'panel' && role !== 'user' && <Home />}
             {section === 'facturacion' && <Facturas userId={localStorage.getItem('userId')} />}
+            {section === 'reportes' && <Reportes />}
             {section === 'usuarios' && role !== 'user' && <Usuarios /> }
             {section === 'aprobaciones' && role !== 'user' && <Aprobaciones /> }
             {section === 'perfil' && <Perfil /> }

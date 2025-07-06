@@ -9,7 +9,7 @@ interface Usuario {
   nombres: string;
   apellidos: string;
   email: string;
-  password?: string;
+  password?: string; // solo al editar
   role: string; // 'admin' | 'user'
 }
 
@@ -17,7 +17,6 @@ const initialForm: Usuario = {
   nombres: '',
   apellidos: '',
   email: '',
-  password: '',
   role: 'user'
 };
 
@@ -89,15 +88,16 @@ const Usuarios: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!form.nombres || !form.apellidos || !form.email || (!editing && !form.password)) {
+    if (!form.nombres || !form.apellidos || !form.email) {
       setError('Completa los campos obligatorios.');
       return;
     }
     try {
       const method = editing ? 'PUT' : 'POST';
       const url = editing ? `/users/${editing._id}` : '/users';
-      const payload = { ...form } as any;
-      if (editing && !payload.password) delete payload.password; // No cambiar si está vacío
+      const payload: any = { ...form };
+      if (!editing) delete payload.password; // no enviar pwd en creación
+      if (editing && !payload.password) delete payload.password;
       const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -233,11 +233,12 @@ const Usuarios: React.FC = () => {
                     <label className="form-label">Email</label>
                     <input type="email" className="form-control" name="email" value={form.email} onChange={handleChange} required />
                   </div>
-                  {!editing && (
+                  {editing && (
                     <div className="mb-3">
-                      <label className="form-label">Contraseña</label>
-                      <input type="password" className="form-control" name="password" value={form.password} onChange={handleChange} required />
-                    </div>) }
+                      <label className="form-label">Contraseña (dejar en blanco para mantener)</label>
+                      <input type="password" name="password" className="form-control" value={form.password || ''} onChange={handleChange} />
+                    </div>
+                  )}
                   <div className="mb-3">
                     <label className="form-label">Rol</label>
                     <Select options={roleOptions} value={roleOptions.find(o => o.value === form.role)} onChange={handleRoleChange} />

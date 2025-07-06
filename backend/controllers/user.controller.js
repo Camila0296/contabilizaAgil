@@ -7,17 +7,40 @@ const userCtrl = {};
 // Crear nuevo usuario (solo admin)
 userCtrl.createUser = async (req, res) => {
   try {
-    const { nombres, apellidos, email, password, role } = req.body;
-    if (!nombres || !apellidos || !email || !password) {
+    const { nombres, apellidos, email, role } = req.body;
+    const crypto = require('crypto');
+    const randomPass = crypto.randomBytes(4).toString('hex'); // 8 chars
+    if (!nombres || !apellidos || !email) {
       return res.status(400).json({ error: 'Campos obligatorios faltantes' });
     }
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: 'Email ya registrado' });
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(randomPass, 10);
     const roleDoc = await Role.findOne({ name: (role || 'user').toLowerCase() });
     if (!roleDoc) return res.status(400).json({ error: 'Rol no válido' });
     const user = new User({ nombres, apellidos, email, password: hashed, role: roleDoc._id });
     await user.save();
+    // Enviar correo con contraseña
+    try {
+      const nodemailer = require('nodemailer');
+      var transporter = nodemailer.createTransport({
+        host: "pro.turbo-smtp.com",
+        port: 587,
+        auth: {
+          user: "kamilapava10@gmail.com",
+          pass: "0mxQrJmn"
+        }
+      });
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: email,
+        subject: 'Credenciales de acceso',
+        text: `Hola ${nombres},\n\nTu cuenta ha sido creada. Puedes iniciar sesión con:\nEmail: ${email}\nContraseña: ${randomPass}\n\nPor favor cambia la contraseña después de iniciar sesión.`
+      });
+    } catch (mailErr) {
+      console.error('Error enviando correo:', mailErr);
+    }
+
     res.json({ status: 'Usuario creado', id: user._id });
   } catch (err) {
     console.error(err);
