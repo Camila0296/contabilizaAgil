@@ -1,66 +1,121 @@
 import React, { useState } from 'react';
 import { apiFetch } from '../api';
+import { showSuccess, showError } from '../utils/alerts';
 
 interface LoginProps {
   onLogin: () => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setLoading(true);
+
     try {
-      const res = await apiFetch('/auth/login', {
+      const response = await apiFetch('/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
-      if (res.ok) {
-        const data = await res.json();
+
+      const data = await response.json();
+
+      if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.user.id);
-        localStorage.setItem('role', (data.user.role || '').toLowerCase());
+        localStorage.setItem('role', data.user.role);
+        showSuccess('Inicio de sesión exitoso');
         onLogin();
       } else {
-        const data = await res.json();
-        console.log(data);
-        setError(data.error || 'Credenciales incorrectas');
+        showError(data.error || 'Error en el inicio de sesión');
       }
-    } catch (err) {
-      setError('Error de conexión con el servidor');
+    } catch (error) {
+      showError('Error de conexión');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2 className="mb-3 text-center">Iniciar Sesión</h2>
-      {error && <div className="alert alert-danger">{error}</div>}
-      <div className="mb-3">
-        <label className="form-label">Correo electrónico</label>
-        <input
-          type="email"
-          className="form-control"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
+    <div className="w-full max-w-md mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Bienvenido de vuelta</h2>
+        <p className="text-gray-600">Ingresa tus credenciales para continuar</p>
       </div>
-      <div className="mb-3">
-        <label className="form-label">Contraseña</label>
-        <input
-          type="password"
-          className="form-control"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label htmlFor="email" className="form-label">
+            Correo electrónico
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="form-input"
+            placeholder="tu@email.com"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="password" className="form-label">
+            Contraseña
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            className="form-input"
+            placeholder="••••••••"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full btn btn-primary py-3 text-base font-medium"
+        >
+          {loading ? (
+            <div className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Iniciando sesión...
+            </div>
+          ) : (
+            'Iniciar sesión'
+          )}
+        </button>
+      </form>
+
+      <div className="mt-6 text-center">
+        <p className="text-sm text-gray-500">
+          Credenciales de prueba: admin@admin.com / admin123
+        </p>
       </div>
-      <button type="submit" className="btn btn-primary w-100">Entrar</button>
-    </form>
+    </div>
   );
 };
 

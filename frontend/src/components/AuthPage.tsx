@@ -10,63 +10,75 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [showLogin, setShowLogin] = useState(true);
 
   return (
-    <div className="d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '80vh' }}>
-      {/* Logo dummy */}
-      <div
-        style={{
-          width: 80,
-          height: 80,
-          borderRadius: '50%',
-          background: 'var(--primary, #22356f)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontWeight: 700,
-          fontSize: 32,
-          marginBottom: 24,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.07)'
-        }}
-      >
-        LOGO
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl w-full">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="mx-auto w-20 h-20 bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl flex items-center justify-center shadow-strong mb-6">
+            <span className="text-white font-bold text-3xl">C</span>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">ContaPro</h2>
+          <p className="text-gray-600">Sistema de Gestión Contable Profesional</p>
+        </div>
 
-      {/* Card with form and image */}
-      <div className="card shadow-lg" style={{ maxWidth: 900, width: '100%', borderRadius: 16 }}>
-        <div className="row g-0">
-          {/* Formulario */}
-          <div className="col-md-6 p-5 d-flex flex-column justify-content-center">
-            {showLogin ? (
-              <Login onLogin={onLogin} />
-            ) : (
-              <Register onRegisterSuccess={() => setShowLogin(true)} />
-            )}
-            <div className="text-center mt-3">
+        {/* Card principal */}
+        <div className="bg-white rounded-2xl shadow-strong overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[600px]">
+            {/* Formulario */}
+            <div className="p-8 lg:p-12 flex flex-col justify-center">
               {showLogin ? (
-                <span>
-                  ¿No tienes cuenta?{' '}
-                  <button className="btn btn-link p-0" onClick={() => setShowLogin(false)}>
-                    Regístrate
-                  </button>
-                </span>
+                <Login onLogin={onLogin} />
               ) : (
-                <span>
-                  ¿Ya tienes cuenta?{' '}
-                  <button className="btn btn-link p-0" onClick={() => setShowLogin(true)}>
-                    Inicia sesión
-                  </button>
-                </span>
+                <Register onRegisterSuccess={() => setShowLogin(true)} />
               )}
+              
+              <div className="text-center mt-8">
+                {showLogin ? (
+                  <p className="text-gray-600">
+                    ¿No tienes cuenta?{' '}
+                    <button 
+                      className="text-primary-600 hover:text-primary-700 font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
+                      onClick={() => setShowLogin(false)}
+                    >
+                      Regístrate aquí
+                    </button>
+                  </p>
+                ) : (
+                  <p className="text-gray-600">
+                    ¿Ya tienes cuenta?{' '}
+                    <button 
+                      className="text-primary-600 hover:text-primary-700 font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded"
+                      onClick={() => setShowLogin(true)}
+                    >
+                      Inicia sesión
+                    </button>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Imagen */}
+            <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-primary-100 to-secondary-100 p-8">
+              <div className="text-center">
+                <div className="w-64 h-64 bg-gradient-to-br from-primary-200 to-secondary-200 rounded-2xl flex items-center justify-center mb-6 shadow-soft">
+                  <svg className="w-32 h-32 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Gestión Contable Inteligente</h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Administra tus facturas, reportes y procesos contables de manera eficiente y profesional
+                </p>
+              </div>
             </div>
           </div>
-          {/* Imagen */}
-          <div className="col-md-6 d-none d-md-flex align-items-center justify-content-center" style={{ background: 'var(--primary-bg, #f5f6fa)' }}>
-            <img
-              src="https://impulso06.com/wp-content/uploads/2023/12/porque-estudiar-contabilidad-en-2024.png"
-              alt="Contabilidad"
-              style={{ maxWidth: '90%', borderRadius: 12 }}
-            />
-          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-8">
+          <p className="text-sm text-gray-500">
+            © 2024 ContaPro. Todos los derechos reservados.
+          </p>
         </div>
       </div>
     </div>

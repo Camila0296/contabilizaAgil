@@ -1,140 +1,145 @@
 import React, { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 import { apiFetch } from '../api';
-import Select from 'react-select';
-import { showError, showSuccess } from '../utils/alerts';
+import { showSuccess, showError } from '../utils/alerts';
 
-interface Usuario {
-  _id?: string;
+interface User {
+  _id: string;
   nombres: string;
   apellidos: string;
   email: string;
-  password?: string; // solo al editar
-  role: string; // 'admin' | 'user'
+  role: {
+    _id: string;
+    name: string;
+  };
+  activo: boolean;
+  approved: boolean;
+  createdAt: string;
 }
 
-const initialForm: Usuario = {
-  nombres: '',
-  apellidos: '',
-  email: '',
-  role: 'user'
-};
-
-const roleOptions = [
-  { value: 'admin', label: 'Administrador' },
-  { value: 'user', label: 'Usuario' }
-];
-
 const Usuarios: React.FC = () => {
-  const [users, setUsers] = useState<Usuario[]>([]);
-  const [showActivos, setShowActivos] = useState<'true' | 'false' | 'all'>('true');
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [roles, setRoles] = useState<{ _id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState<Usuario>(initialForm);
-  const [editing, setEditing] = useState<Usuario | null>(null);
-  const [error, setError] = useState('');
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      let queryParams: string[] = [];
-      if (showActivos !== 'all') queryParams.push(`activo=${showActivos}`);
-      if (search.trim() !== '') queryParams.push(`search=${encodeURIComponent(search.trim())}`);
-      const queryStr = queryParams.length ? `?${queryParams.join('&')}` : '';
-      const res = await apiFetch(`/users${queryStr}`);
-      const data = await res.json();
-      // Convierte role object a nombre string
-      const normalized = data.map((u: any) => ({ ...u, role: u.role?.name || u.role }));
-      setUsers(normalized);
-    } catch {
-      showError('No se pudieron cargar los usuarios');
-    }
-    setLoading(false);
-  };
+  const [editing, setEditing] = useState<User | null>(null);
+  const [form, setForm] = useState({
+    nombres: '',
+    apellidos: '',
+    email: '',
+    role: '',
+    activo: true,
+    approved: false
+  });
 
   useEffect(() => {
-    fetchUsers();
-  }, [showActivos, search]);
+    fetchUsuarios();
+    fetchRoles();
+  }, []);
 
-  const openModal = (user?: Usuario) => {
-    if (user) {
-      setEditing(user);
-      setForm({ ...user, password: '', role: (user.role as any).name || (user.role as any) });
+  const fetchUsuarios = async () => {
+    try {
+      const res = await apiFetch('/users');
+      const data = await res.json();
+      setUsuarios(data);
+    } catch {
+      showError('No se pudieron cargar los usuarios');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRoles = async () => {
+    try {
+      const res = await apiFetch('/roles');
+      const data = await res.json();
+      setRoles(data);
+    } catch {
+      showError('No se pudieron cargar los roles');
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+    }));
+  };
+
+  const openModal = (usuario?: User) => {
+    if (usuario) {
+      setEditing(usuario);
+      setForm({
+        nombres: usuario.nombres,
+        apellidos: usuario.apellidos,
+        email: usuario.email,
+        role: usuario.role._id,
+        activo: usuario.activo,
+        approved: usuario.approved
+      });
     } else {
       setEditing(null);
-      setForm(initialForm);
+      setForm({
+        nombres: '',
+        apellidos: '',
+        email: '',
+        role: '',
+        activo: true,
+        approved: false
+      });
     }
-    setError('');
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditing(null);
-    setForm(initialForm);
-    setError('');
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleRoleChange = (option: any) => {
-    setForm(prev => ({ ...prev, role: option ? option.value : 'user' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    if (!form.nombres || !form.apellidos || !form.email) {
-      setError('Completa los campos obligatorios.');
-      return;
-    }
+    
     try {
       const method = editing ? 'PUT' : 'POST';
       const url = editing ? `/users/${editing._id}` : '/users';
-      const payload: any = { ...form };
-      if (!editing) delete payload.password; // no enviar pwd en creación
-      if (editing && !payload.password) delete payload.password;
+      
       const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(form)
       });
+
       if (res.ok) {
         showSuccess(editing ? 'Usuario actualizado' : 'Usuario creado');
         closeModal();
-        fetchUsers();
+        fetchUsuarios();
       } else {
         const data = await res.json();
-        showError(data.error || 'No se pudo guardar');
+        showError(data.error || 'Error al guardar usuario');
       }
     } catch {
       showError('Error de conexión');
     }
   };
 
-  const confirmAction = async (title: string, text: string, icon: 'warning' | 'question') => {
-    const result = await Swal.fire({ title, text, icon, showCancelButton: true, confirmButtonText: 'Sí', cancelButtonText: 'Cancelar' });
-    return result.isConfirmed;
-  };
-
-  const handleActivate = async (id: string) => {
+  const handleToggleStatus = async (id: string, field: 'activo' | 'approved') => {
     try {
-      const ok = await confirmAction('Reactivar usuario', '¿Activar nuevamente este usuario?', 'question');
-      if (!ok) return;
+      const usuario = usuarios.find(u => u._id === id);
+      if (!usuario) return;
+
       const res = await apiFetch(`/users/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activo: true })
+        body: JSON.stringify({
+          [field]: !usuario[field]
+        })
       });
+
       if (res.ok) {
-        showSuccess('Usuario reactivado');
-        fetchUsers();
+        showSuccess(`Usuario ${field === 'activo' ? 'activado/desactivado' : 'aprobado/rechazado'}`);
+        fetchUsuarios();
       } else {
-        showError('No se pudo activar');
+        showError('Error al actualizar usuario');
       }
     } catch {
       showError('Error de conexión');
@@ -142,15 +147,15 @@ const Usuarios: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    const ok = await confirmAction('Deshabilitar usuario', '¿Estás seguro de deshabilitar este usuario?', 'warning');
-    if (!ok) return;
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este usuario?')) return;
+
     try {
       const res = await apiFetch(`/users/${id}`, { method: 'DELETE' });
       if (res.ok) {
         showSuccess('Usuario eliminado');
-        fetchUsers();
+        setUsuarios(usuarios.filter(u => u._id !== id));
       } else {
-        showError('No se pudo eliminar');
+        showError('No se pudo eliminar el usuario');
       }
     } catch {
       showError('Error de conexión');
@@ -158,98 +163,371 @@ const Usuarios: React.FC = () => {
   };
 
   return (
-    <div className="container py-4">
-      <h3 className="mb-4" style={{ color: 'var(--primary)' }}>Usuarios</h3>
-      <div className="d-flex flex-wrap mb-3 align-items-center gap-2">
-        <button className="btn btn-success" onClick={() => openModal()}>+ Agregar usuario</button>
-        <select className="form-select w-auto" value={showActivos} onChange={e => setShowActivos(e.target.value as any)}>
-          <option value="true">Activos</option>
-          <option value="false">Inactivos</option>
-          <option value="all">Todos</option>
-        </select>
-        <input placeholder="Buscar nombre o email" className="form-control w-auto" style={{ minWidth: 200 }} value={search} onChange={e => setSearch(e.target.value)} />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
+          <p className="text-gray-600 mt-1">Administra usuarios y permisos del sistema</p>
+        </div>
+        <button 
+          className="btn btn-primary flex items-center space-x-2"
+          onClick={() => openModal()}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span>Nuevo Usuario</span>
+        </button>
       </div>
-      <div className="table-responsive">
-        <table className="table table-hover modern-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>Email</th>
-              <th>Rol</th>
-              <th>Estado</th>
-              <th style={{ width: 120 }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="text-center">Cargando...</td></tr>
-            ) : users.length === 0 ? (
-              <tr><td colSpan={5} className="text-center">No hay usuarios</td></tr>
-            ) : (
-              users.map(user => (
-                <tr key={user._id}>
-                  <td>{user.nombres}</td>
-                  <td>{user.apellidos}</td>
-                  <td>{user.email}</td>
-                  <td>{user.role}</td>
-                  <td>{(user as any).activo === false ? 'Inactivo' : 'Activo'}</td>
-                  <td>
-                    <button className="btn btn-sm btn-outline-primary me-2" onClick={() => openModal(user)}>✏️</button>
-                    {(user as any).activo === false ? (
-                      <button className="btn btn-sm btn-outline-success" title="Reactivar" onClick={() => handleActivate(user._id!)}>✔️</button>
-                    ) : (
-                      <button className="btn btn-sm btn-outline-warning" title="Deshabilitar" onClick={() => handleDelete(user._id!)}>🚫</button>
-                    )}
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Usuarios</p>
+                <p className="text-2xl font-bold text-gray-900">{usuarios.length}</p>
+              </div>
+              <div className="p-3 bg-primary-100 rounded-lg">
+                <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Usuarios Activos</p>
+                <p className="text-2xl font-bold text-success-600">
+                  {usuarios.filter(u => u.activo).length}
+                </p>
+              </div>
+              <div className="p-3 bg-success-100 rounded-lg">
+                <svg className="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pendientes de Aprobación</p>
+                <p className="text-2xl font-bold text-warning-600">
+                  {usuarios.filter(u => !u.approved).length}
+                </p>
+              </div>
+              <div className="p-3 bg-warning-100 rounded-lg">
+                <svg className="w-6 h-6 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Administradores</p>
+                <p className="text-2xl font-bold text-primary-600">
+                  {usuarios.filter(u => u.role.name === 'admin').length}
+                </p>
+              </div>
+              <div className="p-3 bg-primary-100 rounded-lg">
+                <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="card">
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead className="table-header">
+              <tr>
+                <th>Usuario</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Aprobación</th>
+                <th>Fecha Registro</th>
+                <th className="w-40">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="table-body">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-8">
+                    <div className="flex items-center justify-center space-x-2">
+                      <svg className="animate-spin h-5 w-5 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-gray-500">Cargando usuarios...</span>
+                    </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : usuarios.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12">
+                    <div className="text-gray-500">
+                      <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      </svg>
+                      <p className="text-lg font-medium">No hay usuarios registrados</p>
+                      <p className="text-sm">Comienza creando el primer usuario</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                usuarios.map(usuario => (
+                  <tr key={usuario._id} className="table-row">
+                    <td className="table-cell">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {usuario.nombres} {usuario.apellidos}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="table-cell text-gray-600">{usuario.email}</td>
+                    <td className="table-cell">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        usuario.role.name === 'admin' 
+                          ? 'bg-primary-100 text-primary-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {usuario.role.name}
+                      </span>
+                    </td>
+                    <td className="table-cell">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        usuario.activo 
+                          ? 'bg-success-100 text-success-800' 
+                          : 'bg-danger-100 text-danger-800'
+                      }`}>
+                        {usuario.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td className="table-cell">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        usuario.approved 
+                          ? 'bg-success-100 text-success-800' 
+                          : 'bg-warning-100 text-warning-800'
+                      }`}>
+                        {usuario.approved ? 'Aprobado' : 'Pendiente'}
+                      </span>
+                    </td>
+                    <td className="table-cell text-sm text-gray-500">
+                      {new Date(usuario.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="table-cell">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors duration-200"
+                          title="Editar"
+                          onClick={() => openModal(usuario)}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        
+                        <button
+                          className={`p-2 rounded-lg transition-colors duration-200 ${
+                            usuario.activo 
+                              ? 'text-warning-600 hover:bg-warning-100' 
+                              : 'text-success-600 hover:bg-success-100'
+                          }`}
+                          title={usuario.activo ? 'Desactivar' : 'Activar'}
+                          onClick={() => handleToggleStatus(usuario._id, 'activo')}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {usuario.activo ? (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                            ) : (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            )}
+                          </svg>
+                        </button>
+
+                        {!usuario.approved && (
+                          <button
+                            className="p-2 text-success-600 hover:bg-success-100 rounded-lg transition-colors duration-200"
+                            title="Aprobar"
+                            onClick={() => handleToggleStatus(usuario._id, 'approved')}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </button>
+                        )}
+
+                        <button
+                          className="p-2 text-danger-600 hover:bg-danger-100 rounded-lg transition-colors duration-200"
+                          title="Eliminar"
+                          onClick={() => handleDelete(usuario._id)}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="modal show d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.25)' }}>
-          <div className="modal-dialog modal-md modal-dialog-centered">
-            <div className="modal-content">
-              <form onSubmit={handleSubmit}>
-                <div className="modal-header">
-                  <h5 className="modal-title">{editing ? 'Editar usuario' : 'Agregar usuario'}</h5>
-                  <button type="button" className="btn-close" onClick={closeModal}></button>
-                </div>
-                <div className="modal-body">
-                  {error && <div className="alert alert-danger">{error}</div>}
-                  <div className="mb-3">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-strong max-w-2xl w-full">
+            <form onSubmit={handleSubmit}>
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {editing ? 'Editar Usuario' : 'Nuevo Usuario'}
+                </h2>
+                <button
+                  type="button"
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  onClick={closeModal}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Nombres */}
+                  <div className="form-group">
                     <label className="form-label">Nombres</label>
-                    <input className="form-control" name="nombres" value={form.nombres} onChange={handleChange} required />
+                    <input
+                      type="text"
+                      className="form-input"
+                      name="nombres"
+                      value={form.nombres}
+                      onChange={handleChange}
+                      required
+                      placeholder="Juan"
+                    />
                   </div>
-                  <div className="mb-3">
+
+                  {/* Apellidos */}
+                  <div className="form-group">
                     <label className="form-label">Apellidos</label>
-                    <input className="form-control" name="apellidos" value={form.apellidos} onChange={handleChange} required />
+                    <input
+                      type="text"
+                      className="form-input"
+                      name="apellidos"
+                      value={form.apellidos}
+                      onChange={handleChange}
+                      required
+                      placeholder="Pérez"
+                    />
                   </div>
-                  <div className="mb-3">
+
+                  {/* Email */}
+                  <div className="form-group md:col-span-2">
                     <label className="form-label">Email</label>
-                    <input type="email" className="form-control" name="email" value={form.email} onChange={handleChange} required />
+                    <input
+                      type="email"
+                      className="form-input"
+                      name="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      required
+                      placeholder="juan.perez@email.com"
+                    />
                   </div>
-                  {editing && (
-                    <div className="mb-3">
-                      <label className="form-label">Contraseña (dejar en blanco para mantener)</label>
-                      <input type="password" name="password" className="form-control" value={form.password || ''} onChange={handleChange} />
-                    </div>
-                  )}
-                  <div className="mb-3">
+
+                  {/* Rol */}
+                  <div className="form-group">
                     <label className="form-label">Rol</label>
-                    <Select options={roleOptions} value={roleOptions.find(o => o.value === form.role)} onChange={handleRoleChange} />
+                    <select
+                      className="form-select"
+                      name="role"
+                      value={form.role}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Seleccionar rol</option>
+                      {roles.map(role => (
+                        <option key={role._id} value={role._id}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Estado */}
+                  <div className="form-group">
+                    <label className="form-label">Estado</label>
+                    <div className="flex items-center space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                          name="activo"
+                          checked={form.activo}
+                          onChange={handleChange}
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Activo</span>
+                      </label>
+                      
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                          name="approved"
+                          checked={form.approved}
+                          onChange={handleChange}
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Aprobado</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary">{editing ? 'Guardar cambios' : 'Crear'}</button>
-                </div>
-              </form>
-            </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={closeModal}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-success"
+                >
+                  {editing ? 'Actualizar Usuario' : 'Crear Usuario'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
