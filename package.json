@@ -1,0 +1,38 @@
+{
+  "name": "proyecto-final",
+  "version": "1.0.0",
+  "description": "Sistema de facturación completo con tests automatizados",
+  "scripts": {
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && npm run dev",
+    "start:frontend": "cd frontend && npm start",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "concurrently \"cd backend && npm test\" \"cd frontend && npm test\"",
+    "test:e2e": "cd tests && npm run test:e2e",
+    "test:performance": "cd tests && npm run test:performance",
+    "test:visual": "cd tests && npm run test:visual",
+    "test:all": "npm run test:unit && npm run test:e2e && npm run test:performance",
+    "test:ci": "npm run test:unit && npm run test:e2e",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../tests && npm install",
+    "setup": "npm run install:all && echo '✅ Setup completado. Ejecuta npm start para iniciar los servicios'"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  },
+  "keywords": [
+    "facturación",
+    "react",
+    "nodejs",
+    "mongodb",
+    "testing",
+    "cucumber",
+    "selenium",
+    "automation"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+} 

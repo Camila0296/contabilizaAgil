@@ -1,5 +1,15 @@
 import '@testing-library/jest-dom';
 
+// Mock de SweetAlert2
+jest.mock('sweetalert2-react-content', () => {
+  return () => ({
+    fire: jest.fn().mockResolvedValue({ isConfirmed: true }),
+    close: jest.fn(),
+    showLoading: jest.fn(),
+    hideLoading: jest.fn(),
+  });
+});
+
 // Mock de fetch global
 global.fetch = jest.fn();
 
