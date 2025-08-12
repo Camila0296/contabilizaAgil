@@ -24,7 +24,7 @@ const Sidebar: React.FC<{
             <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">C</span>
             </div>
-            <span className="text-lg font-semibold text-gray-900">ContaPro</span>
+            <span className="text-lg font-semibold text-gray-900">Contabiliza Agil</span>
           </div>
         </div>
 

@@ -103,10 +103,22 @@ const Usuarios: React.FC = () => {
       const method = editing ? 'PUT' : 'POST';
       const url = editing ? `/users/${editing._id}` : '/users';
       
+      // Ensure we're sending the role ID correctly
+      const roleToSend = roles.find(r => r._id === form.role);
+      if (!roleToSend && !editing) {
+        showError('Por favor seleccione un rol válido');
+        return;
+      }
+      
+      const userData = {
+        ...form,
+        role: roleToSend?.name || form.role  // Send role name for creation, keep ID for update
+      };
+      
       const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(userData)
       });
 
       if (res.ok) {

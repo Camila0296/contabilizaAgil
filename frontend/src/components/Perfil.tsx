@@ -34,30 +34,41 @@ const Perfil: React.FC = () => {
   }, []);
 
   const fetchProfile = async () => {
-      try {
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        showError('No se pudo identificar al usuario');
-        return;
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No se encontró el token de autenticación');
       }
 
-      const res = await apiFetch(`/users/${userId}`);
-        const data = await res.json();
+      const res = await apiFetch('/users/me');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al cargar el perfil');
+      }
+      
+      const data = await res.json();
+      
+      if (!data) {
+        throw new Error('No se recibieron datos del perfil');
+      }
+      
       setProfile(data);
       setForm({
-        nombres: data.nombres,
-        apellidos: data.apellidos,
-        email: data.email,
+        nombres: data.nombres || '',
+        apellidos: data.apellidos || '',
+        email: data.email || '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
-      } catch {
-        showError('No se pudo cargar el perfil');
+    } catch (error) {
+      console.error('Error al cargar el perfil:', error);
+      showError(error instanceof Error ? error.message : 'No se pudo cargar el perfil');
     } finally {
       setLoading(false);
     }
-    };
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

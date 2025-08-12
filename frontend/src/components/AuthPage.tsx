@@ -17,7 +17,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           <div className="mx-auto w-20 h-20 bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl flex items-center justify-center shadow-strong mb-6">
             <span className="text-white font-bold text-3xl">C</span>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">ContaPro</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Contabiliza Agil</h2>
           <p className="text-gray-600">Sistema de Gestión Contable Profesional</p>
         </div>
 
@@ -77,7 +77,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-500">
-            © 2024 ContaPro. Todos los derechos reservados.
+            © 2024 Contabiliza Agil. Todos los derechos reservados.
           </p>
         </div>
       </div>
