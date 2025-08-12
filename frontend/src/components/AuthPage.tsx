@@ -3,7 +3,7 @@ import Login from './Login';
 import Register from './Register';
 
 interface AuthPageProps {
-  onLogin: () => void;
+  onLogin: (userRole: string) => void;
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {

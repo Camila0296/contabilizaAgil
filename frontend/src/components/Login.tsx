@@ -3,7 +3,7 @@ import { apiFetch } from '../api';
 import { showSuccess, showError } from '../utils/alerts';
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (userRole: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -38,9 +38,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.user.id);
-        localStorage.setItem('role', data.user.role);
+        const userRole = data.user.role;
+        localStorage.setItem('role', userRole);
         showSuccess('Inicio de sesión exitoso');
-        onLogin();
+        onLogin(userRole);
       } else {
         showError(data.error || 'Error en el inicio de sesión');
       }
@@ -112,7 +113,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       <div className="mt-6 text-center">
         <p className="text-sm text-gray-500">
-          Credenciales de prueba: admin@admin.com / admin123
+          Credenciales de prueba: admin@admin.com / admin
         </p>
       </div>
     </div>

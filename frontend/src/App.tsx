@@ -152,10 +152,57 @@ const Sidebar: React.FC<{
 };
 
 function App() {
-  const initialLoggedIn = Boolean(localStorage.getItem('token'));
-  const [isLoggedIn, setIsLoggedIn] = useState(initialLoggedIn);
-  const [role, setRole] = useState<string | null>(localStorage.getItem('role'));
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [section, setSection] = useState<Section>('panel');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Verificar autenticación al cargar
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('role');
+    
+    const validateToken = async () => {
+      // Si no hay token o rol, marcar como no autenticado
+      if (!token || !userRole) {
+        setIsLoggedIn(false);
+        setRole(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Primero establecer el estado como autenticado para mostrar la interfaz
+      setIsLoggedIn(true);
+      setRole(userRole);
+      
+      // Validar el token en segundo plano
+      try {
+        const response = await fetch('http://localhost:3000/api/auth/verify', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Token inválido');
+        }
+      } catch (error) {
+        console.error('Error al validar el token:', error);
+        // Solo limpiar si hay un error de autenticación específico
+        if (error instanceof Error && error.message === 'Token inválido') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('role');
+          localStorage.removeItem('userId');
+          setIsLoggedIn(false);
+          setRole(null);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    validateToken();
+  }, []);
 
   // Si el rol es usuario y la sección actual no está permitida, redirigir
   useEffect(() => {
@@ -164,27 +211,44 @@ function App() {
     }
   }, [role, section]);
 
+  // Mostrar un loader mientras se verifica la autenticación inicial
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando aplicación...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className={`bg-white shadow-soft border-b border-gray-200 transition-all duration-300 ${
-        isLoggedIn ? 'ml-64' : ''
-      }`}>
-        <div className="flex items-center justify-center h-16 px-6">
-          <h1 className="text-2xl font-bold text-gray-900">Sistema de Gestión Contable</h1>
-        </div>
-      </header>
+      {/* Header - Solo mostrar si está logueado */}
+      {isLoggedIn && (
+        <header className="bg-white shadow-soft border-b border-gray-200 transition-all duration-300 ml-64">
+          <div className="flex items-center justify-center h-16 px-6">
+            <h1 className="text-2xl font-bold text-gray-900">Sistema de Gestión Contable</h1>
+          </div>
+        </header>
+      )}
 
       {isLoggedIn ? (
         <div className="app-layout">
           <Sidebar 
             role={role} 
             onLogout={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('userId');
+              // Limpiar localStorage al cerrar sesión
+              localStorage.removeItem('token');
+              localStorage.removeItem('userId');
               localStorage.removeItem('role');
-            setIsLoggedIn(false);
-            setRole(null);
+              // Resetear estado
+              setIsLoggedIn(false);
+              setRole(null);
+              setSection('panel');
+              // Redirigir a la página de login
+              window.location.href = '/';
             }} 
             onSection={setSection} 
             section={section} 
@@ -199,10 +263,18 @@ function App() {
           </main>
         </div>
       ) : (
-        <AuthPage onLogin={() => { 
-          setIsLoggedIn(true); 
-          setRole(localStorage.getItem('role')); 
-        }} />
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+          <AuthPage onLogin={(userRole) => { 
+            setIsLoggedIn(true); 
+            setRole(userRole);
+            // Redirigir según el rol
+            if (userRole === 'user') {
+              setSection('facturacion');
+            } else {
+              setSection('panel');
+            }
+          }} />
+        </div>
       )}
     </div>
   );
