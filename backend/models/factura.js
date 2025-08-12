@@ -16,7 +16,7 @@ const FacturaSchema = new mongoose.Schema({
     ica: { type: Number, default: 0 }
   },
   usuario: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
-});
+}, { timestamps: true });
 
 // Calcular IVA automáticamente al 19% antes de guardar o actualizar
 FacturaSchema.pre('save', function(next) {

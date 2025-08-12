@@ -208,7 +208,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           <span>Nueva Factura</span>
-        </button>
+      </button>
       </div>
 
       {/* Tabla */}
@@ -216,20 +216,20 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
         <div className="overflow-x-auto">
           <table className="table">
             <thead className="table-header">
-              <tr>
-                <th>Número</th>
-                <th>Fecha</th>
-                <th>Proveedor</th>
-                <th>PUC</th>
-                <th>Monto</th>
-                <th>ReteFte</th>
-                <th>ICA</th>
+            <tr>
+              <th>Número</th>
+              <th>Fecha</th>
+              <th>Proveedor</th>
+              <th>PUC</th>
+              <th>Monto</th>
+              <th>ReteFte</th>
+              <th>ICA</th>
                 <th className="w-32">Acciones</th>
-              </tr>
-            </thead>
+            </tr>
+          </thead>
             <tbody className="table-body">
-              {loading ? (
-                <tr>
+            {loading ? (
+              <tr>
                   <td colSpan={8} className="text-center py-8">
                     <div className="flex items-center justify-center space-x-2">
                       <svg className="animate-spin h-5 w-5 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -239,9 +239,9 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       <span className="text-gray-500">Cargando facturas...</span>
                     </div>
                   </td>
-                </tr>
-              ) : facturas.length === 0 ? (
-                <tr>
+              </tr>
+            ) : facturas.length === 0 ? (
+              <tr>
                   <td colSpan={8} className="text-center py-12">
                     <div className="text-gray-500">
                       <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,9 +251,9 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       <p className="text-sm">Comienza creando tu primera factura</p>
                     </div>
                   </td>
-                </tr>
-              ) : (
-                facturas.map(factura => (
+              </tr>
+            ) : (
+              facturas.map(factura => (
                   <tr key={factura._id} className="table-row">
                     <td className="table-cell font-medium">{factura.numero}</td>
                     <td className="table-cell">{new Date(factura.fecha).toLocaleDateString()}</td>
@@ -270,31 +270,31 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     </td>
                     <td className="table-cell">
                       <div className="flex items-center space-x-2">
-                        <button
+                    <button
                           className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors duration-200"
-                          title="Editar"
-                          onClick={() => openModal(factura)}
-                        >
+                      title="Editar"
+                      onClick={() => openModal(factura)}
+                    >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
-                        </button>
-                        <button
+                    </button>
+                    <button
                           className="p-2 text-danger-600 hover:bg-danger-100 rounded-lg transition-colors duration-200"
-                          title="Eliminar"
-                          onClick={() => handleDelete(factura._id!)}
-                        >
+                      title="Eliminar"
+                      onClick={() => handleDelete(factura._id!)}
+                    >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
-                        </button>
+                    </button>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
         </div>
       </div>
 
@@ -302,7 +302,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-strong max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit}>
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -317,7 +317,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-              </div>
+                </div>
 
               {/* Body */}
               <div className="p-6">
@@ -349,7 +349,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
 
                   {/* Fecha */}
                   <div className="form-group">
-                    <label className="form-label">Fecha</label>
+                      <label className="form-label">Fecha</label>
                     <input
                       type="date"
                       className="form-input"
@@ -358,11 +358,11 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       onChange={handleChange}
                       required
                     />
-                  </div>
+                    </div>
 
                   {/* Proveedor */}
                   <div className="form-group">
-                    <label className="form-label">Proveedor</label>
+                      <label className="form-label">Proveedor</label>
                     <input
                       type="text"
                       className="form-input"
@@ -372,11 +372,11 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       required
                       placeholder="Nombre del proveedor"
                     />
-                  </div>
+                    </div>
 
                   {/* Monto */}
                   <div className="form-group">
-                    <label className="form-label">Monto</label>
+                      <label className="form-label">Monto</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span className="text-gray-500 sm:text-sm">$</span>
@@ -393,27 +393,27 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                         placeholder="0.00"
                       />
                     </div>
-                  </div>
+                    </div>
 
                   {/* PUC */}
                   <div className="form-group">
                     <label className="form-label">Cuenta PUC</label>
-                                         <Select
-                       classNamePrefix="react-select"
-                       options={pucOptions}
-                       placeholder="Seleccione cuenta..."
-                       value={pucOptions.find(o => o.value === form.puc) || null}
-                       onChange={option =>
-                         setForm(prev => ({ ...prev, puc: option ? option.value : '' }))
-                       }
-                       isClearable
+                      <Select
+                          classNamePrefix="react-select"
+                          options={pucOptions}
+                          placeholder="Seleccione cuenta..."
+                          value={pucOptions.find(o => o.value === form.puc) || null}
+                          onChange={option =>
+                            setForm(prev => ({ ...prev, puc: option ? option.value : '' }))
+                          }
+                          isClearable
                        className="react-select-container"
-                     />
-                  </div>
+                        />
+                    </div>
 
                   {/* Naturaleza */}
                   <div className="form-group">
-                    <label className="form-label">Naturaleza</label>
+                      <label className="form-label">Naturaleza</label>
                     <select
                       className="form-select"
                       name="naturaleza"
@@ -421,10 +421,10 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       onChange={handleChange}
                       required
                     >
-                      <option value="debito">Débito</option>
-                      <option value="credito">Crédito</option>
-                    </select>
-                  </div>
+                        <option value="debito">Débito</option>
+                        <option value="credito">Crédito</option>
+                      </select>
+                    </div>
 
                   {/* Detalle */}
                   <div className="form-group md:col-span-2 lg:col-span-3">
@@ -454,39 +454,39 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                         readOnly
                       />
                     </div>
-                  </div>
+                    </div>
 
                   {/* ReteFuente */}
                   <div className="form-group">
-                    <label className="form-label">ReteFuente %</label>
+                      <label className="form-label">ReteFuente %</label>
                     <select
                       className="form-select"
                       name="retefuentePct"
                       value={form.retefuentePct}
                       onChange={handleChange}
                     >
-                      {retefuenteOptions.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
+                        {retefuenteOptions.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
                     <p className="text-xs text-gray-500 mt-1">
                       Valor: {formatCurrency(form.impuestos.retefuente)}
                     </p>
-                  </div>
+                    </div>
 
                   {/* ICA */}
                   <div className="form-group">
-                    <label className="form-label">ICA %</label>
+                      <label className="form-label">ICA %</label>
                     <select
                       className="form-select"
                       name="icaPct"
                       value={form.icaPct}
                       onChange={handleChange}
                     >
-                      {icaOptions.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
+                        {icaOptions.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
                     <p className="text-xs text-gray-500 mt-1">
                       Valor: {formatCurrency(form.impuestos.ica)}
                     </p>
@@ -509,8 +509,8 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                 >
                   {editing ? 'Actualizar Factura' : 'Crear Factura'}
                 </button>
-              </div>
-            </form>
+                </div>
+              </form>
           </div>
         </div>
       )}

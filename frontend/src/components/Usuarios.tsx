@@ -259,18 +259,18 @@ const Usuarios: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="table">
             <thead className="table-header">
-              <tr>
+            <tr>
                 <th>Usuario</th>
-                <th>Email</th>
-                <th>Rol</th>
-                <th>Estado</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th>Estado</th>
                 <th>Aprobación</th>
                 <th>Fecha Registro</th>
                 <th className="w-40">Acciones</th>
-              </tr>
-            </thead>
+            </tr>
+          </thead>
             <tbody className="table-body">
-              {loading ? (
+            {loading ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8">
                     <div className="flex items-center justify-center space-x-2">
@@ -294,7 +294,7 @@ const Usuarios: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ) : (
+            ) : (
                 usuarios.map(usuario => (
                   <tr key={usuario._id} className="table-row">
                     <td className="table-cell">
@@ -387,12 +387,12 @@ const Usuarios: React.FC = () => {
                           </svg>
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
         </div>
       </div>
 
@@ -400,7 +400,7 @@ const Usuarios: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-strong max-w-2xl w-full">
-            <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit}>
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -415,7 +415,7 @@ const Usuarios: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-              </div>
+                </div>
 
               {/* Body */}
               <div className="p-6">
@@ -526,8 +526,8 @@ const Usuarios: React.FC = () => {
                 >
                   {editing ? 'Actualizar Usuario' : 'Crear Usuario'}
                 </button>
-              </div>
-            </form>
+                </div>
+              </form>
           </div>
         </div>
       )}

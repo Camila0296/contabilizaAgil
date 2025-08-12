@@ -34,7 +34,7 @@ const Aprobaciones: React.FC = () => {
     } catch {
       showError('No se pudieron cargar las solicitudes');
     } finally {
-      setLoading(false);
+    setLoading(false);
     }
   };
 

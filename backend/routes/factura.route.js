@@ -134,6 +134,7 @@ const facturaCtrl = require('../controllers/factura.controller');
 router.use(auth);
 
 router.get('/', facturaCtrl.getFacturas);
+router.get('/dashboard-stats', facturaCtrl.getDashboardStats);
 router.get('/reportes', facturaCtrl.getReportes);
 router.get('/:id', facturaCtrl.getFactura);
 router.post('/', facturaCtrl.createFactura);

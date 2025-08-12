@@ -41,7 +41,7 @@ userCtrl.createUser = async (req, res) => {
       console.error('Error enviando correo:', mailErr);
     }
 
-    res.json({ status: 'Usuario creado', id: user._id });
+    res.json({ status: 'Usuario creado', id: user._id.toString() });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al crear usuario' });

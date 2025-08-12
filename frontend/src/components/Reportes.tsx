@@ -43,7 +43,7 @@ const Reportes: React.FC = () => {
   }, [filtroMes]);
 
   const fetchReportes = async () => {
-    try {
+      try {
       let url = '/facturas/reportes';
       if (filtroMes) {
         url += `?mes=${filtroMes}`;
@@ -154,7 +154,7 @@ const Reportes: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <span>PDF</span>
-          </button>
+        </button>
         </div>
       </div>
 
@@ -308,16 +308,16 @@ const Reportes: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="table">
               <thead className="table-header">
-                <tr>
+          <tr>
                   <th>Número</th>
-                  <th>Fecha</th>
-                  <th>Proveedor</th>
-                  <th>Monto</th>
+            <th>Fecha</th>
+            <th>Proveedor</th>
+            <th>Monto</th>
                   <th>IVA</th>
                   <th>ReteFuente</th>
                   <th>ICA</th>
-                </tr>
-              </thead>
+          </tr>
+        </thead>
               <tbody className="table-body">
                 {reporteData.facturasRecientes.map(factura => (
                   <tr key={factura._id} className="table-row">
@@ -330,10 +330,10 @@ const Reportes: React.FC = () => {
                     <td className="table-cell text-sm">{formatCurrency(factura.impuestos.iva)}</td>
                     <td className="table-cell text-sm">{formatCurrency(factura.impuestos.retefuente)}</td>
                     <td className="table-cell text-sm">{formatCurrency(factura.impuestos.ica)}</td>
-                  </tr>
+              </tr>
                 ))}
-              </tbody>
-            </table>
+        </tbody>
+      </table>
           </div>
         </div>
       </div>

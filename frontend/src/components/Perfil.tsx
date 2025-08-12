@@ -7,7 +7,7 @@ interface UserProfile {
   nombres: string;
   apellidos: string;
   email: string;
-  role: {
+  role?: {
     _id: string;
     name: string;
   };
@@ -34,7 +34,7 @@ const Perfil: React.FC = () => {
   }, []);
 
   const fetchProfile = async () => {
-    try {
+      try {
       const userId = localStorage.getItem('userId');
       if (!userId) {
         showError('No se pudo identificar al usuario');
@@ -42,7 +42,7 @@ const Perfil: React.FC = () => {
       }
 
       const res = await apiFetch(`/users/${userId}`);
-      const data = await res.json();
+        const data = await res.json();
       setProfile(data);
       setForm({
         nombres: data.nombres,
@@ -52,12 +52,12 @@ const Perfil: React.FC = () => {
         newPassword: '',
         confirmPassword: ''
       });
-    } catch {
-      showError('No se pudo cargar el perfil');
+      } catch {
+        showError('No se pudo cargar el perfil');
     } finally {
       setLoading(false);
     }
-  };
+    };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -194,7 +194,7 @@ const Perfil: React.FC = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="form-group">
-                      <label className="form-label">Nombres</label>
+          <label className="form-label">Nombres</label>
                       <input
                         type="text"
                         className="form-input"
@@ -204,10 +204,10 @@ const Perfil: React.FC = () => {
                         required
                         placeholder="Juan"
                       />
-                    </div>
+        </div>
 
                     <div className="form-group">
-                      <label className="form-label">Apellidos</label>
+          <label className="form-label">Apellidos</label>
                       <input
                         type="text"
                         className="form-input"
@@ -328,11 +328,11 @@ const Perfil: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-500">Rol</span>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  profile.role.name === 'admin' 
+                  profile.role?.name === 'admin' 
                     ? 'bg-primary-100 text-primary-800' 
                     : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {profile.role.name}
+                  {profile.role?.name || 'Sin rol'}
                 </span>
               </div>
 

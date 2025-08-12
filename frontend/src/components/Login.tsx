@@ -63,29 +63,29 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <label htmlFor="email" className="form-label">
             Correo electrónico
           </label>
-          <input
-            type="email"
+        <input
+          type="email"
             id="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
-            required
+          required
             className="form-input"
             placeholder="tu@email.com"
-          />
-        </div>
+        />
+      </div>
 
         <div>
           <label htmlFor="password" className="form-label">
             Contraseña
           </label>
-          <input
-            type="password"
+        <input
+          type="password"
             id="password"
             name="password"
             value={formData.password}
             onChange={handleChange}
-            required
+          required
             className="form-input"
             placeholder="••••••••"
           />
