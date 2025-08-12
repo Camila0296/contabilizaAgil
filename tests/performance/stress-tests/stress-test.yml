@@ -1,0 +1,54 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 120
+      arrivalRate: 50
+      name: "Estrés alto"
+    - duration: 60
+      arrivalRate: 100
+      name: "Estrés máximo"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+
+scenarios:
+  - name: "Estrés en login"
+    weight: 40
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "admin@admin.com"
+            password: "admin123"
+
+  - name: "Estrés en dashboard"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "admin@admin.com"
+            password: "admin123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/api/facturas/dashboard-stats"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "Estrés en facturas"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "admin@admin.com"
+            password: "admin123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/api/facturas"
+          headers:
+            Authorization: "Bearer {{ authToken }}" 

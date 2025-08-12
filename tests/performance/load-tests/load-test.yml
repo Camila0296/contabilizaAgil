@@ -1,0 +1,73 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: "Carga normal"
+    - duration: 60
+      arrivalRate: 20
+      name: "Carga media"
+    - duration: 60
+      arrivalRate: 30
+      name: "Carga alta"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+  processor: './load-test-processor.js'
+
+scenarios:
+  - name: "Login de usuarios"
+    weight: 50
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "admin@admin.com"
+            password: "admin123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/api/facturas"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "Crear facturas"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "admin@admin.com"
+            password: "admin123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - post:
+          url: "/api/facturas"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            numero: "F{{ $randomNumber }}"
+            fecha: "2024-01-15"
+            proveedor: "Proveedor Test"
+            monto: 1000000
+            puc: "5110"
+            detalle: "Servicios de consultoría"
+            naturaleza: "debito"
+
+  - name: "Consultar dashboard"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "admin@admin.com"
+            password: "admin123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/api/facturas/dashboard-stats"
+          headers:
+            Authorization: "Bearer {{ authToken }}" 
