@@ -10,8 +10,6 @@ interface HomeProps {
 interface DashboardStats {
   totalFacturas: number;
   totalMonto: number;
-  ingresosMes: number;
-  cambioPorcentual: number;
   usuariosActivos: number;
   usuariosPendientes: number;
   facturasRecientes: Array<{
@@ -95,17 +93,7 @@ const Home: React.FC<HomeProps> = ({ onSectionChange }) => {
         </svg>
       )
     },
-    {
-      title: 'Ingresos del Mes',
-      value: formatCurrency(stats?.ingresosMes ?? 0),
-      change: `${stats?.cambioPorcentual >= 0 ? '+' : ''}${stats?.cambioPorcentual}%` ?? '0%',
-      changeType: stats?.cambioPorcentual >= 0 ? 'positive' as const : 'negative' as const,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-        </svg>
-      )
-    },
+
     {
       title: 'Usuarios Activos',
       value: stats?.usuariosActivos?.toString() ?? '0',
@@ -154,7 +142,7 @@ const Home: React.FC<HomeProps> = ({ onSectionChange }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {statsData.map((stat, index) => (
           <div key={index} className="card">
             <div className="card-body">
