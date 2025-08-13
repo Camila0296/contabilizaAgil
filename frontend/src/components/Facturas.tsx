@@ -193,22 +193,26 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 pt-24 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Facturas</h1>
-          <p className="text-gray-600 mt-1">Administra tus facturas y documentos contables</p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <div className="mb-4 md:mb-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Gestión de Facturas</h1>
+          <p className="text-gray-600 mt-1 text-sm md:text-base">Administra tus facturas y documentos contables</p>
         </div>
-        <button 
-          className="btn btn-primary flex items-center space-x-2"
-          onClick={() => openModal()}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          <span>Nueva Factura</span>
-      </button>
+        {userId && (
+          <div className="w-full md:w-auto">
+            <button 
+              className="w-full md:w-auto btn btn-primary flex items-center justify-center space-x-2 py-2.5 px-4"
+              onClick={() => openModal()}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span>Nueva Factura</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabla */}

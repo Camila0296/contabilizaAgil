@@ -162,6 +162,7 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('role');
+    const userRoles = JSON.parse(localStorage.getItem('roles') || '[]');
     
     const validateToken = async () => {
       // Si no hay token o rol, marcar como no autenticado
@@ -174,6 +175,7 @@ function App() {
 
       // Primero establecer el estado como autenticado para mostrar la interfaz
       setIsLoggedIn(true);
+      // Usar el rol principal para compatibilidad con el código existente
       setRole(userRole);
       
       // Validar el token en segundo plano
@@ -207,7 +209,13 @@ function App() {
 
   // Si el rol es usuario y la sección actual no está permitida, redirigir
   useEffect(() => {
-    if (role === 'user' && section === 'panel') {
+    if (!role) return; // Si no hay rol, no hacer nada
+    
+    const userRoles = JSON.parse(localStorage.getItem('roles') || '[]');
+    const isAdmin = userRoles.includes('admin');
+    
+    // Si no es admin y está en una sección no permitida, redirigir a facturación
+    if (!isAdmin && (section === 'panel' || section === 'usuarios' || section === 'aprobaciones')) {
       setSection('facturacion');
     }
   }, [role, section]);
@@ -302,11 +310,16 @@ function App() {
           <AuthPage onLogin={(userRole) => { 
             setIsLoggedIn(true); 
             setRole(userRole);
+            
+            // Obtener roles desde localStorage
+            const userRoles = JSON.parse(localStorage.getItem('roles') || '[]');
+            const isAdmin = userRoles.includes('admin');
+            
             // Redirigir según el rol
-            if (userRole === 'user') {
-              setSection('facturacion');
-            } else {
+            if (isAdmin) {
               setSection('panel');
+            } else {
+              setSection('facturacion');
             }
           }} />
         </div>

@@ -38,10 +38,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userId', data.user.id);
-        const userRole = data.user.role;
-        localStorage.setItem('role', userRole);
+        // Asegurarse de que el rol sea un array
+        const userRoles = Array.isArray(data.user.role) ? data.user.role : [data.user.role];
+        localStorage.setItem('role', userRoles[0]); // Guardar el primer rol como string para compatibilidad
+        localStorage.setItem('roles', JSON.stringify(userRoles)); // Guardar todos los roles como array JSON
         showSuccess('Inicio de sesión exitoso');
-        onLogin(userRole);
+        onLogin(userRoles[0]); // Pasar el primer rol para compatibilidad
       } else {
         showError(data.error || 'Error en el inicio de sesión');
       }

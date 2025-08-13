@@ -128,17 +128,36 @@
 
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
 const facturaCtrl = require('../controllers/factura.controller');
+const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
+// Aplicar middleware de autenticación a todas las rutas
 router.use(auth);
 
-router.get('/', facturaCtrl.getFacturas);
-router.get('/dashboard-stats', facturaCtrl.getDashboardStats);
-router.get('/reportes', facturaCtrl.getReportes);
-router.get('/:id', facturaCtrl.getFactura);
+// Ruta para crear una factura - cualquier usuario autenticado puede crear facturas
 router.post('/', facturaCtrl.createFactura);
+
+// Ruta para generar reportes (accesible para todos los usuarios autenticados, pero filtrados por usuario)
+router.get('/reportes', facturaCtrl.getReportes);
+
+// Ruta para obtener todas las facturas (solo admin puede ver todas, usuarios solo las suyas)
+router.get('/', facturaCtrl.getFacturas);
+
+// Ruta para obtener una factura por ID
+router.get('/:id', facturaCtrl.getFactura);
+
+// Ruta para actualizar una factura (solo admin o el dueño)
 router.put('/:id', facturaCtrl.updateFactura);
+
+// Ruta para eliminar una factura (solo admin o el dueño)
 router.delete('/:id', facturaCtrl.deleteFactura);
+
+// Rutas solo para administradores
+const adminOnlyRoutes = ['/dashboard/stats'];
+router.use(adminOnlyRoutes, role('admin'));
+
+// Ruta para obtener estadísticas del dashboard (solo admin)
+router.get('/dashboard/stats', facturaCtrl.getDashboardStats);
 
 module.exports = router;
