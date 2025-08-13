@@ -33,22 +33,28 @@ Sistema de gestión integral desarrollado con una arquitectura moderna que inclu
 ## 🛠️ Tecnologías Utilizadas
 
 ### Frontend
-- React.js
-- Redux para gestión de estado
-- Material-UI para componentes de interfaz
-- Axios para peticiones HTTP
+- React 18 con TypeScript
+- React Router DOM para navegación
+- Tailwind CSS con @tailwindcss/forms para estilos
+- React Select para componentes de selección
+- jsPDF y jsPDF-AutoTable para generación de PDFs
+- SweetAlert2 para notificaciones
+- XLSX para manejo de archivos Excel
 
 ### Backend
 - Node.js con Express
-- MongoDB como base de datos
+- MongoDB con Mongoose como ODM
 - JWT para autenticación
-- Mongoose para ODM
+- Bcrypt para hashing de contraseñas
+- Nodemailer para envío de correos
+- Swagger para documentación de API
+- Morgan para logging
 
 ### Testing
-- Jest para pruebas unitarias
-- Supertest para pruebas de API
-- Cucumber para pruebas E2E
-- Selenium WebDriver para automatización
+- Jest para pruebas unitarias (backend)
+- Cucumber + Selenium WebDriver para pruebas E2E
+- Jest para cobertura de código
+- Nock para mocks HTTP (en pruebas unitarias)
 
 ## 🚀 Instalación
 
