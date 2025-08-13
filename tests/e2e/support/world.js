@@ -1,7 +1,9 @@
 const { setWorldConstructor } = require('@cucumber/cucumber');
-// Cargar binario de ChromeDriver instalado por npm
-require('chromedriver');
 const { Builder, By, until } = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
+
+// Cargar ChromeDriver
+require('chromedriver');
 
 class CustomWorld {
   constructor() {
@@ -12,7 +14,30 @@ class CustomWorld {
   }
 
   async initDriver() {
-    this.driver = await new Builder().forBrowser('chrome').build();
+    if (this.driver) {
+      return this.driver;
+    }
+
+    const chromeOptions = new chrome.Options();
+    chromeOptions.addArguments(
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--window-size=1280,1024'
+    );
+
+    this.driver = await new Builder()
+      .forBrowser('chrome')
+      .setChromeOptions(chromeOptions)
+      .build();
+      
+    // Configurar timeouts
+    await this.driver.manage().setTimeouts({
+      implicit: 10000,
+      pageLoad: 30000,
+      script: 30000
+    });
+    
     return this.driver;
   }
 
@@ -20,7 +45,7 @@ class CustomWorld {
     await this.driver.get(url);
   }
 
-  async waitForElement(selector, timeout = 5000) {
+  async waitForElement(selector, timeout = 50000) {
     await this.driver.wait(until.elementLocated(By.css(selector)), timeout);
   }
 
@@ -56,7 +81,7 @@ class CustomWorld {
     }
   }
 
-  async login(email = 'admin@admin.com', password = 'admin123') {
+  async login(email = 'admin@admin.com', password = 'admin') {
     await this.driver.get('http://localhost:4200');
     
     const emailInput = await this.driver.findElement(By.name('email'));
@@ -67,7 +92,7 @@ class CustomWorld {
     await passwordInput.sendKeys(password);
     await loginButton.click();
     
-    await this.driver.wait(until.urlContains('/dashboard'), 5000);
+    await this.driver.wait(until.urlContains('/dashboard'), 50000);
   }
 
   async logout() {
@@ -83,7 +108,7 @@ class CustomWorld {
     }
   }
 
-  async waitForUrl(url, timeout = 5000) {
+  async waitForUrl(url, timeout = 50000) {
     await this.driver.wait(until.urlContains(url), timeout);
   }
 

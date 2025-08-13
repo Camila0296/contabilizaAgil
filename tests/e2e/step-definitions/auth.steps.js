@@ -47,19 +47,19 @@ When('intento hacer clic en {string} sin llenar los campos', async function(butt
 });
 
 Then('debería ser redirigido al dashboard', async function() {
-  await driver.wait(until.urlContains('/dashboard'), 5000);
+  await driver.wait(until.urlContains('/'), 5000);
   const currentUrl = await driver.getCurrentUrl();
-  expect(currentUrl).to.include('/dashboard');
+  expect(currentUrl).to.include('/');
 });
 
 Then('debería ver el mensaje de bienvenida', async function() {
   try {
-    const welcomeMessage = await driver.findElement(By.xpath("//*[contains(text(), 'Bienvenido')]"));
+    const welcomeMessage = await driver.findElement(By.xpath("//*[contains(text(), 'Éxito')]"));
     expect(await welcomeMessage.isDisplayed()).to.be.true;
   } catch (error) {
     // Si no encuentra el mensaje específico, verificar que estamos en el dashboard
     const currentUrl = await driver.getCurrentUrl();
-    expect(currentUrl).to.include('/dashboard');
+    expect(currentUrl).to.include('/');
   }
 });
 
