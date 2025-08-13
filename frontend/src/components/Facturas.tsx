@@ -212,21 +212,21 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
       </div>
 
       {/* Tabla */}
-      <div className="card">
+      <div className="card p-0 overflow-hidden md:overflow-x-auto">
         <div className="overflow-x-auto">
-          <table className="table">
-            <thead className="table-header">
-            <tr>
-              <th>Número</th>
-              <th>Fecha</th>
-              <th>Proveedor</th>
-              <th>PUC</th>
-              <th>Monto</th>
-              <th>ReteFte</th>
-              <th>ICA</th>
-                <th className="w-32">Acciones</th>
-            </tr>
-          </thead>
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Número</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Fecha</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Proveedor</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">PUC</th>
+                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Monto</th>
+                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell whitespace-nowrap">ReteFte</th>
+                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell whitespace-nowrap">ICA</th>
+                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Acciones</th>
+              </tr>
+            </thead>
             <tbody className="table-body">
             {loading ? (
               <tr>
@@ -254,41 +254,59 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
               </tr>
             ) : (
               facturas.map(factura => (
-                  <tr key={factura._id} className="table-row">
-                    <td className="table-cell font-medium">{factura.numero}</td>
-                    <td className="table-cell">{new Date(factura.fecha).toLocaleDateString()}</td>
-                    <td className="table-cell">{factura.proveedor}</td>
-                    <td className="table-cell text-sm text-gray-600">{getPucLabel(factura.puc)}</td>
-                    <td className="table-cell font-semibold">{formatCurrency(factura.monto)}</td>
-                    <td className="table-cell text-sm">
-                      {formatCurrency(factura.impuestos.retefuente)}
-                      <span className="text-gray-500 ml-1">({(factura.retefuentePct || 0).toFixed(2)}%)</span>
-                    </td>
-                    <td className="table-cell text-sm">
-                      {formatCurrency(factura.impuestos.ica)}
-                      <span className="text-gray-500 ml-1">({(factura.icaPct || 0).toFixed(3)}%)</span>
-                    </td>
-                    <td className="table-cell">
-                      <div className="flex items-center space-x-2">
+                  <tr key={factura._id} className="hover:bg-gray-50 border-b border-gray-200 last:border-b-0">
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">{factura.numero}</div>
+                  <div className="text-xs text-gray-500 sm:hidden">
+                    {new Date(factura.fecha).toLocaleDateString()}
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
+                  {new Date(factura.fecha).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{factura.proveedor}</div>
+                  <div className="text-xs text-gray-500 lg:hidden truncate max-w-[150px]">
+                    {getPucLabel(factura.puc)}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">
+                  <div className="truncate max-w-[200px]">
+                    {getPucLabel(factura.puc)}
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
+                  {formatCurrency(factura.monto)}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right text-sm text-gray-500 hidden md:table-cell">
+                  <div>{formatCurrency(factura.impuestos.retefuente)}</div>
+                  <div className="text-xs text-gray-400">({(factura.retefuentePct || 0).toFixed(2)}%)</div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right text-sm text-gray-500 hidden md:table-cell">
+                  <div>{formatCurrency(factura.impuestos.ica)}</div>
+                  <div className="text-xs text-gray-400">({(factura.icaPct || 0).toFixed(3)}%)</div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                  <div className="flex justify-end space-x-2">
                     <button
-                          className="p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors duration-200"
+                      className="text-primary-600 hover:text-primary-900 p-1 rounded-md hover:bg-primary-50 transition-colors duration-200"
                       title="Editar"
                       onClick={() => openModal(factura)}
                     >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
                     </button>
                     <button
-                          className="p-2 text-danger-600 hover:bg-danger-100 rounded-lg transition-colors duration-200"
+                      className="text-danger-600 hover:text-danger-900 p-1 rounded-md hover:bg-danger-50 transition-colors duration-200"
                       title="Eliminar"
                       onClick={() => handleDelete(factura._id!)}
                     >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                     </button>
-                      </div>
+                  </div>
                   </td>
                 </tr>
               ))

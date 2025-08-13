@@ -156,6 +156,7 @@ function App() {
   const [role, setRole] = useState<string | null>(null);
   const [section, setSection] = useState<Section>('panel');
   const [isLoading, setIsLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Verificar autenticación al cargar
   useEffect(() => {
@@ -227,33 +228,67 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       {/* Header - Solo mostrar si está logueado */}
       {isLoggedIn && (
-        <header className="bg-white shadow-soft border-b border-gray-200 transition-all duration-300 ml-64">
-          <div className="flex items-center justify-center h-16 px-6">
-            <h1 className="text-2xl font-bold text-gray-900">Sistema de Gestión Contable</h1>
+        <header className="bg-white shadow-soft border-b border-gray-200 fixed top-0 right-0 left-0 z-30 lg:left-64 transition-all duration-300">
+          <div className="flex items-center justify-between h-16 px-4 sm:px-6">
+            {/* Botón de menú móvil */}
+            <button 
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-md text-gray-500 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 lg:hidden"
+              aria-expanded="false"
+            >
+              <span className="sr-only">Abrir menú</span>
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Sistema de Gestión Contable</h1>
+            <div className="w-8"></div> {/* Para mantener el balance del flex */}
           </div>
         </header>
       )}
 
       {isLoggedIn ? (
-        <div className="app-layout">
-          <Sidebar 
-            role={role} 
-            onLogout={() => {
-              // Limpiar localStorage al cerrar sesión
-              localStorage.removeItem('token');
-              localStorage.removeItem('userId');
-              localStorage.removeItem('role');
-              // Resetear estado
-              setIsLoggedIn(false);
-              setRole(null);
-              setSection('panel');
-              // Redirigir a la página de login
-              window.location.href = '/';
-            }} 
-            onSection={setSection} 
-            section={section} 
-          />
-          <main className="main-content">
+        <div className="relative min-h-screen flex">
+          {/* Overlay móvil */}
+          {mobileMenuOpen && (
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            ></div>
+          )}
+          
+          {/* Sidebar - Móvil y escritorio */}
+          <div className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 z-30 w-64 transition-transform duration-300 ease-in-out bg-white`}>
+            <div className="h-full overflow-y-auto">
+              <Sidebar 
+                role={role} 
+                onLogout={() => {
+                  // Limpiar localStorage al cerrar sesión
+                  localStorage.removeItem('token');
+                  localStorage.removeItem('userId');
+                  localStorage.removeItem('role');
+                  // Resetear estado
+                  setIsLoggedIn(false);
+                  setRole(null);
+                  setSection('panel');
+                  // Redirigir a la página de login
+                  window.location.href = '/';
+                }} 
+                onSection={(section) => {
+                  setSection(section);
+                  setMobileMenuOpen(false); // Cerrar menú al seleccionar una opción
+                }} 
+                section={section} 
+              />
+            </div>
+          </div>
+          
+          {/* Contenido principal */}
+          <main className="flex-1 pt-16 lg:pt-0 lg:ml-64 p-4 sm:p-6 transition-all duration-300">
             {section === 'panel' && role !== 'user' && <Home onSectionChange={setSection} />}
             {section === 'facturacion' && <Facturas userId={localStorage.getItem('userId')} />}
             {section === 'reportes' && <Reportes />}
