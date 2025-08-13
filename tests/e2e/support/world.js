@@ -1,16 +1,26 @@
-const { setWorldConstructor } = require('@cucumber/cucumber');
+const { setWorldConstructor, After, Before } = require('@cucumber/cucumber');
 const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
+const path = require('path');
+const fs = require('fs');
 
 // Cargar ChromeDriver
 require('chromedriver');
 
 class CustomWorld {
-  constructor() {
+  constructor({ attach, parameters }) {
+    this.attach = attach;
+    this.parameters = parameters;
     this.driver = null;
     this.currentPage = '';
     this.testData = {};
     this.screenshots = [];
+    
+    // Crear directorio de screenshots si no existe
+    this.screenshotsDir = path.join(process.cwd(), 'reports', 'screenshots');
+    if (!fs.existsSync(this.screenshotsDir)) {
+      fs.mkdirSync(this.screenshotsDir, { recursive: true });
+    }
   }
 
   async initDriver() {
@@ -76,9 +86,44 @@ class CustomWorld {
 
   async takeScreenshot(name) {
     if (this.driver) {
-      const screenshot = await this.driver.takeScreenshot();
-      this.screenshots.push({ name, data: screenshot });
+      try {
+        // Crear nombre de archivo seguro
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const safeName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const fileName = `${safeName}_${timestamp}.png`;
+        const screenshotPath = `${process.cwd()}/reports/screenshots/${fileName}`;
+        
+        // Tomar el screenshot
+        const screenshot = await this.driver.takeScreenshot();
+        
+        // Guardar en memoria para el reporte
+        this.screenshots.push({ 
+          name: safeName, 
+          data: screenshot,
+          path: screenshotPath
+        });
+        
+        // Guardar archivo en disco
+        const fs = require('fs');
+        const path = require('path');
+        
+        // Asegurarse de que exista el directorio
+        const dir = path.dirname(screenshotPath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        
+        // Guardar el archivo
+        fs.writeFileSync(screenshotPath, screenshot, 'base64');
+        console.log(`📸 Screenshot guardado en: ${screenshotPath}`);
+        
+        return screenshotPath;
+      } catch (error) {
+        console.error('Error al guardar el screenshot:', error);
+        return null;
+      }
     }
+    return null;
   }
 
   async login(email = 'admin@admin.com', password = 'admin') {

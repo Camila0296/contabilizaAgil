@@ -1,12 +1,15 @@
-const { Before, After, AfterAll, setDefaultTimeout, Status } = require('@cucumber/cucumber');
+const { Before, After, AfterAll, Status, setDefaultTimeout } = require('@cucumber/cucumber');
 const { Builder } = require('selenium-webdriver');
+const path = require('path');
+const fs = require('fs');
 
-// Aumentar el timeout a 2 minutos
-setDefaultTimeout(120000);
+// Configurar tiempo de espera global (2 minutos)
+setDefaultTimeout(2 * 60 * 1000);
 
 // Variable para controlar la ejecución secuencial
 let testInProgress = false;
 
+// Hook Before para cada escenario
 Before(async function() {
   // Esperar a que la prueba anterior termine
   while (testInProgress) {
@@ -14,38 +17,70 @@ Before(async function() {
   }
   
   testInProgress = true;
-  console.log('🚀 Iniciando nuevo escenario...');
+  const scenario = this.scenario || this.test;
+  if (scenario && scenario.pickle) {
+    console.log(`\n🚀 Iniciando escenario: ${scenario.pickle.name}`);
+  } else {
+    console.log('\n🚀 Iniciando escenario (nombre no disponible)');
+  }
   
-  // Inicializar el driver
-  await this.initDriver();
-  
-  // Configurar timeouts
-  await this.driver.manage().setTimeouts({
-    implicit: 30000,
-    pageLoad: 60000,
-    script: 60000
-  });
-  
-  // Maximizar ventana
   try {
-    await this.driver.manage().window().maximize();
+    // Inicializar el driver si no está inicializado
+    if (!this.driver) {
+      if (typeof this.initDriver === 'function') {
+        await this.initDriver();
+        
+        // Configurar timeouts del driver
+        if (this.driver && typeof this.driver.manage === 'function') {
+          await this.driver.manage().setTimeouts({
+            implicit: 30000,
+            pageLoad: 60000,
+            script: 60000
+          });
+          
+          // Maximizar ventana
+          try {
+            await this.driver.manage().window().maximize();
+          } catch (error) {
+            console.warn('No se pudo maximizar la ventana:', error.message);
+          }
+        }
+      } else {
+        console.warn('initDriver no está definido en el contexto del mundo');
+      }
+    }
   } catch (error) {
-    console.warn('No se pudo maximizar la ventana:', error.message);
+    console.error('Error en el hook Before:', error);
+    testInProgress = false;
+    throw error;
   }
 });
 
 After(async function(scenario) {
-  console.log(`🏁 Finalizando escenario: ${scenario.pickle.name}`);
+  const scenarioName = scenario.pickle.name;
+  console.log(`🏁 Finalizando escenario: ${scenarioName}`);
   
   // Tomar screenshot si el escenario falló
   if (scenario.result.status === Status.FAILED) {
-    console.error(`❌ El escenario falló: ${scenario.pickle.name}`);
+    console.error(`❌ El escenario falló: ${scenarioName}`);
     try {
-      await this.takeScreenshot(`failed-${scenario.pickle.name}`);
-      console.log('📸 Se tomó un screenshot del error');
+      const screenshotPath = await this.takeScreenshot(`failed_${scenarioName}`);
+      if (screenshotPath) {
+        // Adjuntar la ruta del screenshot al resultado del escenario
+        scenario.result.attachments = scenario.result.attachments || [];
+        scenario.result.attachments.push({
+          data: screenshotPath,
+          media: { type: 'text/plain' },
+          name: 'Screenshot Path'
+        });
+      }
     } catch (error) {
       console.error('Error al tomar screenshot:', error.message);
     }
+  } else if (process.env.SCREENSHOT_ON_SUCCESS === 'true') {
+    // Opcional: Tomar screenshot en éxito si está habilitado
+    console.log('✅ Escenario completado exitosamente');
+    await this.takeScreenshot(`success_${scenarioName}`);
   } else {
     console.log('✅ Escenario completado exitosamente');
   }

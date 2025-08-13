@@ -4,8 +4,8 @@
   "description": "Tests automatizados para el sistema de facturación",
   "scripts": {
     "test": "npm run test:e2e",
-    "test:e2e": "cucumber-js --config e2e/cucumber.js",
-    "test:e2e:parallel": "cucumber-js --config e2e/cucumber.js --parallel 2",
+    "test:e2e": "cucumber-js e2e/features/ -r e2e/support -f json:reports/cucumber-report.json -f @cucumber/pretty-formatter",
+    "test:e2e:parallel": "cucumber-js e2e/features/ -r e2e/support -f json:reports/cucumber-report.json -f @cucumber/pretty-formatter --parallel 2",
     "test:performance": "npm run test:load && npm run test:stress",
     "test:load": "artillery run tests/performance/load-tests/load-test.yml",
     "test:stress": "artillery run tests/performance/stress-tests/stress-test.yml",
@@ -14,11 +14,12 @@
   },
   "devDependencies": {
     "@cucumber/cucumber": "^10.0.1",
-    "@cucumber/pretty-formatter": "^1.0.0",
     "@playwright/test": "^1.40.0",
     "artillery": "^2.0.0",
     "chai": "^4.3.0",
     "chromedriver": "^138.0.5",
+    "cucumber-pretty": "^6.0.1",
+    "mkdirp": "^3.0.1",
     "selenium-webdriver": "^4.15.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.0"
@@ -31,5 +32,9 @@
     "automation"
   ],
   "author": "Tu Nombre",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@cucumber/html-formatter": "^21.14.0",
+    "@cucumber/pretty-formatter": "^2.0.1"
+  }
 }

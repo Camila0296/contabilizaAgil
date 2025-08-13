@@ -1,0 +1,22 @@
+# Ignore Node dependencies installed for tests
+aegir*
+node_modules/
+
+# Ignore test coverage reports
+coverage/
+.nyc_output/
+
+# Ignore Cypress/Playwright or other e2e artifacts
+videos/
+screenshots/
+report/
+
+# Ignore log files
+*.log
+
+# Ignore locally generated environment or config files
+.env*
+*.local.*
+
+# Ignore TypeScript build info
+tsconfig.*.tsbuildinfo

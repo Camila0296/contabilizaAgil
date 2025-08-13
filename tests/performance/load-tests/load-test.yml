@@ -23,7 +23,7 @@ scenarios:
           url: "/api/auth/login"
           json:
             email: "admin@admin.com"
-            password: "admin123"
+            password: "admin"
           capture:
             - json: "$.token"
               as: "authToken"
@@ -39,7 +39,7 @@ scenarios:
           url: "/api/auth/login"
           json:
             email: "admin@admin.com"
-            password: "admin123"
+            password: "admin"
           capture:
             - json: "$.token"
               as: "authToken"
@@ -63,7 +63,7 @@ scenarios:
           url: "/api/auth/login"
           json:
             email: "admin@admin.com"
-            password: "admin123"
+            password: "admin"
           capture:
             - json: "$.token"
               as: "authToken"
