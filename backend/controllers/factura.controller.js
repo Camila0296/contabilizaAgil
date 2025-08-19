@@ -230,11 +230,48 @@ facturaCtrl.getDashboardStats = async (req, res) => {
 facturaCtrl.getReportes = async (req, res) => {
   try {
     console.log('=== INICIO DE GENERACIÓN DE REPORTES ===');
-    console.log('Generando reporte con todas las facturas del sistema');
+    console.log('Query params recibidos:', req.query);
     
-    // No hay filtro por usuario, se muestran todas las facturas
+    // Construir filtro base
     const baseMatch = {};
-    console.log('Mostrando todas las facturas del sistema');
+    const { mes, usuarioId, proveedor, fechaInicio, fechaFin } = req.query;
+    
+    // Aplicar filtro de mes si está presente
+    if (mes) {
+      const [year, month] = mes.split('-');
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0);
+      
+      baseMatch.fecha = {
+        $gte: startDate.toISOString().split('T')[0],
+        $lte: endDate.toISOString().split('T')[0]
+      };
+      console.log('Filtro por mes aplicado:', mes);
+    }
+    
+    // Aplicar filtro de rango de fechas si está presente
+    if (fechaInicio && fechaFin) {
+      baseMatch.fecha = {
+        ...baseMatch.fecha,
+        $gte: new Date(fechaInicio).toISOString().split('T')[0],
+        $lte: new Date(fechaFin).toISOString().split('T')[0]
+      };
+      console.log('Filtro por rango de fechas aplicado:', fechaInicio, 'a', fechaFin);
+    }
+    
+    // Aplicar filtro de usuario si está presente
+    if (usuarioId) {
+      baseMatch.usuario = usuarioId;
+      console.log('Filtro por usuario aplicado:', usuarioId);
+    }
+    
+    // Aplicar filtro de proveedor si está presente
+    if (proveedor) {
+      baseMatch.proveedor = { $regex: proveedor, $options: 'i' };
+      console.log('Filtro por proveedor aplicado:', proveedor);
+    }
+    
+    console.log('Filtros aplicados:', baseMatch);
 
     // Verificar si hay facturas que coincidan con el filtro
     const facturasCount = await Factura.countDocuments(baseMatch);
@@ -281,22 +318,39 @@ facturaCtrl.getReportes = async (req, res) => {
     ];
     const topProveedores = await Factura.aggregate(topProveedoresAgg);
     
-    // Facturas por mes (últimos 6 meses)
-    const seisMesesAtras = new Date();
-    seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
+    // Obtener meses disponibles para el filtro (últimos 12 meses con facturas)
+    const doceMesesAtras = new Date();
+    doceMesesAtras.setMonth(doceMesesAtras.getMonth() - 12);
     
-    const porMesAgg = [
+    const mesesConFacturas = await Factura.aggregate([
       { 
         $match: { 
           ...baseMatch,
-          fecha: { $gte: seisMesesAtras.toISOString().split('T')[0] } 
+          fecha: { $gte: doceMesesAtras.toISOString().split('T')[0] } 
         } 
       },
-      { $group: { 
-        _id: { $substr: ['$fecha', 0, 7] }, 
-        count: { $sum: 1 }, 
-        total: { $sum: '$monto' } 
-      }},
+      { 
+        $group: { 
+          _id: { $substr: ['$fecha', 0, 7] },
+          minDate: { $min: '$fecha' },
+          maxDate: { $max: '$fecha' }
+        } 
+      },
+      { $sort: { _id: -1 } }
+    ]);
+    
+    // Obtener estadísticas por mes
+    const porMesAgg = [
+      { 
+        $match: baseMatch
+      },
+      { 
+        $group: { 
+          _id: { $substr: ['$fecha', 0, 7] }, 
+          count: { $sum: 1 }, 
+          total: { $sum: '$monto' } 
+        }
+      },
       { $sort: { _id: 1 } }
     ];
     const porMes = await Factura.aggregate(porMesAgg);
@@ -329,6 +383,18 @@ facturaCtrl.getReportes = async (req, res) => {
       monto: item.total
     }));
     
+    // Obtener lista de proveedores para el filtro
+    const proveedores = await Factura.distinct('proveedor', baseMatch);
+    
+    // Obtener lista de usuarios para el filtro
+    const usuarios = await Factura.aggregate([
+      { $match: baseMatch },
+      { $lookup: { from: 'usuarios', localField: 'usuario', foreignField: '_id', as: 'usuarioInfo' } },
+      { $unwind: '$usuarioInfo' },
+      { $group: { _id: '$usuario', nombre: { $first: { $concat: ['$usuarioInfo.nombres', ' ', '$usuarioInfo.apellidos'] } } } },
+      { $project: { _id: 1, nombre: 1 } }
+    ]);
+    
     res.json({
       totalFacturas,
       totalMonto: totalMonto[0]?.total || 0,
@@ -337,7 +403,15 @@ facturaCtrl.getReportes = async (req, res) => {
       totalIca: totalesImpuestos[0]?.totalIca || 0,
       facturasPorMes,
       topProveedores: topProveedoresFormateado,
-      facturasRecientes
+      facturasRecientes,
+      filtros: {
+        mesesDisponibles: mesesConFacturas.map(m => ({
+          id: m._id,
+          label: new Date(m._id).toLocaleDateString('es-ES', { year: 'numeric', month: 'long' })
+        })),
+        proveedores: proveedores.filter(p => p).sort(),
+        usuarios: usuarios
+      }
     });
   } catch (error) {
     console.error('Error generando reportes:', error);

@@ -21,6 +21,16 @@ interface Factura {
   usuario?: any;
 }
 
+interface FiltroMes {
+  id: string;
+  label: string;
+}
+
+interface UsuarioFiltro {
+  _id: string;
+  nombre: string;
+}
+
 interface ReporteData {
   totalFacturas: number;
   totalMonto: number;
@@ -30,27 +40,98 @@ interface ReporteData {
   facturasPorMes: { mes: string; cantidad: number; monto: number }[];
   topProveedores: { proveedor: string; cantidad: number; monto: number }[];
   facturasRecientes: Factura[];
+  filtros?: {
+    mesesDisponibles: FiltroMes[];
+    proveedores: string[];
+    usuarios: UsuarioFiltro[];
+  };
 }
 
 const Reportes: React.FC = () => {
   const [reporteData, setReporteData] = useState<ReporteData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filtroMes, setFiltroMes] = useState<string>('');
+  const [filtros, setFiltros] = useState({
+    mes: '',
+    usuario: '',
+    proveedor: '',
+    fechaInicio: '',
+    fechaFin: ''
+  });
+  const [filtrosDisponibles, setFiltrosDisponibles] = useState<{
+    meses: FiltroMes[];
+    usuarios: UsuarioFiltro[];
+    proveedores: string[];
+  }>({ meses: [], usuarios: [], proveedores: [] });
+  const [cargandoFiltros, setCargandoFiltros] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Cargar filtros disponibles al montar el componente
   useEffect(() => {
-    fetchReportes();
+    const cargarFiltrosDisponibles = async () => {
+      try {
+        const res = await apiFetch('/facturas/reportes');
+        const data = await res.json();
+        
+        if (data.filtros) {
+          setFiltrosDisponibles({
+            meses: data.filtros.mesesDisponibles || [],
+            usuarios: data.filtros.usuarios || [],
+            proveedores: data.filtros.proveedores || []
+          });
+        }
+      } catch (error) {
+        console.error('Error cargando filtros:', error);
+      } finally {
+        setCargandoFiltros(false);
+      }
+    };
+    
+    cargarFiltrosDisponibles();
+  }, []);
+  
+  // Actualizar reporte cuando cambien los filtros
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchReportes();
+    }, 500); // Debounce para evitar múltiples llamadas
+    
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroMes]);
+  }, [filtros]);
 
+  const handleFiltroChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFiltros(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  const limpiarFiltros = () => {
+    setFiltros({
+      mes: '',
+      usuario: '',
+      proveedor: '',
+      fechaInicio: '',
+      fechaFin: ''
+    });
+  };
+  
   const fetchReportes = async () => {
     try {
-      console.log('Iniciando fetchReportes');
+      console.log('Iniciando fetchReportes con filtros:', filtros);
       setLoading(true);
-      let url = '/facturas/reportes';
-      if (filtroMes) {
-        url += `?mes=${filtroMes}`;
-      }
+      
+      // Construir query string con los filtros
+      const params = new URLSearchParams();
+      if (filtros.mes) params.append('mes', filtros.mes);
+      if (filtros.usuario) params.append('usuarioId', filtros.usuario);
+      if (filtros.proveedor) params.append('proveedor', filtros.proveedor);
+      if (filtros.fechaInicio) params.append('fechaInicio', filtros.fechaInicio);
+      if (filtros.fechaFin) params.append('fechaFin', filtros.fechaFin);
+      
+      const queryString = params.toString();
+      const url = `/facturas/reportes${queryString ? `?${queryString}` : ''}`;
       
       console.log('Realizando petición a:', url);
       const res = await apiFetch(url);
@@ -100,9 +181,18 @@ const Reportes: React.FC = () => {
     return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
   };
 
+  const formatearFecha = (fecha: string) => {
+    if (!fecha) return '';
+    return new Date(fecha).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   const generarReportePDF = () => {
     if (reporteData) {
-      exportarPDF(reporteData, filtroMes || getMesActual());
+      exportarPDF(reporteData, filtros.mes || getMesActual());
     } else {
       showError('No hay datos para exportar');
     }
@@ -110,7 +200,7 @@ const Reportes: React.FC = () => {
 
   const exportarExcelReporte = () => {
     if (reporteData) {
-      exportarExcel(reporteData, filtroMes || getMesActual());
+      exportarExcel(reporteData, filtros.mes || getMesActual());
     } else {
       showError('No hay datos para exportar');
     }
@@ -187,51 +277,153 @@ const Reportes: React.FC = () => {
   return (
     <div className="container mx-auto px-4 pt-24 pb-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
-          <p className="text-sm text-gray-500">Resumen y análisis de facturas</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <select
-            className="form-select w-full sm:w-auto"
-            value={filtroMes}
-            onChange={(e) => setFiltroMes(e.target.value)}
-          >
-            <option value="">Todos los meses</option>
-            <option value="2024-01">Enero 2024</option>
-            <option value="2024-02">Febrero 2024</option>
-            <option value="2024-03">Marzo 2024</option>
-            <option value="2024-04">Abril 2024</option>
-            <option value="2024-05">Mayo 2024</option>
-            <option value="2024-06">Junio 2024</option>
-            <option value="2024-07">Julio 2024</option>
-            <option value="2024-08">Agosto 2024</option>
-            <option value="2024-09">Septiembre 2024</option>
-            <option value="2024-10">Octubre 2024</option>
-            <option value="2024-11">Noviembre 2024</option>
-            <option value="2024-12">Diciembre 2024</option>
-          </select>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={generarReportePDF}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              <svg className="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              PDF
-            </button>
-            <button
-              onClick={exportarExcelReporte}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              <svg className="-ml-1 mr-2 h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Excel
-            </button>
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-2xl font-bold text-gray-900">Reportes de Facturas</h2>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white shadow rounded-lg p-4 mb-6">
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <h3 className="text-lg font-medium text-gray-900">Filtros de Reporte</h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={limpiarFiltros}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                Limpiar Filtros
+              </button>
+              <button
+                onClick={generarReportePDF}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <svg className="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                PDF
+              </button>
+              <button
+                onClick={exportarExcelReporte}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <svg className="-ml-1 mr-2 h-5 w-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Excel
+              </button>
+            </div>
           </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Filtro por mes */}
+            <div>
+              <label htmlFor="mes" className="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+              <select
+                id="mes"
+                name="mes"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                value={filtros.mes}
+                onChange={handleFiltroChange}
+                disabled={cargandoFiltros}
+              >
+                <option value="">Todos los meses</option>
+                {filtrosDisponibles.meses.map((mes) => (
+                  <option key={mes.id} value={mes.id}>
+                    {mes.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro por usuario */}
+            <div>
+              <label htmlFor="usuario" className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+              <select
+                id="usuario"
+                name="usuario"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                value={filtros.usuario}
+                onChange={handleFiltroChange}
+                disabled={cargandoFiltros}
+              >
+                <option value="">Todos los usuarios</option>
+                {filtrosDisponibles.usuarios.map((usuario) => (
+                  <option key={usuario._id} value={usuario._id}>
+                    {usuario.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro por proveedor */}
+            <div>
+              <label htmlFor="proveedor" className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+              <select
+                id="proveedor"
+                name="proveedor"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                value={filtros.proveedor}
+                onChange={handleFiltroChange}
+                disabled={cargandoFiltros}
+              >
+                <option value="">Todos los proveedores</option>
+                {filtrosDisponibles.proveedores.map((proveedor) => (
+                  <option key={proveedor} value={proveedor}>
+                    {proveedor}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro por rango de fechas */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rango de fechas</label>
+              <div className="flex space-x-2">
+                <input
+                  type="date"
+                  name="fechaInicio"
+                  className="block w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  value={filtros.fechaInicio}
+                  onChange={handleFiltroChange}
+                />
+                <span className="flex items-center">a</span>
+                <input
+                  type="date"
+                  name="fechaFin"
+                  className="block w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  value={filtros.fechaFin}
+                  onChange={handleFiltroChange}
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* Resumen de filtros aplicados */}
+          {(filtros.mes || filtros.usuario || filtros.proveedor || filtros.fechaInicio || filtros.fechaFin) && (
+            <div className="mt-2 text-sm text-gray-600">
+              <span className="font-medium">Filtros aplicados:</span>
+              {filtros.mes && (
+                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  Mes: {filtrosDisponibles.meses.find(m => m.id === filtros.mes)?.label || filtros.mes}
+                </span>
+              )}
+              {filtros.usuario && (
+                <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                  Usuario: {filtrosDisponibles.usuarios.find(u => u._id === filtros.usuario)?.nombre || filtros.usuario}
+                </span>
+              )}
+              {filtros.proveedor && (
+                <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
+                  Proveedor: {filtros.proveedor}
+                </span>
+              )}
+              {filtros.fechaInicio && filtros.fechaFin && (
+                <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                  {formatearFecha(filtros.fechaInicio)} - {formatearFecha(filtros.fechaFin)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
