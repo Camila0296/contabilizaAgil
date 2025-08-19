@@ -28,7 +28,7 @@ const options = {
       },
     ],
   },
-  apis: ['./backend/routes/*.js', './backend/models/*.js'], // Archivos con anotaciones Swagger
+  apis: ['./routes/*.js', './models/*.js'], // Archivos con anotaciones Swagger
 };
 
 const swaggerSpec = swaggerJSDoc(options);
