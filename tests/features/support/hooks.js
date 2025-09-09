@@ -1,29 +1,50 @@
-const { Before, After, BeforeAll, AfterAll } = require('@cucumber/cucumber');
-const { setDefaultTimeout } = require('@cucumber/cucumber');
+const { Before, After, BeforeAll, AfterAll, setDefaultTimeout } = require('@cucumber/cucumber');
 
-// Set default timeout to 60 seconds
+// Establecer tiempo de espera predeterminado a 60 segundos
 setDefaultTimeout(60 * 1000);
 
 BeforeAll(async function() {
-  console.log('🚀 Starting test suite...');
+  console.log('🚀 Iniciando suite de pruebas...');
+  console.log('Entorno:', process.env.NODE_ENV || 'development');
+  console.log('Versión de Node.js:', process.version);
 });
 
 Before(async function() {
-  // Initialize the WebDriver before each scenario
-  await this.init();
+  console.log('\n🌱 Iniciando un nuevo escenario...');
+  try {
+    console.log('Inicializando WebDriver...');
+    await this.init();
+    console.log('WebDriver inicializado correctamente');
+  } catch (error) {
+    console.error('❌ Error al inicializar WebDriver:', error);
+    throw error;
+  }
 });
 
 After(async function(scenario) {
-  // Take a screenshot if the scenario failed
-  if (scenario.result && scenario.result.status === 'FAILED') {
-    const screenshot = await this.driver.takeScreenshot();
-    this.attach(screenshot, 'image/png');
+  console.log('\n🏁 Escenario finalizado con estado:', scenario.result?.status || 'desconocido');
+  
+  if (scenario.result?.status === 'FAILED') {
+    console.log('❌ ¡Escenario fallido!');
+    try {
+      console.log('Tomando captura de pantalla...');
+      const screenshot = await this.driver.takeScreenshot();
+      this.attach(screenshot, 'image/png');
+      console.log('Captura de pantalla guardada');
+    } catch (error) {
+      console.error('❌ Error al tomar la captura de pantalla:', error);
+    }
   }
   
-  // Quit the WebDriver after each scenario
-  await this.quit();
+  try {
+    console.log('Cerrando WebDriver...');
+    await this.quit();
+    console.log('WebDriver cerrado correctamente');
+  } catch (error) {
+    console.error('❌ Error al cerrar WebDriver:', error);
+  }
 });
 
 AfterAll(async function() {
-  console.log('🏁 Test suite completed');
+  console.log('\n🏁 Suite de pruebas finalizada');
 });

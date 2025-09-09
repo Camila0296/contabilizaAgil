@@ -1,6 +1,6 @@
 const { setWorldConstructor } = require('@cucumber/cucumber');
 const { Builder, By, until } = require('selenium-webdriver');
-const firefox = require('selenium-webdriver/firefox');
+const chrome = require('selenium-webdriver/chrome');
 
 class CustomWorld {
   constructor({ attach }) {
@@ -9,23 +9,26 @@ class CustomWorld {
   }
 
   async init() {
-    const options = new firefox.Options();
+    console.log('Inicializando WebDriver...');
+    const options = new chrome.Options();
     
-    // Run in headless mode by default
+    // Ejecutar en modo sin cabeza (headless) por defecto
     if (process.env.HEADED !== 'true') {
-      options.headless();
+      options.addArguments('--headless=new');
     }
     
-    // Additional options
-    options.setPreference('browser.privatebrowsing.autostart', true);
+    // Opciones adicionales
+    options.addArguments('--no-sandbox');
+    options.addArguments('--disable-dev-shm-usage');
+    options.addArguments('--window-size=1920,1080');
     
-    // Initialize the WebDriver
+    // Inicializar el WebDriver
     this.driver = await new Builder()
-      .forBrowser('firefox')
-      .setFirefoxOptions(options)
+      .forBrowser('chrome')
+      .setChromeOptions(options)
       .build();
-      
-    // Set timeouts
+    
+    // Configurar timeouts
     await this.driver.manage().setTimeouts({
       implicit: 10000,
       pageLoad: 30000,

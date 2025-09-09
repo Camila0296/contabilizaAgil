@@ -5,24 +5,18 @@
   "scripts": {
     "test": "cucumber-js",
     "test:headed": "set HEADED=true && npm test",
-    "test:debug": "set DEBUG=true && npm run test:headed"
+    "test:debug": "set DEBUG=* && npm test"
   },
   "dependencies": {
-    "@cucumber/cucumber": "^9.5.1",
-    "chai": "^4.3.7",
+    "@cucumber/cucumber": "^9.6.0",
+    "chai": "^4.5.0",
     "chromedriver": "^115.0.0",
-    "selenium-webdriver": "^4.10.0"
+    "selenium-webdriver": "^4.35.0"
   },
-  "keywords": [
-    "testing",
-    "e2e",
-    "cucumber",
-    "selenium",
-    "automation"
-  ],
-  "author": "Tu Nombre",
-  "license": "MIT",
   "devDependencies": {
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
+    "@babel/register": "^7.28.3",
     "geckodriver": "^6.0.1"
   }
 }
