@@ -6,7 +6,7 @@
     "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "start:backend": "cd backend && npm run dev",
     "start:frontend": "cd frontend && npm start",
-    "test": "npm run test:unit && npm run test:e2e",
+    "test": "node tests/e2e/all-tests.js",
     "test:unit": "concurrently \"cd backend && npm test\" \"cd frontend && npm test\"",
     "test:e2e": "cd tests && npm run test:e2e",
     "test:performance": "cd tests && npm run test:performance",

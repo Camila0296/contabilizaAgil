@@ -13,7 +13,6 @@ interface User {
   };
   activo: boolean;
   approved: boolean;
-  createdAt: string;
 }
 
 const Aprobaciones: React.FC = () => {
@@ -124,7 +123,7 @@ const Aprobaciones: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <div className="card">
           <div className="card-body">
             <div className="flex items-center justify-between">
@@ -135,50 +134,6 @@ const Aprobaciones: React.FC = () => {
               <div className="p-3 bg-warning-100 rounded-lg">
                 <svg className="w-6 h-6 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-body">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Nuevos Hoy</p>
-                <p className="text-2xl font-bold text-primary-600">
-                  {usuarios.filter(u => {
-                    const today = new Date().toDateString();
-                    const userDate = new Date(u.createdAt).toDateString();
-                    return today === userDate;
-                  }).length}
-                </p>
-              </div>
-              <div className="p-3 bg-primary-100 rounded-lg">
-                <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-body">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Esta Semana</p>
-                <p className="text-2xl font-bold text-success-600">
-                  {usuarios.filter(u => {
-                    const weekAgo = new Date();
-                    weekAgo.setDate(weekAgo.getDate() - 7);
-                    return new Date(u.createdAt) >= weekAgo;
-                  }).length}
-                </p>
-              </div>
-              <div className="p-3 bg-success-100 rounded-lg">
-                <svg className="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
             </div>
@@ -195,15 +150,13 @@ const Aprobaciones: React.FC = () => {
                 <th>Usuario</th>
                 <th>Email</th>
                 <th>Rol Solicitado</th>
-                <th>Fecha Solicitud</th>
-                <th>Tiempo de Espera</th>
                 <th className="w-48">Acciones</th>
               </tr>
             </thead>
             <tbody className="table-body">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8">
+                  <td colSpan={4} className="text-center py-8">
                     <div className="flex items-center justify-center space-x-2">
                       <svg className="animate-spin h-5 w-5 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -215,7 +168,7 @@ const Aprobaciones: React.FC = () => {
                 </tr>
               ) : usuarios.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12">
+                  <td colSpan={4} className="text-center py-12">
                     <div className="text-gray-500">
                       <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -227,43 +180,22 @@ const Aprobaciones: React.FC = () => {
                 </tr>
               ) : (
                 usuarios.map(usuario => {
-                  const fechaSolicitud = new Date(usuario.createdAt);
-                  const ahora = new Date();
-                  const tiempoEspera = Math.floor((ahora.getTime() - fechaSolicitud.getTime()) / (1000 * 60 * 60 * 24));
-                  
                   return (
                     <tr key={usuario._id} className="table-row">
                       <td className="table-cell">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {usuario.nombres} {usuario.apellidos}
-                          </p>
+                        <div className="flex items-center">
+                          <div>
+                            <p className="font-medium text-gray-900">{`${usuario.nombres} ${usuario.apellidos}`}</p>
+                            <p className="text-sm text-gray-500">{usuario.email}</p>
+                          </div>
                         </div>
                       </td>
-                      <td className="table-cell text-gray-600">{usuario.email}</td>
                       <td className="table-cell">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          usuario.role.name === 'admin' 
-                            ? 'bg-primary-100 text-primary-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className="text-gray-900">{usuario.email}</span>
+                      </td>
+                      <td className="table-cell">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                           {usuario.role.name}
-                        </span>
-                      </td>
-                      <td className="table-cell text-sm text-gray-500">
-                        {fechaSolicitud.toLocaleDateString()}
-                      </td>
-                      <td className="table-cell">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          tiempoEspera > 7 
-                            ? 'bg-danger-100 text-danger-800' 
-                            : tiempoEspera > 3 
-                            ? 'bg-warning-100 text-warning-800'
-                            : 'bg-success-100 text-success-800'
-                        }`}>
-                          {tiempoEspera === 0 ? 'Hoy' : 
-                           tiempoEspera === 1 ? 'Ayer' : 
-                           `${tiempoEspera} días`}
                         </span>
                       </td>
                       <td className="table-cell">
@@ -315,7 +247,6 @@ const Aprobaciones: React.FC = () => {
                     <li>Los usuarios aprobados podrán acceder al sistema inmediatamente</li>
                     <li>Los usuarios rechazados serán desactivados y no podrán acceder</li>
                     <li>Se recomienda revisar cada solicitud antes de aprobar</li>
-                    <li>Las solicitudes con más de 7 días de espera se marcan en rojo</li>
                   </ul>
                 </div>
               </div>

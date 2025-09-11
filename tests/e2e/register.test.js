@@ -1,84 +1,12 @@
 const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
-const { Options } = require('selenium-webdriver/chrome');
-const { ServiceBuilder } = require('selenium-webdriver/chrome');
 const fs = require('fs');
-const path = require('path');
-const webdriver = require('selenium-webdriver');
-const chromeVersion = '140.0.7339.82';
 
-// Configuración de ChromeDriver
-const chromeDriverPath = require('chromedriver').path;
-const service = new ServiceBuilder(chromeDriverPath)
-  .setChromeBinary(`C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`)
-  .build();
-
-// Configurar el servicio global de ChromeDriver
-try {
-  chrome.setDefaultService(service);
-} catch (err) {
-  console.log('Usando configuración de ChromeDriver existente');
-}
-
-// Configuración de opciones de Chrome
-const chromeOptions = new Options();
-chromeOptions.setChromeBinaryPath(`C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`);
-chromeOptions.addArguments(
-  '--no-sandbox',
-  '--disable-dev-shm-usage',
-  '--disable-gpu',
-  '--window-size=1920,1080',
-  '--disable-extensions',
-  '--disable-software-rasterizer',
-  '--disable-notifications',
-  '--disable-popup-blocking',
-  '--disable-default-apps',
-  '--disable-infobars',
-  '--disable-gpu-sandbox',
-  '--no-first-run',
-  '--no-default-browser-check',
-  '--disable-browser-side-navigation',
-  '--disable-web-security',
-  '--allow-running-insecure-content',
-  '--disable-blink-features=AutomationControlled'
-);
-
-// Configuración para modo headless
-if (process.env.HEADLESS === 'true') {
-  chromeOptions.addArguments('--headless=new');
-}
-
-// Reutilizamos la función auxiliar del login test
-async function findElementWithRetry(driver, selectors, timeout = 10000) {
-  const startTime = Date.now();
-  let lastError;
-  
-  for (const selector of selectors) {
-    try {
-      const element = await driver.wait(
-        until.elementLocated(By.css(selector)),
-        Math.max(1000, timeout / selectors.length)
-      );
-      if (element) {
-        await driver.wait(until.elementIsVisible(element), 1000);
-        return element;
-      }
-    } catch (e) {
-      lastError = e;
-      // Continuar con el siguiente selector
-    }
-    
-    if (Date.now() - startTime > timeout) break;
-  }
-  
-  throw lastError || new Error(`No se pudo encontrar el elemento con los selectores: ${selectors.join(', ')}`);
-}
-
-// Configuración
+// Configuration
 const CONFIG = {
   baseUrl: 'http://localhost:4200',
   headless: false,
-  timeout: 15000, // Aumentado para dar más tiempo a la carga
+  timeout: 10000,
   testUser: {
     nombres: 'Test',
     apellidos: 'User',
@@ -89,241 +17,231 @@ const CONFIG = {
   screenshotsDir: './screenshots'
 };
 
-// Función para crear el directorio de capturas si no existe
-function ensureScreenshotsDir() {
-  if (!fs.existsSync(CONFIG.screenshotsDir)) {
-    fs.mkdirSync(CONFIG.screenshotsDir, { recursive: true });
-  }
+// Función para formatear la hora
+function getCurrentTime() {
+  return new Date().toLocaleTimeString('en-US', { hour12: false });
 }
 
-// Función para tomar capturas de pantalla
-async function takeScreenshot(driver, name) {
-  ensureScreenshotsDir();
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `register-${name}-${timestamp}.png`;
-  const filepath = path.join(CONFIG.screenshotsDir, filename);
-  
-  try {
-    const image = await driver.takeScreenshot();
-    fs.writeFileSync(filepath, image, 'base64');
-    return filepath;
-  } catch (e) {
-    console.error(`Error al guardar la captura ${name}:`, e.message);
-    return null;
-  }
+// Función para imprimir mensajes con formato
+function log(message) {
+  console.log(`[${getCurrentTime()}] ${message}`);
 }
+
+// Función para pausar la ejecución
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Configuración del navegador
+const chromeOptions = new chrome.Options();
+if (CONFIG.headless) {
+  chromeOptions.addArguments('--headless=new');
+}
+chromeOptions.addArguments(
+  '--no-sandbox',
+  '--disable-dev-shm-usage',
+  '--window-size=1920,1080',
+  '--start-maximized'
+);
 
 // Función principal de la prueba
 async function runRegistrationTest() {
+  log('🚀 INICIO: Prueba de registro de usuario');
+  log(`📋 Configuración:`);
+  log(`- URL: ${CONFIG.baseUrl}`);
+  log(`- Headless: ${CONFIG.headless ? 'Sí' : 'No'}`);
+  
   let driver;
   
   try {
-    // Configurar el navegador
-    console.log('🚀 Iniciando prueba de registro de usuario...');
-    console.log(`🔍 Usando Chrome versión: ${chromeVersion}`);
-    
-    // Inicializar el driver con la configuración
+    // Inicializar WebDriver
+    log('🌐 PASO 1/6: Iniciando navegador Chrome...');
     driver = await new Builder()
       .forBrowser('chrome')
       .setChromeOptions(chromeOptions)
-      .setChromeService(service)
       .build();
+    log('✅ Navegador iniciado correctamente');
     
-    // Configurar tiempo de espera global
+    // Configurar timeouts
     await driver.manage().setTimeouts({
-      implicit: 10000,      // Tiempo de espera implícito
-      pageLoad: 30000,      // Tiempo de espera para cargar la página
-      script: 30000         // Tiempo de espera para ejecución de scripts
+      implicit: CONFIG.timeout,
+      pageLoad: CONFIG.timeout * 3,
+      script: CONFIG.timeout
     });
+
+    // Navegar a la página principal
+    log('🌐 PASO 2/6: Navegando a la página principal...');
+    await driver.get(CONFIG.baseUrl);
+    log(`✅ Navegación exitosa a: ${CONFIG.baseUrl}`);
+    await sleep(1000);
     
     // Maximizar la ventana para asegurar visibilidad de elementos
     await driver.manage().window().maximize();
+    await sleep(1000);
     
-    // Navegar a la página principal
-    console.log('🌐 Navegando a la página principal...');
-    await driver.get(CONFIG.baseUrl);
-    await takeScreenshot(driver, 'pagina-inicio');
-    
-    // Buscar y hacer clic en el botón de registro usando el selector exacto
-    console.log('🔍 Buscando botón de registro...');
-    const registerButtonSelectors = [
-      '#root > div > div > div > div > div.bg-white.rounded-2xl.shadow-strong.overflow-hidden > div > div.p-8.lg\\:p-12.flex.flex-col.justify-center > div.text-center.mt-8 > p > button',
-      'button:contains("Registrate aqui")',
-      'button:contains("Registrarse")',
-      'a:contains("Registrate aqui")',
-      'a:contains("Registrarse")',
-      'a[href*="register"]',
-      'button[routerLink*="register"]'
-    ];
-    
-    // Intentar con el selector exacto primero
+    // Buscar y hacer clic en el enlace de registro usando el XPath proporcionado
+    log('🔍 Buscando enlace de registro con el XPath proporcionado...');
     try {
+      // Usar el XPath exacto proporcionado
+      const registerXPath = '//*[@id="root"]/div/div/div/div/div[2]/div/div[1]/div[2]/p/button';
+      
+      // Esperar a que el elemento esté presente y sea visible
       const registerButton = await driver.wait(
-        until.elementLocated(By.css(registerButtonSelectors[0])),
-        CONFIG.timeout
+        until.elementLocated(By.xpath(registerXPath)),
+        CONFIG.timeout,
+        'No se encontró el botón de registro con el XPath proporcionado'
       );
+     
       await driver.wait(until.elementIsVisible(registerButton), CONFIG.timeout);
-      await registerButton.click();
-      console.log('✅ Botón de registro encontrado y clickeado usando selector exacto');
-    } catch (error) {
-      console.log('⚠️ No se pudo encontrar el botón con el selector exacto, intentando con selectores alternativos...');
-      // Si falla, intentar con los selectores alternativos
-      const registerLink = await findElementWithRetry(driver, registerButtonSelectors.slice(1));
-      await driver.wait(until.elementIsVisible(registerLink), CONFIG.timeout);
-      await registerLink.click();
-      console.log('✅ Botón de registro encontrado y clickeado usando selectores alternativos');
-    }
-    
-    await takeScreenshot(driver, 'click-registro');
-    
-    // Esperar a que el formulario de registro esté visible
-    console.log('⏳ Cargando formulario de registro...');
-    await driver.wait(until.elementLocated(By.css('form')), CONFIG.timeout);
-    await takeScreenshot(driver, 'formulario-registro');
-    
-    // Llenar el formulario de registro
-    console.log('📝 Llenando formulario de registro...');
-    
-    // Campos del formulario basados en el componente Register.tsx
-    const fields = [
-      { 
-        name: 'nombres', 
-        selectors: [
-          'input[name="nombres"]', 
-          '#nombres', 
-          'input[formControlName="nombres"]',
-          'input[placeholder*="Juan"]'
-        ] 
-      },
-      { 
-        name: 'apellidos', 
-        selectors: [
-          'input[name="apellidos"]', 
-          '#apellidos', 
-          'input[formControlName="apellidos"]',
-          'input[placeholder*="Perez"]'
-        ] 
-      },
-      { 
-        name: 'email', 
-        selectors: [
-          'input[type="email"]', 
-          '#email', 
-          'input[formControlName="email"]',
-          'input[placeholder*="correo"]'
-        ] 
-      },
-      { 
-        name: 'password', 
-        selectors: [
-          'input[type="password"][name="password"]',
-          '#password', 
-          'input[formControlName="password"]',
-          'input[type="password"]:nth-of-type(1)'
-        ] 
-      },
-      { 
-        name: 'confirmPassword', 
-        selectors: [
-          'input[type="password"][name="confirmPassword"]',
-          '#confirmPassword', 
-          'input[formControlName="confirmPassword"]',
-          'input[type="password"]:nth-of-type(2)'
-        ] 
-      }
-    ];
-    
-    // Llenar cada campo
-    for (const field of fields) {
+      await driver.wait(until.elementIsEnabled(registerButton), CONFIG.timeout);
+      
+      // Desplazarse al elemento para asegurar visibilidad
+      await driver.executeScript("arguments[0].scrollIntoView(true);", registerButton);
+      
+      // Tomar captura antes de hacer clic
+      const screenshot = await driver.takeScreenshot();
+      require('fs').writeFileSync('before-register-click.png', screenshot, 'base64');
+      await sleep(1000);
+      // Hacer clic en el botón
+      log('✅ Haciendo clic en el botón de registro...');
       try {
-        const element = await findElementWithRetry(driver, field.selectors);
-        await element.clear();
-        await element.sendKeys(CONFIG.testUser[field.name]);
-        console.log(`   ✓ Campo ${field.name} completado`);
+        await registerButton.click();
+      } catch (clickError) {
+        log('   • Intento de clic normal fallido, usando JavaScript...');
+        await driver.executeScript("arguments[0].click();", registerButton);
+      }
+      
+      // Esperar a que se cargue la vista de registro usando el XPath proporcionado
+      log('⏳ Validando que estamos en la vista de registro...');
+      const registrationTitleXPath = '//*[@id="root"]/div/div/div/div/div[2]/div/div[1]/div[1]/div[1]/h2';
+      await sleep(1000);
+      try {
+        const registrationTitle = await driver.wait(
+          until.elementLocated(By.xpath(registrationTitleXPath)),
+          CONFIG.timeout,
+          'No se pudo encontrar el título de la vista de registro'
+        );
+        
+        await driver.wait(
+          until.elementIsVisible(registrationTitle),
+          CONFIG.timeout,
+          'El título de la vista de registro no es visible'
+        );
+       
+        const titleText = await registrationTitle.getText();
+        log(`✅ Vista de registro cargada correctamente. Título: "${titleText}"`);
+        
+        // Verificar que el formulario de registro esté presente
+        await driver.wait(
+          until.elementLocated(By.css('form')),
+          CONFIG.timeout,
+          'No se encontró el formulario de registro'
+        );
+        await sleep(1000);
+        log('✅ Formulario de registro cargado correctamente');
+        
       } catch (error) {
-        console.error(`   ✗ Error al completar el campo ${field.name}:`, error.message);
-        throw error;
-      }
-    }
-    
-    // Tomar captura después de llenar el formulario
-    await takeScreenshot(driver, 'formulario-completo');
-    
-    // Enviar el formulario
-    console.log('🖱️ Enviando formulario de registro...');
-    const submitButtons = [
-      'button[type="submit"]',
-      'button.primary',
-      '.btn-primary',
-      'button:contains("Registrarse")',
-      'button:contains("Crear cuenta")',
-      'button'
-    ];
-    
-    const submitButton = await findElementWithRetry(driver, submitButtons);
-    await submitButton.click();
-    
-    // Esperar a que se complete el registro
-    console.log('⏳ Esperando confirmación de registro...');
-    
-    // Verificar registro exitoso
-    const successSelectors = [
-      '.alert-success',
-      '.toast-success',
-      '.success-message',
-      'div:contains("Registro exitoso")',
-      'div:contains("cuenta está pendiente de aprobación")',
-      'h2:contains("Registro exitoso")',
-      'body'
-    ];
-    
-    try {
-      const successElement = await findElementWithRetry(driver, successSelectors, 15000);
-      const successText = await successElement.getText();
-      console.log('✅ Registro exitoso!');
-      console.log(`   • ${successText.substring(0, 100)}${successText.length > 100 ? '...' : ''}`);
-      
-      // Tomar captura del resultado
-      await takeScreenshot(driver, 'registro-exitoso');
-      
-      // Verificar redirección
-      const currentUrl = await driver.getCurrentUrl();
-      if (currentUrl.includes('login') || currentUrl.includes('register')) {
-        console.log('⚠️  El usuario fue redirigido a:', currentUrl);
-      } else {
-        console.log('🔗 Redirigido a:', currentUrl);
+        const screenshot = await driver.takeScreenshot();
+        require('fs').writeFileSync('register-view-error.png', screenshot, 'base64');
+        throw new Error(`Error al validar la vista de registro: ${error.message}`);
       }
       
-    } catch (error) {
-      console.error('❌ No se pudo verificar el registro exitoso:', error.message);
-      // Tomar captura de error
-      await takeScreenshot(driver, 'error-registro');
-      throw error;
+      // Llenar el formulario de registro
+      log('📝 Llenando el formulario de registro...');
+   
+      // Función auxiliar para llenar campos del formulario
+      const fillField = async (id, value, description) => {
+        const element = await driver.wait(
+          until.elementLocated(By.id(id)),
+          CONFIG.timeout,
+          `No se encontró el campo ${description} (${id})`
+        );
+        await element.clear();
+        await element.sendKeys(value);
+        log(`   • ${description} completado`);
+      };
+      
+      // Llenar los campos del formulario
+      await fillField('nombres', CONFIG.testUser.nombres, 'Nombres');
+      await fillField('apellidos', CONFIG.testUser.apellidos, 'Apellidos');
+      await fillField('email', CONFIG.testUser.email, 'Correo electrónico');
+      await fillField('password', CONFIG.testUser.password, 'Contraseña');
+      await fillField('confirmPassword', CONFIG.testUser.confirmPassword, 'Confirmar contraseña');
+      await sleep(1000);
+      // Tomar captura después de llenar el formulario
+      const filledFormScreenshot = await driver.takeScreenshot();
+      require('fs').writeFileSync('filled-register-form.png', filledFormScreenshot, 'base64');
+      
+      // Enviar el formulario
+      log('🔄 Enviando el formulario de registro...');
+      const submitButton = await driver.wait(
+        until.elementLocated(By.css('button[type="submit"]')),
+        CONFIG.timeout,
+        'No se encontró el botón de enviar el formulario'
+      );
+      
+      await driver.wait(until.elementIsVisible(submitButton), CONFIG.timeout);
+      await driver.wait(until.elementIsEnabled(submitButton), CONFIG.timeout);
+
+      try {
+        await submitButton.click();
+      } catch (clickError) {
+        log('   • Intento de clic normal fallido, usando JavaScript...');
+        await driver.executeScript("arguments[0].click();", submitButton);
+      }
+      
+      // Esperar a que se complete el registro
+      log('⏳ Esperando a que se complete el registro...');
+      await driver.wait(
+        async () => {
+          const currentUrl = await driver.getCurrentUrl();
+          return !currentUrl.includes('register') && !currentUrl.endsWith('register');
+        },
+        15000,
+        'No se completó el registro después de 15 segundos'
+      );
+      
+      log('✅ Registro completado exitosamente');
+      
+    } catch (e) {
+      log(`❌ Error durante la prueba de registro: ${e.message}`);
+      // Tomar captura de la página actual para depuración
+      const screenshot = await driver.takeScreenshot();
+      require('fs').writeFileSync('register-error.png', screenshot, 'base64');
+      throw e;
     }
-    
+    await sleep(1000);
   } catch (error) {
-    console.error('❌ Error en la prueba de registro:', error);
-    // Tomar captura de error
-    if (driver) {
-      await takeScreenshot(driver, 'error-final');
-    }
+    log(`❌ Error en la prueba de registro: ${error.message}`);
     throw error;
     
   } finally {
+    await sleep(1000);
     // Cerrar el navegador
     if (driver) {
-      try {
-        await driver.quit();
-        console.log('✅ Navegador cerrado correctamente');
-      } catch (e) {
-        console.error('Error al cerrar el navegador:', e);
-      }
+      log('👋 Cerrando navegador...');
+      await driver.quit();
+      log('✅ Navegador cerrado correctamente');
     }
+    log('🏁 Prueba finalizada');
   }
 }
 
-// Ejecutar la prueba
-runRegistrationTest().catch(error => {
-  console.error('Prueba fallida:', error);
-  process.exit(1);
-});
+// Función para asegurar el cierre del navegador
+async function runTestSafely() {
+  try {
+    await runRegistrationTest();
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error en la prueba de registro:', error);
+    process.exit(1);
+  }
+}
+
+// Exportar la función para que pueda ser usada en otros archivos
+module.exports = { runRegistrationTest };
+
+// Si se ejecuta directamente este archivo, ejecutar la prueba
+if (require.main === module) {
+  runTestSafely();
+}

@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "Tests automatizados para el sistema de facturación",
   "scripts": {
-    "test": "node e2e/login.test.js",
-    "test:headless": "set HEADLESS=true && npm test",
-    "test:debug": "set DEBUG=true && npm test"
+    "test": "node e2e/all-tests.js",
+    "test:login": "node e2e/login.test.js",
+    "test:register": "node e2e/register.test.js",
+    "test:headless": "set HEADLESS=true && npm run test:login && npm run test:register",
+    "test:debug": "set DEBUG=true && npm run test"
   },
   "dependencies": {
     "@cucumber/cucumber": "^9.6.0",

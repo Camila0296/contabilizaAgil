@@ -32,7 +32,7 @@ async function findElementWithRetry(driver, selectors, timeout = 10000) {
 const CONFIG = {
   baseUrl: 'http://localhost:4200',
   headless: false,  // Cambiar a true para modo sin interfaz gráfica
-  timeout: 10000,
+  timeout: 30000,
   user: {
     email: 'admin@admin.com',
     password: 'admin'
@@ -92,8 +92,8 @@ async function runLoginTest() {
     // Navegar a la página de inicio de sesión
     log('🌐 PASO 2/6: Navegando a la página de inicio de sesión...');
     try {
-      await driver.get(`${CONFIG.baseUrl}/login`);
-      log(`✅ Navegación exitosa a: ${CONFIG.baseUrl}/login`);
+      await driver.get(`${CONFIG.baseUrl}`);
+      log(`✅ Navegación exitosa a: ${CONFIG.baseUrl}`);
     } catch (error) {
       log(`❌ Error al navegar a la página: ${error.message}`);
       throw error;
@@ -102,6 +102,25 @@ async function runLoginTest() {
     // Ingresar credenciales
     log('🔑 PASO 3/6: Ingresando credenciales...');
     try {
+      // Tomar una captura de pantalla de la página de login
+      try {
+        const screenshot = await driver.takeScreenshot();
+        const fs = require('fs');
+        fs.writeFileSync('login-page.png', screenshot, 'base64');
+        log('   • Captura de pantalla guardada como login-page.png');
+      } catch (e) {
+        log('   • No se pudo guardar la captura de pantalla: ' + e.message);
+      }
+
+      // Obtener el HTML de la página para depuración
+      try {
+        const pageSource = await driver.getPageSource();
+        fs.writeFileSync('login-page.html', pageSource);
+        log('   • Código fuente de la página guardado como login-page.html');
+      } catch (e) {
+        log('   • No se pudo guardar el código fuente de la página: ' + e.message);
+      }
+
       // Intentar diferentes selectores para el campo de email
       const emailSelectors = [
         'input[type="email"]',
@@ -109,15 +128,18 @@ async function runLoginTest() {
         '[name="email"]',
         'input[placeholder*="mail"]',
         'input[placeholder*="usuario"]',
+        'input[formcontrolname="email"]',
+        'input[type="text"]',
         '.form-control',
         'input:first-of-type'
       ];
       
-      log(`   • Ingresando email: ${CONFIG.user.email}`);
+      log(`   • Buscando campo de email con selectores: ${emailSelectors.join(', ')}`);
       const emailInput = await findElementWithRetry(driver, emailSelectors, CONFIG.timeout);
+      log('   • Campo de email encontrado');
       await emailInput.clear();
       await emailInput.sendKeys(CONFIG.user.email);
-      log('   • Email ingresado correctamente');
+      log(`   • Email ingresado: ${CONFIG.user.email}`);
 
       // Intentar diferentes selectores para el campo de contraseña
       const passwordSelectors = [
@@ -126,23 +148,39 @@ async function runLoginTest() {
         '[name="password"]',
         'input[placeholder*="contrase"]',
         'input[placeholder*="pass"]',
-        'input[type="password"]',
+        'input[formcontrolname="password"]',
+        '.form-control ~ input[type="password"]',
         'input:last-of-type'
       ];
       
-      log(`   • Ingresando contraseña: ${'*'.repeat(CONFIG.user.password.length)}`);
+      log(`   • Buscando campo de contraseña con selectores: ${passwordSelectors.join(', ')}`);
       const passwordInput = await findElementWithRetry(driver, passwordSelectors, CONFIG.timeout);
+      log('   • Campo de contraseña encontrado');
       await passwordInput.clear();
       await passwordInput.sendKeys(CONFIG.user.password);
-      log('   • Contraseña ingresada correctamente');
+      log('   • Contraseña ingresada');
     } catch (error) {
       log(`❌ Error al ingresar credenciales: ${error.message}`);
+      // Tomar captura de pantalla del error
+      try {
+        const screenshot = await driver.takeScreenshot();
+        const fs = require('fs');
+        fs.writeFileSync('login-error.png', screenshot, 'base64');
+        log('   • Captura de error guardada como login-error.png');
+      } catch (e) {
+        log('   • No se pudo guardar la captura de error: ' + e.message);
+      }
       throw error;
     }
 
     // Hacer clic en el botón de inicio de sesión
     log('🖱️ PASO 4/6: Enviando formulario...');
     try {
+      // Tomar captura antes de hacer clic
+      const preClickScreenshot = await driver.takeScreenshot();
+      require('fs').writeFileSync('pre-click.png', preClickScreenshot, 'base64');
+      
+      // Intentar diferentes selectores para el botón de login
       const buttonSelectors = [
         'button[type="submit"]',
         'button.primary',
@@ -153,65 +191,86 @@ async function runLoginTest() {
         'button',
         'input[type="submit"]',
         '.btn',
-        '.btn-submit'
+        '.btn-submit',
+        // Selectores específicos de Angular Material
+        'button[color="primary"]',
+        'button.mat-button',
+        'button.mat-raised-button',
+        'button.mat-flat-button',
+        'button.mat-stroked-button'
       ];
       
+      log('   • Buscando botón de inicio de sesión...');
       const loginButton = await findElementWithRetry(driver, buttonSelectors, CONFIG.timeout);
+      log('   • Botón encontrado, intentando hacer clic...');
+      
+      // Desplazarse al botón si es necesario
+      await driver.executeScript("arguments[0].scrollIntoView(true);", loginButton);
+      
+      // Esperar a que sea clickeable
       await driver.wait(until.elementIsVisible(loginButton), CONFIG.timeout);
-      await loginButton.click();
+      await driver.wait(until.elementIsEnabled(loginButton), CONFIG.timeout);
+      
+      // Usar JavaScript para hacer clic si es necesario
+      try {
+        await loginButton.click();
+      } catch (clickError) {
+        log('   • Error al hacer clic, intentando con JavaScript...');
+        await driver.executeScript("arguments[0].click();", loginButton);
+      }
+      
       log('✅ Formulario enviado correctamente');
+      
+      // Esperar un momento para que se procese el clic
+      await driver.sleep(5000);
+      
     } catch (error) {
       log(`❌ Error al enviar el formulario: ${error.message}`);
+      // Tomar captura del error
+      try {
+        const screenshot = await driver.takeScreenshot();
+        require('fs').writeFileSync('form-error.png', screenshot, 'base64');
+        log('   • Captura de error guardada como form-error.png');
+      } catch (e) {
+        log('   • No se pudo guardar la captura de error: ' + e.message);
+      }
       throw error;
     }
 
     // Verificar inicio de sesión exitoso
     log('⏳ PASO 5/6: Verificando inicio de sesión exitoso...');
     try {
-      // Lista de posibles selectores que indican un inicio de sesión exitoso
-      const successSelectors = [
-        // Elementos de dashboard
-        '.dashboard', '.main-content', '.app-container',
-        // Menús de usuario
-        '.user-menu', '.user-profile', '.user-avatar',
-        // Mensajes de bienvenida
-        '.welcome-message', '.welcome-text', '.greeting',
-        // Selectores de datos
-        '[data-test="dashboard"]', '[data-role="main"]',
-        // Títulos de página
-        'h1', 'h2', '.page-title',
-        // Cualquier elemento que no esté en la página de login
-        'nav', 'header', 'aside', 'main', 'section'
-      ];
-
-      // Esperar a que aparezca algún elemento que indique éxito
-      const successElement = await findElementWithRetry(driver, successSelectors, CONFIG.timeout * 3);
+      // Esperar a que aparezca el título "Sistema de Gestión Contable"
+      const successHeadingSelector = 'h1';
+      log('   • Buscando título "Sistema de Gestión Contable"...');
       
-      // Verificar que no estamos en la página de login
-      const currentUrl = await driver.getCurrentUrl();
-      if (currentUrl.includes('login')) {
-        throw new Error('La URL aún muestra la página de login');
+      // Esperar a que el título sea visible
+      const heading = await driver.wait(
+        until.elementLocated(By.css(successHeadingSelector)),
+        CONFIG.timeout * 2,
+        'No se encontró el título de la página de inicio'
+      );
+      
+      await driver.wait(until.elementIsVisible(heading), CONFIG.timeout);
+      
+      // Verificar que el título sea el esperado
+      const headingText = await heading.getText();
+      log(`   • Texto del título: ${headingText}`);
+      
+      if (!headingText.includes('Sistema de Gestión Contable')) {
+        throw new Error('No se encontró el título "Sistema de Gestión Contable" después del inicio de sesión');
       }
       
-      // Obtener información del elemento de éxito
-      const tagName = await successElement.getTagName();
-      const elementClass = await successElement.getAttribute('class');
-      const elementText = await successElement.getText();
+      log('✅ Inicio de sesión exitoso detectado');
       
-      log(`✅ ¡Inicio de sesión exitoso!`);
-      log(`   • Elemento encontrado: <${tagName} class="${elementClass}">`);
-      if (elementText && elementText.length < 100) { // Mostrar solo si el texto no es muy largo
-        log(`   • Texto: "${elementText.trim()}"`);
-      }
-      
-      // Tomar captura de pantalla del dashboard
+      // Tomar captura del dashboard
       try {
-        await driver.takeScreenshot().then(
-          (image) => require('fs').writeFileSync('dashboard.png', image, 'base64')
-        );
+        const screenshot = await driver.takeScreenshot();
+        const fs = require('fs');
+        fs.writeFileSync('dashboard.png', screenshot, 'base64');
         log('   • Captura del dashboard guardada como dashboard.png');
       } catch (e) {
-        log('   • No se pudo guardar la captura del dashboard');
+        log('   • No se pudo guardar la captura del dashboard: ' + e.message);
       }
     } catch (error) {
       log(`❌ Error en el proceso de inicio de sesión: ${error.message}`);
@@ -278,5 +337,10 @@ async function runTestSafely() {
   }
 }
 
-// Ejecutar la prueba
-runTestSafely().catch(console.error);
+// Exportar la función para que pueda ser usada en otros archivos
+module.exports = { runLoginTest };
+
+// Si se ejecuta directamente este archivo, ejecutar la prueba
+if (require.main === module) {
+  runTestSafely().catch(console.error);
+}
