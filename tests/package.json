@@ -3,20 +3,22 @@
   "version": "1.0.0",
   "description": "Tests automatizados para el sistema de facturación",
   "scripts": {
-    "test": "cucumber-js",
-    "test:headed": "set HEADED=true && npm test",
-    "test:debug": "set DEBUG=* && npm test"
+    "test": "node e2e/login.test.js",
+    "test:headless": "set HEADLESS=true && npm test",
+    "test:debug": "set DEBUG=true && npm test"
   },
   "dependencies": {
     "@cucumber/cucumber": "^9.6.0",
     "chai": "^4.5.0",
-    "chromedriver": "^115.0.0",
     "selenium-webdriver": "^4.35.0"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/preset-env": "^7.28.3",
     "@babel/register": "^7.28.3",
-    "geckodriver": "^6.0.1"
+    "chromedriver": "^140.0.1",
+    "geckodriver": "^6.0.1",
+    "mocha": "^11.7.2",
+    "webdriver-manager": "^12.1.9"
   }
 }

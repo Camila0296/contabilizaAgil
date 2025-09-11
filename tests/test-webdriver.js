@@ -7,10 +7,12 @@ async function testWebDriver() {
 
   try {
     const options = new chrome.Options();
-    options.addArguments('--headless=new');
+    // Eliminar el modo headless para ver el navegador
+    // options.addArguments('--headless=new');
     options.addArguments('--no-sandbox');
     options.addArguments('--disable-dev-shm-usage');
     options.addArguments('--window-size=1920,1080');
+    options.addArguments('--start-maximized');  // Maximizar la ventana
 
     console.log('Initializing WebDriver...');
     driver = await new Builder()
