@@ -35,7 +35,8 @@ async function connectDB() {
       apellidos: 'Principal',
       email: 'admin@admin.com',
       password: hashedPassword,
-      role: adminRole._id
+      role: adminRole._id,
+      approved: true
     });
     console.log('Usuario admin creado en la base temporal');
   }

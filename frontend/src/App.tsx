@@ -6,6 +6,7 @@ import Usuarios from './components/Usuarios';
 import Aprobaciones from './components/Aprobaciones';
 import Perfil from './components/Perfil';
 import Reportes from './components/Reportes';
+import ChatBot from './components/ChatBot';
 
 type Section = 'panel' | 'facturacion' | 'reportes' | 'usuarios' | 'aprobaciones' | 'perfil';
 
@@ -304,6 +305,12 @@ function App() {
             {section === 'aprobaciones' && role !== 'user' && <Aprobaciones />}
             {section === 'perfil' && <Perfil />}
           </main>
+
+          <ChatBot
+            currentSection={section}
+            onNavigate={(s) => setSection(s as Section)}
+            isLoggedIn={isLoggedIn}
+          />
         </div>
       ) : (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">

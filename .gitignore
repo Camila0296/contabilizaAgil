@@ -20,3 +20,10 @@ report/
 
 # Ignore TypeScript build info
 tsconfig.*.tsbuildinfo
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Screenshots de prueba
+chatbot-*.png
