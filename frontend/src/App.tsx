@@ -7,6 +7,7 @@ import Aprobaciones from './components/Aprobaciones';
 import Perfil from './components/Perfil';
 import Reportes from './components/Reportes';
 import ChatBot from './components/ChatBot';
+import Logo from './components/Logo';
 
 type Section = 'panel' | 'facturacion' | 'reportes' | 'usuarios' | 'aprobaciones' | 'perfil';
 
@@ -20,114 +21,137 @@ const Sidebar: React.FC<{
     <aside className="sidebar">
       <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">C</span>
-            </div>
-            <span className="text-lg font-semibold text-gray-900">Contabiliza Agil</span>
-          </div>
+        <div className="flex items-center h-20 px-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <Logo size={40} withText textMode="light" />
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
+        <nav className="flex-1 px-3 py-5 space-y-1">
           {role !== 'user' && (
             <button
-              className={`w-full text-left px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                section === 'panel' 
-                  ? 'bg-primary-100 text-primary-700 shadow-sm' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+              className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+                section === 'panel'
+                  ? 'text-white font-semibold'
+                  : 'text-white/60 hover:text-white'
               }`}
+              style={section === 'panel' ? { background: 'rgba(255,255,255,0.12)', boxShadow: 'inset 3px 0 0 #a78bfa' } : {}}
               onClick={() => onSection('panel')}
             >
               <div className="flex items-center space-x-3">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
-                </svg>
-                <span>Panel</span>
+                <span className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+                  style={{ background: section === 'panel' ? 'rgba(167,139,250,0.28)' : 'rgba(255,255,255,0.07)', boxShadow: section === 'panel' ? '0 0 14px rgba(167,139,250,0.45)' : 'none' }}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+                  </svg>
+                </span>
+                <span>Panel de Control</span>
               </div>
             </button>
           )}
-          
+
           <button
-            className={`w-full text-left px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-              section === 'facturacion' 
-                ? 'bg-primary-100 text-primary-700 shadow-sm' 
-                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+            className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+              section === 'facturacion'
+                ? 'text-white font-semibold'
+                : 'text-white/60 hover:text-white'
             }`}
+            style={section === 'facturacion' ? { background: 'rgba(255,255,255,0.12)', boxShadow: 'inset 3px 0 0 #a78bfa' } : {}}
             onClick={() => onSection('facturacion')}
           >
             <div className="flex items-center space-x-3">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <span className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+                style={{ background: section === 'facturacion' ? 'rgba(167,139,250,0.28)' : 'rgba(255,255,255,0.07)', boxShadow: section === 'facturacion' ? '0 0 14px rgba(167,139,250,0.45)' : 'none' }}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </span>
               <span>Facturación</span>
             </div>
           </button>
-          
+
           <button
-            className={`w-full text-left px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-              section === 'reportes' 
-                ? 'bg-primary-100 text-primary-700 shadow-sm' 
-                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+            className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+              section === 'reportes'
+                ? 'text-white font-semibold'
+                : 'text-white/60 hover:text-white'
             }`}
+            style={section === 'reportes' ? { background: 'rgba(255,255,255,0.12)', boxShadow: 'inset 3px 0 0 #a78bfa' } : {}}
             onClick={() => onSection('reportes')}
           >
             <div className="flex items-center space-x-3">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
+              <span className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+                style={{ background: section === 'reportes' ? 'rgba(167,139,250,0.28)' : 'rgba(255,255,255,0.07)', boxShadow: section === 'reportes' ? '0 0 14px rgba(167,139,250,0.45)' : 'none' }}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </span>
               <span>Reportes</span>
             </div>
           </button>
-          
-          <button 
-            className={`w-full text-left px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-              section === 'perfil' 
-                ? 'bg-primary-100 text-primary-700 shadow-sm' 
-                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-            }`} 
+
+          <button
+            className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+              section === 'perfil'
+                ? 'text-white font-semibold'
+                : 'text-white/60 hover:text-white'
+            }`}
+            style={section === 'perfil' ? { background: 'rgba(255,255,255,0.12)', boxShadow: 'inset 3px 0 0 #a78bfa' } : {}}
             onClick={() => onSection('perfil')}
           >
             <div className="flex items-center space-x-3">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span>Perfil</span>
+              <span className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+                style={{ background: section === 'perfil' ? 'rgba(167,139,250,0.28)' : 'rgba(255,255,255,0.07)', boxShadow: section === 'perfil' ? '0 0 14px rgba(167,139,250,0.45)' : 'none' }}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </span>
+              <span>Mi Perfil</span>
             </div>
           </button>
-          
+
           {role !== 'user' && (
             <>
-              <button 
-                className={`w-full text-left px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  section === 'usuarios' 
-                    ? 'bg-primary-100 text-primary-700 shadow-sm' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                }`} 
+              <div className="pt-3 pb-1 px-4">
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>Administración</p>
+              </div>
+
+              <button
+                className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+                  section === 'usuarios'
+                    ? 'text-white font-semibold'
+                    : 'text-white/60 hover:text-white'
+                }`}
+                style={section === 'usuarios' ? { background: 'rgba(255,255,255,0.12)', boxShadow: 'inset 3px 0 0 #a78bfa' } : {}}
                 onClick={() => onSection('usuarios')}
               >
                 <div className="flex items-center space-x-3">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                  </svg>
+                  <span className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+                    style={{ background: section === 'usuarios' ? 'rgba(167,139,250,0.28)' : 'rgba(255,255,255,0.07)', boxShadow: section === 'usuarios' ? '0 0 14px rgba(167,139,250,0.45)' : 'none' }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                  </span>
                   <span>Usuarios</span>
                 </div>
               </button>
-              
-              <button 
-                className={`w-full text-left px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  section === 'aprobaciones' 
-                    ? 'bg-primary-100 text-primary-700 shadow-sm' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                }`} 
+
+              <button
+                className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+                  section === 'aprobaciones'
+                    ? 'text-white font-semibold'
+                    : 'text-white/60 hover:text-white'
+                }`}
+                style={section === 'aprobaciones' ? { background: 'rgba(255,255,255,0.12)', boxShadow: 'inset 3px 0 0 #a78bfa' } : {}}
                 onClick={() => onSection('aprobaciones')}
               >
                 <div className="flex items-center space-x-3">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <span className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+                    style={{ background: section === 'aprobaciones' ? 'rgba(167,139,250,0.28)' : 'rgba(255,255,255,0.07)', boxShadow: section === 'aprobaciones' ? '0 0 14px rgba(167,139,250,0.45)' : 'none' }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </span>
                   <span>Aprobaciones</span>
                 </div>
               </button>
@@ -136,16 +160,19 @@ const Sidebar: React.FC<{
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
-          <button 
-            className="w-full btn btn-outline" 
+        <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <button
+            className="w-full flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200"
+            style={{ color: 'rgba(255,255,255,0.45)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.15)'; (e.currentTarget as HTMLButtonElement).style.color = '#f87171'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = ''; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)'; }}
             onClick={onLogout}
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-          Cerrar sesión
-        </button>
+            Cerrar sesión
+          </button>
         </div>
       </div>
     </aside>
@@ -237,12 +264,13 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       {/* Header - Solo mostrar si está logueado */}
       {isLoggedIn && (
-        <header className="bg-white shadow-soft border-b border-gray-200 fixed top-0 right-0 left-0 z-30 lg:left-64 transition-all duration-300">
+        <header className="bg-white border-b border-gray-200 fixed top-0 right-0 left-0 z-30 lg:left-64 transition-all duration-300"
+          style={{ boxShadow: '0 1px 8px rgba(79,70,229,0.07)' }}>
           <div className="flex items-center justify-between h-16 px-4 sm:px-6">
             {/* Botón de menú móvil */}
-            <button 
+            <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-md text-gray-500 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 lg:hidden"
+              className="p-2 rounded-xl text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-400 lg:hidden transition-colors"
               aria-expanded="false"
             >
               <span className="sr-only">Abrir menú</span>
@@ -254,8 +282,17 @@ function App() {
                 )}
               </svg>
             </button>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Sistema de Gestión Contable</h1>
-            <div className="w-8"></div> {/* Para mantener el balance del flex */}
+            <div>
+              <h1 className="text-lg md:text-xl font-bold font-display" style={{ color: '#0f0f23', letterSpacing: '-0.02em' }}>Sistema de Gestión Contable</h1>
+              <p className="text-xs text-gray-400 hidden sm:block">Contabiliza Ágil — Plataforma profesional para PYMES</p>
+            </div>
+            {/* Indicador de usuario activo */}
+            <div className="flex items-center space-x-2 bg-indigo-50 rounded-xl px-3 py-1.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+              <span className="text-xs font-medium text-indigo-700 hidden sm:block">
+                {role === 'admin' ? 'Administrador' : role === 'approver' ? 'Aprobador' : 'Usuario'}
+              </span>
+            </div>
           </div>
         </header>
       )}
@@ -271,7 +308,7 @@ function App() {
           )}
           
           {/* Sidebar - Móvil y escritorio */}
-          <div className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 z-30 w-64 transition-transform duration-300 ease-in-out bg-white`}>
+          <div className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 z-30 w-64 transition-transform duration-300 ease-in-out`}>
             <div className="h-full overflow-y-auto">
               <Sidebar 
                 role={role} 
