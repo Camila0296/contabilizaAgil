@@ -2,19 +2,24 @@ const User = require('../models/user');
 const Role = require('../models/role');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { isStrongPassword, PASSWORD_ERROR, BCRYPT_ROUNDS } = require('../utils/passwordPolicy');
 
 const authCtrl = {};
 
 // Registro de usuario
 authCtrl.register = async (req, res) => {
   const { nombres, apellidos, email, password } = req.body;
-  
+
   // Validar campos requeridos
   if (!nombres || !apellidos || !email || !password) {
     return res.status(400).json({ error: 'Faltan campos requeridos' });
   }
-  
-  const hashedPassword = await bcrypt.hash(password, 10);
+
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({ error: PASSWORD_ERROR });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const userRole = await Role.findOne({ name: "user" }) || await Role.findOne(); // Asigna el primer rol si no se envía
   if (!userRole) {
     return res.status(500).json({ error: 'No hay roles definidos en la base de datos' });

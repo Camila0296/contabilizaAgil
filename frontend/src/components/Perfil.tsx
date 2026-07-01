@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import { showSuccess, showError } from '../utils/alerts';
+import { isStrongPassword, PASSWORD_ERROR, PASSWORD_HINT } from '../utils/password';
 
 interface UserProfile {
   _id: string;
@@ -16,7 +17,11 @@ interface UserProfile {
   createdAt: string;
 }
 
-const Perfil: React.FC = () => {
+interface PerfilProps {
+  onLogout?: () => void;
+}
+
+const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -86,18 +91,17 @@ const Perfil: React.FC = () => {
       return;
     }
 
-    if (form.newPassword && form.newPassword.length < 6) {
-      showError('La nueva contraseña debe tener al menos 6 caracteres');
+    if (form.newPassword && !isStrongPassword(form.newPassword)) {
+      showError(PASSWORD_ERROR);
+      return;
+    }
+
+    if (form.newPassword && !form.currentPassword) {
+      showError('Ingresa tu contraseña actual para poder cambiarla');
       return;
     }
 
     try {
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        showError('No se pudo identificar al usuario');
-        return;
-      }
-
       const updateData: any = {
         nombres: form.nombres,
         apellidos: form.apellidos,
@@ -106,10 +110,10 @@ const Perfil: React.FC = () => {
 
       if (form.newPassword) {
         updateData.currentPassword = form.currentPassword;
-        updateData.newPassword = form.newPassword;
+        updateData.password = form.newPassword;
       }
 
-      const res = await apiFetch(`/users/${userId}`, {
+      const res = await apiFetch('/users/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData)
@@ -257,6 +261,7 @@ const Perfil: React.FC = () => {
                           value={form.currentPassword}
                           onChange={handleChange}
                           placeholder="••••••••"
+                          autoComplete="current-password"
                         />
                       </div>
 
@@ -270,9 +275,10 @@ const Perfil: React.FC = () => {
                             value={form.newPassword}
                             onChange={handleChange}
                             placeholder="••••••••"
-                            minLength={6}
+                            minLength={8}
+                            autoComplete="new-password"
                           />
-                          <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
+                          <p className="text-xs text-gray-500 mt-1">{PASSWORD_HINT}</p>
                         </div>
 
                         <div className="form-group">
@@ -284,6 +290,7 @@ const Perfil: React.FC = () => {
                             value={form.confirmPassword}
                             onChange={handleChange}
                             placeholder="••••••••"
+                            autoComplete="new-password"
                           />
                         </div>
                       </div>
@@ -416,14 +423,20 @@ const Perfil: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900">Acciones</h3>
             </div>
             <div className="card-body space-y-3">
-              <button className="w-full btn btn-outline flex items-center justify-center space-x-2">
+              <button
+                className="w-full btn btn-outline flex items-center justify-center space-x-2"
+                onClick={() => setEditing(true)}
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                 </svg>
                 <span>Cambiar Contraseña</span>
               </button>
 
-              <button className="w-full btn btn-outline flex items-center justify-center space-x-2">
+              <button
+                className="w-full btn btn-outline flex items-center justify-center space-x-2"
+                onClick={onLogout}
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>

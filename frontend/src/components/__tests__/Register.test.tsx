@@ -66,14 +66,14 @@ describe('Register Component', () => {
     await userEvent.type(nombresInput, 'Juan');
     await userEvent.type(apellidosInput, 'Pérez');
     await userEvent.type(emailInput, 'juan@example.com');
-    await userEvent.type(passwordInput, 'password123');
-    await userEvent.type(confirmPasswordInput, 'password123');
+    await userEvent.type(passwordInput, 'Password123!');
+    await userEvent.type(confirmPasswordInput, 'Password123!');
 
     expect(nombresInput).toHaveValue('Juan');
     expect(apellidosInput).toHaveValue('Pérez');
     expect(emailInput).toHaveValue('juan@example.com');
-    expect(passwordInput).toHaveValue('password123');
-    expect(confirmPasswordInput).toHaveValue('password123');
+    expect(passwordInput).toHaveValue('Password123!');
+    expect(confirmPasswordInput).toHaveValue('Password123!');
   });
 
   it('should show error when passwords do not match', async () => {
@@ -97,24 +97,26 @@ describe('Register Component', () => {
     });
   });
 
-  it('should show error when password is too short', async () => {
+  it('should show error when password does not meet strength requirements', async () => {
     render(<Register onRegisterSuccess={mockOnRegisterSuccess} />);
-    
+
     // Llenar los campos requeridos
     await userEvent.type(screen.getByLabelText('Nombres'), 'Test');
     await userEvent.type(screen.getByLabelText('Apellidos'), 'User');
     await userEvent.type(screen.getByLabelText('Correo electrónico'), 'test@example.com');
-    
-    // Establecer contraseña demasiado corta
-    await userEvent.type(screen.getByLabelText('Contraseña'), '123');
-    await userEvent.type(screen.getByLabelText('Confirmar contraseña'), '123');
-    
+
+    // Establecer contraseña débil (sin mayúscula, número ni carácter especial)
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'weak');
+    await userEvent.type(screen.getByLabelText('Confirmar contraseña'), 'weak');
+
     // Enviar el formulario
     fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
-    
+
     // Verificar que se muestra el error correcto
     await waitFor(() => {
-      expect(showError).toHaveBeenCalledWith('La contraseña debe tener al menos 6 caracteres');
+      expect(showError).toHaveBeenCalledWith(
+        expect.stringContaining('La contraseña debe tener al menos 8 caracteres')
+      );
     });
   });
 
@@ -134,9 +136,9 @@ describe('Register Component', () => {
     await userEvent.type(screen.getByLabelText('Correo electrónico'), 'juan@example.com');
     
     // Usar fireEvent.change para los campos de contraseña
-    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } });
-    
+    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'Password123!' } });
+    fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'Password123!' } });
+
     // Enviar el formulario
     fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
 
@@ -151,7 +153,7 @@ describe('Register Component', () => {
           nombres: 'Juan',
           apellidos: 'Pérez',
           email: 'juan@example.com',
-          password: 'password123'
+          password: 'Password123!'
         }),
       });
       
@@ -181,9 +183,9 @@ describe('Register Component', () => {
     await userEvent.type(screen.getByLabelText('Correo electrónico'), 'existente@example.com');
     
     // Usar fireEvent.change para los campos de contraseña
-    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } });
-    
+    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'Password123!' } });
+    fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'Password123!' } });
+
     // Enviar el formulario
     fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
 

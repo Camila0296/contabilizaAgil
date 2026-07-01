@@ -186,6 +186,20 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const handleLogout = () => {
+    // Limpiar localStorage al cerrar sesión
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('role');
+    localStorage.removeItem('roles');
+    // Resetear estado
+    setIsLoggedIn(false);
+    setRole(null);
+    setSection('panel');
+    // Redirigir a la página de login
+    window.location.href = '/';
+  };
+
   // Verificar autenticación al cargar
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -310,20 +324,9 @@ function App() {
           {/* Sidebar - Móvil y escritorio */}
           <div className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 z-30 w-64 transition-transform duration-300 ease-in-out`}>
             <div className="h-full overflow-y-auto">
-              <Sidebar 
-                role={role} 
-                onLogout={() => {
-                  // Limpiar localStorage al cerrar sesión
-                  localStorage.removeItem('token');
-                  localStorage.removeItem('userId');
-                  localStorage.removeItem('role');
-                  // Resetear estado
-                  setIsLoggedIn(false);
-                  setRole(null);
-                  setSection('panel');
-                  // Redirigir a la página de login
-                  window.location.href = '/';
-                }} 
+              <Sidebar
+                role={role}
+                onLogout={handleLogout}
                 onSection={(section) => {
                   setSection(section);
                   setMobileMenuOpen(false); // Cerrar menú al seleccionar una opción
@@ -340,7 +343,7 @@ function App() {
             {section === 'reportes' && <Reportes />}
             {section === 'usuarios' && role !== 'user' && <Usuarios />}
             {section === 'aprobaciones' && role !== 'user' && <Aprobaciones />}
-            {section === 'perfil' && <Perfil />}
+            {section === 'perfil' && <Perfil onLogout={handleLogout} />}
           </main>
 
           <ChatBot

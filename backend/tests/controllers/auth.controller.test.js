@@ -12,7 +12,7 @@ describe('Auth Controller', () => {
           nombres: 'John',
           apellidos: 'Doe',
           email: 'john@example.com',
-          password: 'password123'
+          password: 'Password123!'
         }
       });
       const res = mockResponse();
@@ -20,6 +20,27 @@ describe('Auth Controller', () => {
       await authCtrl.register(req, res);
 
       expect(res.json).toHaveBeenCalledWith({ status: 'Usuario registrado' });
+    });
+
+    it('should return error if password is not strong enough', async () => {
+      await createTestRole('user');
+
+      const req = mockRequest({
+        body: {
+          nombres: 'John',
+          apellidos: 'Doe',
+          email: 'john@example.com',
+          password: 'password123'
+        }
+      });
+      const res = mockResponse();
+
+      await authCtrl.register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: expect.stringContaining('La contraseña debe tener al menos 8 caracteres')
+      });
     });
 
     it('should return error if required fields are missing', async () => {

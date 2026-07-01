@@ -27,3 +27,10 @@ CLAUDE.md
 
 # Screenshots de prueba
 chatbot-*.png
+
+# Capturas sueltas generadas por scripts de verificación manual (deben ir a tests/screenshots/)
+/*.png
+/*.jpg
+/*.jpeg
+verify-*.png
+vcheck*.png

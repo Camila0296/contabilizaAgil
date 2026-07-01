@@ -91,6 +91,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           required
             className="form-input"
             placeholder="••••••••"
+            autoComplete="current-password"
           />
         </div>
 

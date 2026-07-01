@@ -75,6 +75,11 @@ router.get('/me', auth, userCtrl.getMe);
  *                 type: string
  *               apellidos:
  *                 type: string
+ *               email:
+ *                 type: string
+ *               currentPassword:
+ *                 type: string
+ *                 description: Requerida cuando se envía password
  *               password:
  *                 type: string
  *     responses:

@@ -214,12 +214,13 @@ describe('User Controller', () => {
       expect(res.json).toHaveBeenCalledWith({ status: 'Perfil actualizado' });
     });
 
-    it('should update password if provided', async () => {
+    it('should update password if provided with a valid current password', async () => {
       const req = mockRequest({
         body: {
           nombres: 'Test',
           apellidos: 'User',
-          password: 'newpassword123'
+          currentPassword: 'password123',
+          password: 'NewPassword123!'
         },
         user: { id: regularUser._id }
       });
@@ -228,6 +229,44 @@ describe('User Controller', () => {
       await userCtrl.updateMe(req, res);
 
       expect(res.json).toHaveBeenCalledWith({ status: 'Perfil actualizado' });
+    });
+
+    it('should reject password update if current password is wrong', async () => {
+      const req = mockRequest({
+        body: {
+          nombres: 'Test',
+          apellidos: 'User',
+          currentPassword: 'wrongpassword',
+          password: 'NewPassword123!'
+        },
+        user: { id: regularUser._id }
+      });
+      const res = mockResponse();
+
+      await userCtrl.updateMe(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Contraseña actual incorrecta' });
+    });
+
+    it('should reject weak passwords', async () => {
+      const req = mockRequest({
+        body: {
+          nombres: 'Test',
+          apellidos: 'User',
+          currentPassword: 'password123',
+          password: 'weak'
+        },
+        user: { id: regularUser._id }
+      });
+      const res = mockResponse();
+
+      await userCtrl.updateMe(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: expect.stringContaining('La contraseña debe tener al menos 8 caracteres')
+      });
     });
   });
 }); 

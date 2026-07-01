@@ -1,6 +1,7 @@
 const User = require('../models/user');
 const Role = require('../models/role');
 const bcrypt = require('bcryptjs');
+const { isStrongPassword, PASSWORD_ERROR, BCRYPT_ROUNDS, generateTempPassword } = require('../utils/passwordPolicy');
 
 const userCtrl = {};
 
@@ -8,14 +9,13 @@ const userCtrl = {};
 userCtrl.createUser = async (req, res) => {
   try {
     const { nombres, apellidos, email, role } = req.body;
-    const crypto = require('crypto');
-    const randomPass = crypto.randomBytes(4).toString('hex'); // 8 chars
+    const randomPass = generateTempPassword();
     if (!nombres || !apellidos || !email) {
       return res.status(400).json({ error: 'Campos obligatorios faltantes' });
     }
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: 'Email ya registrado' });
-    const hashed = await bcrypt.hash(randomPass, 10);
+    const hashed = await bcrypt.hash(randomPass, BCRYPT_ROUNDS);
     const roleDoc = await Role.findOne({ name: (role || 'user').toLowerCase() });
     if (!roleDoc) return res.status(400).json({ error: 'Rol no válido' });
     const user = new User({ nombres, apellidos, email, password: hashed, role: roleDoc._id });
@@ -74,7 +74,14 @@ userCtrl.getUser = async (req, res) => {
 };
 
 userCtrl.updateUser = async (req, res) => {
-  await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  const update = { ...req.body };
+  if (update.password) {
+    if (!isStrongPassword(update.password)) {
+      return res.status(400).json({ error: PASSWORD_ERROR });
+    }
+    update.password = await bcrypt.hash(update.password, BCRYPT_ROUNDS);
+  }
+  await User.findByIdAndUpdate(req.params.id, update, { new: true });
   res.json({ status: 'Usuario actualizado' });
 };
 
@@ -84,11 +91,25 @@ userCtrl.getMe = async (req, res) => {
 };
 
 userCtrl.updateMe = async (req, res) => {
-  const { nombres, apellidos, password } = req.body;
+  const { nombres, apellidos, email, password, currentPassword } = req.body;
   const update = { nombres, apellidos };
+  if (email) {
+    const existing = await User.findOne({ email, _id: { $ne: req.user.id } });
+    if (existing) {
+      return res.status(400).json({ error: 'Email ya registrado' });
+    }
+    update.email = email;
+  }
   if (password) {
-    const bcrypt = require('bcryptjs');
-    update.password = await bcrypt.hash(password, 10);
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ error: PASSWORD_ERROR });
+    }
+    const user = await User.findById(req.user.id);
+    const valid = currentPassword && await bcrypt.compare(currentPassword, user.password);
+    if (!valid) {
+      return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+    }
+    update.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
   }
   await User.findByIdAndUpdate(req.user.id, update, { new: true });
   res.json({ status: 'Perfil actualizado' });

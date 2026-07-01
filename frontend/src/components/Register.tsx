@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { apiFetch } from '../api';
 import { showSuccess, showError } from '../utils/alerts';
+import { isStrongPassword, PASSWORD_ERROR, PASSWORD_HINT } from '../utils/password';
 
 interface RegisterProps {
   onRegisterSuccess: () => void;
@@ -31,8 +32,8 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      showError('La contraseña debe tener al menos 6 caracteres');
+    if (!isStrongPassword(formData.password)) {
+      showError(PASSWORD_ERROR);
       return;
     }
 
@@ -138,9 +139,10 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
             required
             className="form-input"
             placeholder="••••••••"
-            minLength={6}
+            minLength={8}
+            autoComplete="new-password"
           />
-          <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
+          <p className="text-xs text-gray-500 mt-1">{PASSWORD_HINT}</p>
         </div>
 
         <div>
@@ -156,6 +158,7 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess }) => {
             required
             className="form-input"
             placeholder="••••••••"
+            autoComplete="new-password"
           />
         </div>
 

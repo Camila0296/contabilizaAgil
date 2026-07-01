@@ -32,7 +32,7 @@ const Home: React.FC<HomeProps> = ({ onSectionChange }) => {
 
   const fetchDashboardStats = async () => {
     try {
-      const res = await apiFetch('/facturas/dashboard-stats');
+      const res = await apiFetch('/facturas/dashboard/stats');
       const data = await res.json();
       setStats(data);
     } catch (error) {
