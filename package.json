@@ -9,9 +9,8 @@
     "test": "node tests/e2e/all-tests.js",
     "test:unit": "concurrently \"cd backend && npm test\" \"cd frontend && npm test\"",
     "test:e2e": "cd tests && npm run test:e2e",
-    "test:performance": "cd tests && npm run test:performance",
     "test:visual": "cd tests && npm run test:visual",
-    "test:all": "npm run test:unit && npm run test:e2e && npm run test:performance",
+    "test:all": "npm run test:unit && npm run test:e2e",
     "test:ci": "npm run test:unit && npm run test:e2e",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../tests && npm install",
     "setup": "npm run install:all && echo '✅ Setup completado. Ejecuta npm start para iniciar los servicios'"

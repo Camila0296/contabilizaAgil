@@ -11,6 +11,11 @@ videos/
 screenshots/
 report/
 
+# Capturas sueltas que dejan los scripts de e2e/ al correr (deben ir a screenshots/)
+*.png
+*.jpg
+*.jpeg
+
 # Ignore log files
 *.log
 

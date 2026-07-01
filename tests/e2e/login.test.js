@@ -31,11 +31,11 @@ async function findElementWithRetry(driver, selectors, timeout = 10000) {
 // Configuration
 const CONFIG = {
   baseUrl: 'http://localhost:4200',
-  headless: false,  // Cambiar a true para modo sin interfaz gráfica
+  headless: process.env.HEADLESS === 'true',
   timeout: 30000,
   user: {
     email: 'admin@admin.com',
-    password: 'admin'
+    password: 'admin123'
   }
 };
 
@@ -63,6 +63,7 @@ async function runLoginTest() {
   }
   options.addArguments('--no-sandbox');
   options.addArguments('--disable-dev-shm-usage');
+  options.addArguments('--disable-gpu');
   options.addArguments('--window-size=1920,1080');
   options.addArguments('--start-maximized');
 

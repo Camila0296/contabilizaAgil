@@ -5,7 +5,7 @@ const fs = require('fs');
 // Configuration
 const CONFIG = {
   baseUrl: 'http://localhost:4200',
-  headless: false,
+  headless: process.env.HEADLESS === 'true',
   timeout: 10000,
   testUser: {
     nombres: 'Test',
