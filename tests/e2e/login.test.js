@@ -35,7 +35,7 @@ const CONFIG = {
   timeout: 30000,
   user: {
     email: 'admin@admin.com',
-    password: 'admin123'
+    password: 'Admin202602*'
   }
 };
 

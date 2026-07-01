@@ -37,7 +37,7 @@ const fs = require('fs');
 
     // ── LOGIN ───────────────────────────────────────────────
     await inp.sendKeys('admin@admin.com');
-    await driver.findElement(By.css('input[type="password"]')).sendKeys('admin123');
+    await driver.findElement(By.css('input[type="password"]')).sendKeys('Admin202602*');
     await btn.click();
 
     // Wait for dashboard
