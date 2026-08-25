@@ -21,24 +21,26 @@ userCtrl.createUser = async (req, res) => {
     const user = new User({ nombres, apellidos, email, password: hashed, role: roleDoc._id });
     await user.save();
     // Enviar correo con contraseña
-    try {
-      const nodemailer = require('nodemailer');
-      var transporter = nodemailer.createTransport({
-        host: "pro.turbo-smtp.com",
-        port: 587,
-        auth: {
-          user: "kamilapava10@gmail.com",
-          pass: "0mxQrJmn"
-        }
-      });
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
-        to: email,
-        subject: 'Credenciales de acceso',
-        text: `Hola ${nombres},\n\nTu cuenta ha sido creada. Puedes iniciar sesión con:\nEmail: ${email}\nContraseña: ${randomPass}\n\nPor favor cambia la contraseña después de iniciar sesión.`
-      });
-    } catch (mailErr) {
-      console.error('Error enviando correo:', mailErr);
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        });
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+          to: email,
+          subject: 'Credenciales de acceso',
+          text: `Hola ${nombres},\n\nTu cuenta ha sido creada. Puedes iniciar sesión con:\nEmail: ${email}\nContraseña: ${randomPass}\n\nPor favor cambia la contraseña después de iniciar sesión.`
+        });
+      } catch (mailErr) {
+        console.error('Error enviando correo:', mailErr);
+      }
     }
 
     res.json({ status: 'Usuario creado', id: user._id.toString() });
