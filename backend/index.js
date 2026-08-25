@@ -33,6 +33,10 @@ app.use('/api/users', require('./routes/user.route'));
 app.use('/api/facturas', require('./routes/factura.route'));
 app.use('/api/roles', require('./routes/role.route'));
 app.use('/api/chat', require('./routes/chat.route'));
+app.use('/api/terceros', require('./routes/tercero.route'));
+app.use('/api/puc', require('./routes/puc.route'));
+app.use('/api/facturas-cartera', require('./routes/facturaCartera.route'));
+app.use('/api/aprobaciones', require('./routes/aprobaciones.route'));
 
 // Documentación Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
