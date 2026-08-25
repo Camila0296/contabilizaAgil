@@ -41,7 +41,11 @@ app.use('/api/aprobaciones', require('./routes/aprobaciones.route'));
 // Documentación Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Iniciando el servidor
-app.listen(app.get('port'), '0.0.0.0', () => {
+// Iniciar servidor solo si no está en modo test
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(app.get('port'), '0.0.0.0', () => {
     console.log('server activo en el puerto', app.get('port'));
-});
+  });
+}
+
+module.exports = app;
