@@ -82,8 +82,8 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
     setLoading(true);
     try {
       const res = await apiFetch('/facturas');
-      const data = await res.json();
-      setFacturas(data);
+      const response = await res.json();
+      setFacturas(response.data || response);
     } catch {
       showError('No se pudieron cargar las facturas');
     }

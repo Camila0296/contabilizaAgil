@@ -33,8 +33,8 @@ const Puc: React.FC = () => {
     setLoading(true);
     try {
       const res = await apiFetch('/puc');
-      const data = await res.json();
-      setPucs(data);
+      const response = await res.json();
+      setPucs(response.data || response);
     } catch {
       showError('No se pudieron cargar las cuentas PUC');
     }

@@ -39,8 +39,8 @@ const Usuarios: React.FC = () => {
   const fetchUsuarios = async () => {
     try {
       const res = await apiFetch('/users');
-      const data = await res.json();
-      setUsuarios(data);
+      const response = await res.json();
+      setUsuarios(response.data || response);
     } catch {
       showError('No se pudieron cargar los usuarios');
     } finally {
@@ -51,8 +51,8 @@ const Usuarios: React.FC = () => {
   const fetchRoles = async () => {
     try {
       const res = await apiFetch('/roles');
-      const data = await res.json();
-      setRoles(data);
+      const response = await res.json();
+      setRoles(response.data || response);
     } catch {
       showError('No se pudieron cargar los roles');
     }

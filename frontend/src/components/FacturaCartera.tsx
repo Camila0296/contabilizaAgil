@@ -100,8 +100,8 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
     setLoading(true);
     try {
       const res = await apiFetch('/facturas-cartera');
-      const data = await res.json();
-      setFacturas(data);
+      const response = await res.json();
+      setFacturas(response.data || response);
     } catch {
       showError('No se pudieron cargar las facturas');
     }
@@ -111,8 +111,8 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
   const fetchTerceros = async () => {
     try {
       const res = await apiFetch('/terceros?tipo=cliente');
-      const data = await res.json();
-      setTerceros(data);
+      const response = await res.json();
+      setTerceros(response.data || response);
     } catch {
       showError('No se pudieron cargar los terceros');
     }
@@ -121,8 +121,8 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
   const fetchPucs = async () => {
     try {
       const res = await apiFetch('/puc');
-      const data = await res.json();
-      setPucs(data);
+      const response = await res.json();
+      setPucs(response.data || response);
     } catch {
       showError('No se pudieron cargar las cuentas PUC');
     }

@@ -45,8 +45,8 @@ const Terceros: React.FC = () => {
     setLoading(true);
     try {
       const res = await apiFetch('/terceros');
-      const data = await res.json();
-      setTerceros(data);
+      const response = await res.json();
+      setTerceros(response.data || response);
     } catch {
       showError('No se pudieron cargar los terceros');
     }
