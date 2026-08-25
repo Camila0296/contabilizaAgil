@@ -10,9 +10,9 @@ describe('PUC Controller - Validaciones y Paginación', () => {
 
   beforeAll(async () => {
     // Crear rol
-    let userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
+    let userRole = await Role.findOne({ name: 'administrador' });
     if (!userRole) {
-      userRole = await Role.create({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
+      userRole = await Role.create({ name: 'administrador', nivel: 1, descripcion: 'Control total del sistema' });
     }
 
     // Crear usuario
@@ -24,6 +24,10 @@ describe('PUC Controller - Validaciones y Paginación', () => {
         email: `puc-user-${Date.now()}@test.com`,
         password: 'TestPass123!'
       });
+
+    // Aprobar usuario
+    const userId = res.body.user._id;
+    await User.findByIdAndUpdate(userId, { approved: true });
 
     authToken = res.body.token;
   });
