@@ -9,6 +9,12 @@ describe('PUC Controller - Validaciones y Paginación', () => {
   let authToken;
 
   beforeAll(async () => {
+    // Asegurar que el rol auxiliar existe
+    let auxRole = await Role.findOne({ name: 'auxiliar' });
+    if (!auxRole) {
+      auxRole = await Role.create({ name: 'auxiliar', nivel: 4, descripcion: 'Entrada de datos' });
+    }
+
     // Crear usuario
     const email = `puc-user-${Date.now()}@test.com`;
     const password = 'TestPass123!';
