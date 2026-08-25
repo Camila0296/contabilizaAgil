@@ -27,8 +27,9 @@ const Aprobaciones: React.FC = () => {
     try {
       const res = await apiFetch('/users');
       const response = await res.json();
+      const usuarios = response.data || response;
       // Filtrar solo usuarios pendientes de aprobación
-      const pendientes = data.filter((user: User) => !user.approved);
+      const pendientes = usuarios.filter((user: User) => !user.approved);
       setUsuarios(pendientes);
     } catch {
       showError('No se pudieron cargar las solicitudes');
