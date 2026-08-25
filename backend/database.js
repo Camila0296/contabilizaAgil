@@ -39,7 +39,7 @@ async function connectDB() {
     }
   }
 
-  // Crea el usuario admin si no existe
+  // Crea el usuario admin si no existe o actualiza su rol
   let adminUser = await User.findOne({ email: 'admin@admin.com' });
   if (!adminUser) {
     const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -52,6 +52,10 @@ async function connectDB() {
       approved: true
     });
     console.log('Usuario administrador creado');
+  } else if (adminUser.role === null || !adminUser.role) {
+    // Si el usuario existe pero su rol es nulo, asignar el rol administrador
+    await User.findByIdAndUpdate(adminUser._id, { role: adminRole._id });
+    console.log('Rol administrador asignado al usuario admin');
   }
 
   // Siembra el catálogo PUC si está vacío

@@ -39,12 +39,26 @@ authCtrl.register = async (req, res) => {
 // Login de usuario
 authCtrl.login = async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email }).populate('role');
+  let user = await User.findOne({ email }).populate('role');
   if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta' });
   // Generar token JWT
   if (!user.approved) return res.status(403).json({ error: 'Cuenta pendiente de aprobación' });
+
+  // Si el rol es nulo, asignar el rol según el email
+  if (!user.role) {
+    const defaultRole = email === 'admin@admin.com'
+      ? await Role.findOne({ name: 'administrador' })
+      : await Role.findOne({ name: 'auxiliar' });
+
+    if (!defaultRole) {
+      return res.status(500).json({ error: 'No hay roles definidos en la base de datos' });
+    }
+
+    user = await User.findByIdAndUpdate(user._id, { role: defaultRole._id }, { new: true }).populate('role');
+  }
+
   const token = jwt.sign({ id: user._id, role: user.role.name }, process.env.JWT_SECRET || 'changeme', {
     expiresIn: '8h'
   });
