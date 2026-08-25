@@ -44,6 +44,7 @@ describe('Factura Controller - Validaciones y Paginación', () => {
 
     adminToken = adminRes.body.token;
     adminId = adminRes.body.user._id;
+    await User.findByIdAndUpdate(adminId, { approved: true });
 
     // Crear usuario regular
     const userEmail = `user-${Date.now()}@test.com`;
@@ -58,6 +59,7 @@ describe('Factura Controller - Validaciones y Paginación', () => {
 
     authToken = userRes.body.token;
     userId = userRes.body.user._id;
+    await User.findByIdAndUpdate(userId, { approved: true });
   });
 
   afterAll(async () => {

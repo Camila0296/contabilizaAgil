@@ -28,6 +28,7 @@ describe('Tercero Controller - Validaciones y Paginación', () => {
 
     authToken = res.body.token;
     userId = res.body.user._id;
+    await User.findByIdAndUpdate(userId, { approved: true });
   });
 
   afterAll(async () => {

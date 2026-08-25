@@ -34,6 +34,7 @@ describe('User Controller - Validaciones y Paginación', () => {
 
     adminToken = adminRes.body.token;
     adminId = adminRes.body.user._id;
+    await User.findByIdAndUpdate(adminId, { approved: true });
 
     // Crear usuario regular
     const userRes = await request(app)
@@ -47,6 +48,7 @@ describe('User Controller - Validaciones y Paginación', () => {
 
     userToken = userRes.body.token;
     userId = userRes.body.user._id;
+    await User.findByIdAndUpdate(userId, { approved: true });
   });
 
   afterAll(async () => {

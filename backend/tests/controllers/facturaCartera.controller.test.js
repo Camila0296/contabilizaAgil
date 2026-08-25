@@ -50,7 +50,8 @@ describe('FacturaCartera Controller', () => {
       await facturaCarteraCtrl.createFacturaCartera(req, res);
 
       expect(res.json).toHaveBeenCalled();
-      const call = res.json.mock.calls[0][0];
+      const response = res.json.mock.calls[0][0];
+      const call = response.data || response;
       expect(call.status).toBe('Factura guardada');
       expect(call.factura).toBeDefined();
       expect(call.factura.numeroDocumento).toBe('FAC-001');
@@ -78,7 +79,8 @@ describe('FacturaCartera Controller', () => {
       await facturaCarteraCtrl.createFacturaCartera(req, res);
 
       expect(res.json).toHaveBeenCalled();
-      const call = res.json.mock.calls[0][0];
+      const response = res.json.mock.calls[0][0];
+      const call = response.data || response;
       expect(call.factura.numeroDocumento).toBe('NC-001');
       expect(call.factura.tipo).toBe('creditNote');
     });
@@ -103,7 +105,8 @@ describe('FacturaCartera Controller', () => {
       await facturaCarteraCtrl.createFacturaCartera(req, res);
 
       expect(res.json).toHaveBeenCalled();
-      const call = res.json.mock.calls[0][0];
+      const response = res.json.mock.calls[0][0];
+      const call = response.data || response;
       expect(call.factura.numeroDocumento).toBe('ND-001');
       expect(call.factura.tipo).toBe('debitNote');
     });
@@ -213,9 +216,10 @@ describe('FacturaCartera Controller', () => {
       await facturaCarteraCtrl.getFacturasCartera(reqGet, resGet);
 
       expect(resGet.json).toHaveBeenCalled();
-      const facturas = resGet.json.mock.calls[0][0];
-      expect(Array.isArray(facturas)).toBe(true);
-      expect(facturas.length).toBeGreaterThan(0);
+      const response = resGet.json.mock.calls[0][0];
+      expect(response).toHaveProperty('data');
+      expect(Array.isArray(response.data)).toBe(true);
+      expect(response.data.length).toBeGreaterThan(0);
     });
 
     it('should return only user own facturas for non-admin', async () => {
