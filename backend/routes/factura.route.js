@@ -155,7 +155,7 @@ router.delete('/:id', facturaCtrl.deleteFactura);
 
 // Rutas solo para administradores
 const adminOnlyRoutes = ['/dashboard/stats'];
-router.use(adminOnlyRoutes, role('admin'));
+router.use(adminOnlyRoutes, role('administrador', 'contador'));
 
 // Ruta para obtener estadísticas del dashboard (solo admin)
 router.get('/dashboard/stats', facturaCtrl.getDashboardStats);

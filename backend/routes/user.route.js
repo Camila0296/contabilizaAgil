@@ -88,8 +88,8 @@ router.get('/me', auth, userCtrl.getMe);
  */
 router.put('/me', auth, userCtrl.updateMe);
 
-// Protege todas las rutas bajo /users solo para admin
-router.use(auth, role(['admin']));
+// Protege todas las rutas bajo /users solo para administrador
+router.use(auth, role(['administrador']));
 
 /**
  * @swagger

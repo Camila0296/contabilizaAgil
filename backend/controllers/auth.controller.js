@@ -20,7 +20,7 @@ authCtrl.register = async (req, res) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  const userRole = await Role.findOne({ name: "user" }) || await Role.findOne(); // Asigna el primer rol si no se envía
+  const userRole = await Role.findOne({ name: "auxiliar" }) || await Role.findOne({ nivel: 4 }); // Asigna rol auxiliar por defecto
   if (!userRole) {
     return res.status(500).json({ error: 'No hay roles definidos en la base de datos' });
   }

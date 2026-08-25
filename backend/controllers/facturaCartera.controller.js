@@ -65,7 +65,7 @@ const getNextConsecutivo = async (tipo) => {
 facturaCarteraCtrl.getFacturasCartera = async (req, res) => {
   try {
     let query = {};
-    if (!req.user.roles.includes('admin')) {
+    if (!req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) {
       query.usuario = req.user.id;
     }
 
@@ -116,7 +116,7 @@ facturaCarteraCtrl.getFacturaCartera = async (req, res) => {
     if (!factura) {
       return res.status(404).json({ error: 'Factura no encontrada' });
     }
-    if (!req.user.roles.includes('admin') && factura.usuario._id.toString() !== req.user.id) {
+    if ((!req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) && factura.usuario._id.toString() !== req.user.id) {
       return res.status(403).json({ error: 'No tienes permiso para ver esta factura' });
     }
     res.json(factura);
@@ -181,7 +181,7 @@ facturaCarteraCtrl.updateFacturaCartera = async (req, res) => {
       return res.status(404).json({ error: 'Factura no encontrada' });
     }
 
-    if (!req.user.roles.includes('admin') && factura.usuario._id.toString() !== req.user.id) {
+    if ((!req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) && factura.usuario._id.toString() !== req.user.id) {
       return res.status(403).json({ error: 'No tienes permiso para editar esta factura' });
     }
 
@@ -210,7 +210,7 @@ facturaCarteraCtrl.deleteFacturaCartera = async (req, res) => {
       return res.status(404).json({ error: 'Factura no encontrada' });
     }
 
-    if (!req.user.roles.includes('admin') && factura.usuario._id.toString() !== req.user.id) {
+    if ((!req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) && factura.usuario._id.toString() !== req.user.id) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar esta factura' });
     }
 

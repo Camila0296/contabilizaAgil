@@ -30,7 +30,7 @@ const Sidebar: React.FC<{
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-5 space-y-1">
-          {role !== 'user' && (
+          {(role === 'administrador' || role === 'contador') && (
             <button
               className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                 section === 'panel'
@@ -173,7 +173,7 @@ const Sidebar: React.FC<{
             </div>
           </button>
 
-          {role !== 'user' && (
+          {role === 'administrador' && (
             <>
               <div className="pt-3 pb-1 px-4">
                 <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>Administración</p>
@@ -313,16 +313,23 @@ function App() {
     validateToken();
   }, []);
 
-  // Si el rol es usuario y la sección actual no está permitida, redirigir
+  // Validar acceso a secciones según el rol
   useEffect(() => {
-    if (!role) return; // Si no hay rol, no hacer nada
-    
-    const userRoles = JSON.parse(localStorage.getItem('roles') || '[]');
-    const isAdmin = userRoles.includes('admin');
-    
-    // Si no es admin y está en una sección no permitida, redirigir a facturación
-    if (!isAdmin && (section === 'panel' || section === 'usuarios' || section === 'aprobaciones')) {
+    if (!role) return;
+
+    const isAdmin = role === 'administrador';
+    const isCounter = role === 'contador';
+
+    // Panel: solo administrador y contador
+    if (section === 'panel' && !isAdmin && !isCounter) {
       setSection('facturacion');
+      return;
+    }
+
+    // Usuarios y Aprobaciones: solo administrador
+    if ((section === 'usuarios' || section === 'aprobaciones') && !isAdmin) {
+      setSection('facturacion');
+      return;
     }
   }, [role, section]);
 
@@ -368,7 +375,7 @@ function App() {
             <div className="flex items-center space-x-2 bg-indigo-50 rounded-xl px-3 py-1.5">
               <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
               <span className="text-xs font-medium text-indigo-700 hidden sm:block">
-                {role === 'admin' ? 'Administrador' : role === 'approver' ? 'Aprobador' : 'Usuario'}
+                {role === 'administrador' ? 'Administrador' : role === 'contador' ? 'Contador' : role === 'analista' ? 'Analista' : role === 'auxiliar' ? 'Auxiliar' : 'Usuario'}
               </span>
             </div>
           </div>
@@ -402,14 +409,14 @@ function App() {
           
           {/* Contenido principal */}
           <main className="flex-1 pt-16 lg:pt-0 lg:ml-64 p-4 sm:p-6 transition-all duration-300">
-            {section === 'panel' && role !== 'user' && <Home onSectionChange={setSection} />}
+            {section === 'panel' && (role === 'administrador' || role === 'contador') && <Home onSectionChange={setSection} />}
             {section === 'facturacion' && <Facturas userId={localStorage.getItem('userId')} />}
             {section === 'facturacion-cartera' && <FacturaCartera userId={localStorage.getItem('userId')} />}
             {section === 'reportes' && <Reportes />}
             {section === 'terceros' && <Terceros />}
             {section === 'puc' && <Puc />}
-            {section === 'usuarios' && role !== 'user' && <Usuarios />}
-            {section === 'aprobaciones' && role !== 'user' && <Aprobaciones />}
+            {section === 'usuarios' && role === 'administrador' && <Usuarios />}
+            {section === 'aprobaciones' && role === 'administrador' && <Aprobaciones />}
             {section === 'perfil' && <Perfil onLogout={handleLogout} />}
           </main>
 
@@ -421,16 +428,12 @@ function App() {
         </div>
       ) : (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
-          <AuthPage onLogin={(userRole) => { 
-            setIsLoggedIn(true); 
+          <AuthPage onLogin={(userRole) => {
+            setIsLoggedIn(true);
             setRole(userRole);
-            
-            // Obtener roles desde localStorage
-            const userRoles = JSON.parse(localStorage.getItem('roles') || '[]');
-            const isAdmin = userRoles.includes('admin');
-            
+
             // Redirigir según el rol
-            if (isAdmin) {
+            if (userRole === 'administrador' || userRole === 'contador') {
               setSection('panel');
             } else {
               setSection('facturacion');
