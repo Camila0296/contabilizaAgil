@@ -9,12 +9,6 @@ describe('PUC Controller - Validaciones y Paginación', () => {
   let authToken;
 
   beforeAll(async () => {
-    // Crear rol
-    let userRole = await Role.findOne({ name: 'administrador' });
-    if (!userRole) {
-      userRole = await Role.create({ name: 'administrador', nivel: 1, descripcion: 'Control total del sistema' });
-    }
-
     // Crear usuario
     const res = await request(app)
       .post('/api/auth/register')
@@ -26,10 +20,13 @@ describe('PUC Controller - Validaciones y Paginación', () => {
       });
 
     // Aprobar usuario
-    const userId = res.body.user._id;
-    await User.findByIdAndUpdate(userId, { approved: true });
-
-    authToken = res.body.token;
+    if (res.body.user && res.body.user._id) {
+      const userId = res.body.user._id;
+      await User.findByIdAndUpdate(userId, { approved: true });
+      authToken = res.body.token;
+    } else {
+      throw new Error('Register failed: ' + JSON.stringify(res.body));
+    }
   });
 
   afterAll(async () => {
