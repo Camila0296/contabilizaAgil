@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Factura = require('../models/factura');
 
 const facturaCtrl = {};
@@ -6,8 +7,8 @@ facturaCtrl.getFacturas = async (req, res) => {
   try {
     let query = {};
     // Si el usuario no es administrador, solo puede ver sus propias facturas
-    if (!req.user.roles.includes('admin')) {
-      query.usuario = req.user.id;
+    if (!req.user || !Array.isArray(req.user.roles) || !req.user.roles.includes('admin')) {
+      query.usuario = req.user?.id;
     }
     
     // Buscar facturas con el filtro aplicado
@@ -28,7 +29,7 @@ facturaCtrl.getFactura = async (req, res) => {
     }
     
     // Verificar permisos: el usuario es admin o es el dueño de la factura
-    if (!req.user.roles.includes('admin') && factura.usuario._id.toString() !== req.user.id) {
+    if ((!req.user || !Array.isArray(req.user.roles) || !req.user.roles.includes('admin')) && factura.usuario._id.toString() !== req.user?.id) {
       return res.status(403).json({ error: 'No tienes permiso para ver esta factura' });
     }
     
@@ -72,7 +73,7 @@ facturaCtrl.updateFactura = async (req, res) => {
     }
 
     // Verificar permisos: el usuario es admin o es el dueño de la factura
-    if (!req.user.roles.includes('admin') && facturaExistente.usuario.toString() !== req.user.id) {
+    if ((!req.user || !Array.isArray(req.user.roles) || !req.user.roles.includes('admin')) && facturaExistente.usuario.toString() !== req.user?.id) {
       return res.status(403).json({ error: 'No tienes permiso para actualizar esta factura' });
     }
 
@@ -111,8 +112,8 @@ facturaCtrl.deleteFactura = async (req, res) => {
     }
     
     // Verificar permisos: admin puede eliminar todas, usuario solo las suyas
-    const isAdmin = req.user.roles && req.user.roles.includes('admin');
-    const isOwner = factura.usuario && factura.usuario.toString() === req.user.id;
+    const isAdmin = req.user && Array.isArray(req.user.roles) && req.user.roles.includes('admin');
+    const isOwner = factura.usuario && factura.usuario.toString() === req.user?.id;
     
     if (!isAdmin && !isOwner) {
       return res.status(403).json({ 
@@ -134,8 +135,8 @@ facturaCtrl.getDashboardStats = async (req, res) => {
   try {
     // Crear filtro basado en el rol del usuario
     let matchFilter = {};
-    if (!req.user.roles.includes('admin')) {
-      matchFilter.usuario = req.user.id;
+    if (!req.user || !Array.isArray(req.user.roles) || !req.user.roles.includes('admin')) {
+      matchFilter.usuario = req.user?.id;
     }
 
     // Obtener estadísticas generales
@@ -158,8 +159,8 @@ facturaCtrl.getDashboardStats = async (req, res) => {
     };
     
     // Aplicar filtro de usuario si no es admin
-    if (!req.user.roles.includes('admin')) {
-      matchMesActual.usuario = new mongoose.Types.ObjectId(req.user.id);
+    if (!req.user || !Array.isArray(req.user.roles) || !req.user.roles.includes('admin')) {
+      matchMesActual.usuario = new mongoose.Types.ObjectId(req.user?.id);
     }
     
     const ingresosMes = await Factura.aggregate([
@@ -179,8 +180,8 @@ facturaCtrl.getDashboardStats = async (req, res) => {
     };
     
     // Aplicar filtro de usuario si no es admin
-    if (!req.user.roles.includes('admin')) {
-      matchMesAnterior.usuario = new mongoose.Types.ObjectId(req.user.id);
+    if (!req.user || !Array.isArray(req.user.roles) || !req.user.roles.includes('admin')) {
+      matchMesAnterior.usuario = new mongoose.Types.ObjectId(req.user?.id);
     }
     
     const ingresosMesAnterior = await Factura.aggregate([
