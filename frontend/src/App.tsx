@@ -8,8 +8,11 @@ import Perfil from './components/Perfil';
 import Reportes from './components/Reportes';
 import ChatBot from './components/ChatBot';
 import Logo from './components/Logo';
+import Terceros from './components/Terceros';
+import Puc from './components/Puc';
+import FacturaCartera from './components/FacturaCartera';
 
-type Section = 'panel' | 'facturacion' | 'reportes' | 'usuarios' | 'aprobaciones' | 'perfil';
+type Section = 'panel' | 'facturacion' | 'facturacion-cartera' | 'reportes' | 'usuarios' | 'aprobaciones' | 'terceros' | 'puc' | 'perfil';
 
 const Sidebar: React.FC<{ 
   role: string | null; 
@@ -72,6 +75,26 @@ const Sidebar: React.FC<{
 
           <button
             className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+              section === 'facturacion-cartera'
+                ? 'text-white font-semibold'
+                : 'text-white/60 hover:text-white'
+            }`}
+            style={section === 'facturacion-cartera' ? { background: 'rgba(255,255,255,0.12)', boxShadow: 'inset 3px 0 0 #a78bfa' } : {}}
+            onClick={() => onSection('facturacion-cartera')}
+          >
+            <div className="flex items-center space-x-3">
+              <span className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+                style={{ background: section === 'facturacion-cartera' ? 'rgba(167,139,250,0.28)' : 'rgba(255,255,255,0.07)', boxShadow: section === 'facturacion-cartera' ? '0 0 14px rgba(167,139,250,0.45)' : 'none' }}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </span>
+              <span>Cartera</span>
+            </div>
+          </button>
+
+          <button
+            className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
               section === 'reportes'
                 ? 'text-white font-semibold'
                 : 'text-white/60 hover:text-white'
@@ -87,6 +110,46 @@ const Sidebar: React.FC<{
                 </svg>
               </span>
               <span>Reportes</span>
+            </div>
+          </button>
+
+          <button
+            className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+              section === 'terceros'
+                ? 'text-white font-semibold'
+                : 'text-white/60 hover:text-white'
+            }`}
+            style={section === 'terceros' ? { background: 'rgba(255,255,255,0.12)', boxShadow: 'inset 3px 0 0 #a78bfa' } : {}}
+            onClick={() => onSection('terceros')}
+          >
+            <div className="flex items-center space-x-3">
+              <span className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+                style={{ background: section === 'terceros' ? 'rgba(167,139,250,0.28)' : 'rgba(255,255,255,0.07)', boxShadow: section === 'terceros' ? '0 0 14px rgba(167,139,250,0.45)' : 'none' }}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.856-1.487M7 20H2v-2a3 3 0 015.856-1.487m5.856 0A3 3 0 0012.487 15M7 20a4 4 0 110-8 4 4 0 010 8zm10-12a4 4 0 110-8 4 4 0 010 8z" />
+                </svg>
+              </span>
+              <span>Terceros</span>
+            </div>
+          </button>
+
+          <button
+            className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
+              section === 'puc'
+                ? 'text-white font-semibold'
+                : 'text-white/60 hover:text-white'
+            }`}
+            style={section === 'puc' ? { background: 'rgba(255,255,255,0.12)', boxShadow: 'inset 3px 0 0 #a78bfa' } : {}}
+            onClick={() => onSection('puc')}
+          >
+            <div className="flex items-center space-x-3">
+              <span className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200"
+                style={{ background: section === 'puc' ? 'rgba(167,139,250,0.28)' : 'rgba(255,255,255,0.07)', boxShadow: section === 'puc' ? '0 0 14px rgba(167,139,250,0.45)' : 'none' }}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-6 3h12a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </span>
+              <span>PUC</span>
             </div>
           </button>
 
@@ -155,6 +218,7 @@ const Sidebar: React.FC<{
                   <span>Aprobaciones</span>
                 </div>
               </button>
+
             </>
           )}
         </nav>
@@ -340,7 +404,10 @@ function App() {
           <main className="flex-1 pt-16 lg:pt-0 lg:ml-64 p-4 sm:p-6 transition-all duration-300">
             {section === 'panel' && role !== 'user' && <Home onSectionChange={setSection} />}
             {section === 'facturacion' && <Facturas userId={localStorage.getItem('userId')} />}
+            {section === 'facturacion-cartera' && <FacturaCartera userId={localStorage.getItem('userId')} />}
             {section === 'reportes' && <Reportes />}
+            {section === 'terceros' && <Terceros />}
+            {section === 'puc' && <Puc />}
             {section === 'usuarios' && role !== 'user' && <Usuarios />}
             {section === 'aprobaciones' && role !== 'user' && <Aprobaciones />}
             {section === 'perfil' && <Perfil onLogout={handleLogout} />}
