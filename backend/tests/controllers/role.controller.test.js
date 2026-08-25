@@ -6,7 +6,9 @@ describe('Role Controller', () => {
     it('should create a new role successfully', async () => {
       const req = mockRequest({
         body: {
-          name: 'test-role'
+          name: 'test-role',
+          nivel: 5,
+          descripcion: 'Rol de prueba'
         }
       });
       const res = mockResponse();
@@ -17,28 +19,34 @@ describe('Role Controller', () => {
         expect.objectContaining({
           status: 'Rol creado',
           role: expect.objectContaining({
-            name: 'test-role'
+            name: 'test-role',
+            nivel: 5,
+            descripcion: 'Rol de prueba'
           })
         })
       );
     });
 
-    it('should return error if name is missing', async () => {
+    it('should return error if required fields are missing', async () => {
       const req = mockRequest({
-        body: {}
+        body: { name: 'test-role' }
       });
       const res = mockResponse();
 
       await roleCtrl.createRole(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'El nombre es requerido' });
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Nombre, nivel y descripción son requeridos'
+      });
     });
 
     it('should return error if name is empty', async () => {
       const req = mockRequest({
         body: {
-          name: ''
+          name: '',
+          nivel: 5,
+          descripcion: 'Descripción'
         }
       });
       const res = mockResponse();
@@ -46,30 +54,33 @@ describe('Role Controller', () => {
       await roleCtrl.createRole(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'El nombre es requerido' });
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Nombre, nivel y descripción son requeridos'
+      });
     });
 
     it('should handle duplicate role name error', async () => {
-      // Crear un rol primero
       const req1 = mockRequest({
         body: {
-          name: 'duplicate-role'
+          name: 'administrador',
+          nivel: 1,
+          descripcion: 'Admin role'
         }
       });
       const res1 = mockResponse();
       await roleCtrl.createRole(req1, res1);
 
-      // Intentar crear otro rol con el mismo nombre
       const req2 = mockRequest({
         body: {
-          name: 'duplicate-role'
+          name: 'administrador',
+          nivel: 1,
+          descripcion: 'Duplicate admin'
         }
       });
       const res2 = mockResponse();
 
       await roleCtrl.createRole(req2, res2);
 
-      // Debería fallar por duplicado
       expect(res2.status).toHaveBeenCalledWith(500);
       expect(res2.json).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -81,18 +92,17 @@ describe('Role Controller', () => {
 
   describe('getRoles', () => {
     it('should return all roles', async () => {
-      // Crear algunos roles de prueba
-      const roles = ['admin', 'user', 'manager'];
-      
-      for (const roleName of roles) {
-        const req = mockRequest({
-          body: { name: roleName }
-        });
+      const rolesData = [
+        { name: 'administrador', nivel: 1, descripcion: 'Admin role' },
+        { name: 'contador', nivel: 2, descripcion: 'Counter role' }
+      ];
+
+      for (const roleData of rolesData) {
+        const req = mockRequest({ body: roleData });
         const res = mockResponse();
         await roleCtrl.createRole(req, res);
       }
 
-      // Obtener todos los roles
       const req = mockRequest({});
       const res = mockResponse();
 
@@ -100,9 +110,8 @@ describe('Role Controller', () => {
 
       expect(res.json).toHaveBeenCalledWith(
         expect.arrayContaining([
-          expect.objectContaining({ name: 'admin' }),
-          expect.objectContaining({ name: 'user' }),
-          expect.objectContaining({ name: 'manager' })
+          expect.objectContaining({ name: 'administrador' }),
+          expect.objectContaining({ name: 'contador' })
         ])
       );
     });

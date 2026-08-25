@@ -3,10 +3,12 @@ const Role = require('../models/role');
 const roleCtrl = {};
 
 roleCtrl.createRole = async (req, res) => {
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: 'El nombre es requerido' });
+  const { name, nivel, descripcion } = req.body;
+  if (!name || !nivel || !descripcion) {
+    return res.status(400).json({ error: 'Nombre, nivel y descripción son requeridos' });
+  }
   try {
-    const role = new Role({ name });
+    const role = new Role({ name, nivel, descripcion });
     await role.save();
     res.json({ status: 'Rol creado', role });
   } catch (err) {

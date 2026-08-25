@@ -5,7 +5,22 @@ const Role = require('../../models/role');
 
 // Crear un rol de prueba
 const createTestRole = async (name = 'test-role') => {
-  return await Role.create({ name });
+  const roleMap = {
+    'administrador': { name: 'administrador', nivel: 1, descripcion: 'Control total del sistema' },
+    'contador': { name: 'contador', nivel: 2, descripcion: 'Gestión contable y financiera completa' },
+    'analista': { name: 'analista', nivel: 3, descripcion: 'Análisis y gestión sin creación de usuarios' },
+    'auxiliar': { name: 'auxiliar', nivel: 4, descripcion: 'Entrada de datos y consulta de información' },
+    'admin': { name: 'administrador', nivel: 1, descripcion: 'Control total del sistema' },
+    'user': { name: 'auxiliar', nivel: 4, descripcion: 'Entrada de datos y consulta de información' }
+  };
+
+  const roleData = roleMap[name] || {
+    name: name.toLowerCase(),
+    nivel: 5,
+    descripcion: `Rol de prueba: ${name}`
+  };
+
+  return await Role.create(roleData);
 };
 
 // Crear un usuario de prueba
@@ -49,7 +64,7 @@ const createTestToken = (user) => {
 
 // Crear un usuario admin de prueba
 const createTestAdmin = async () => {
-  const adminRole = await createTestRole('admin');
+  const adminRole = await createTestRole('administrador');
   return await createTestUser({
     email: 'admin@example.com',
     role: adminRole._id
