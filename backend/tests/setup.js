@@ -3,8 +3,17 @@ const mongoose = require('mongoose');
 
 let mongod;
 
+// Configurar variables de entorno ANTES de importar app
+process.env.JWT_SECRET = 'test-secret-key';
+process.env.NODE_ENV = 'test';
+
 // Configurar MongoDB en memoria antes de todas las pruebas
 beforeAll(async () => {
+  // Desconectar de cualquier conexión anterior
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
+
   mongod = await MongoMemoryServer.create();
   const uri = mongod.getUri();
   await mongoose.connect(uri);
@@ -23,8 +32,4 @@ afterEach(async () => {
 afterAll(async () => {
   await mongoose.connection.close();
   await mongod.stop();
-});
-
-// Configurar variables de entorno para pruebas
-process.env.JWT_SECRET = 'test-secret-key';
-process.env.NODE_ENV = 'test'; 
+}); 
