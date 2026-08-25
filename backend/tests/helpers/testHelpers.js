@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../../models/user');
 const Role = require('../../models/role');
 
-// Crear un rol de prueba
+// Crear un rol de prueba (o traer uno existente)
 const createTestRole = async (name = 'auxiliar') => {
   const roleMap = {
     'administrador': { name: 'administrador', nivel: 1, descripcion: 'Control total del sistema' },
@@ -17,7 +17,12 @@ const createTestRole = async (name = 'auxiliar') => {
   // Siempre usar un rol válido, por defecto 'auxiliar'
   const roleData = roleMap[name] || roleMap['auxiliar'];
 
-  return await Role.create(roleData);
+  // Evitar duplicate key: buscar primero, crear si no existe
+  let role = await Role.findOne({ name: roleData.name });
+  if (!role) {
+    role = await Role.create(roleData);
+  }
+  return role;
 };
 
 // Crear un usuario de prueba
