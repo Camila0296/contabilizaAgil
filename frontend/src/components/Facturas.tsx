@@ -193,7 +193,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   };
 
   return (
-    <div className="container mx-auto px-4 pt-24 pb-8">
+    <div className="container mx-auto px-4 pt-4 pb-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div className="mb-4 md:mb-0">
