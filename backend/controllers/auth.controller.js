@@ -33,7 +33,7 @@ authCtrl.register = async (req, res) => {
     approved: false
   });
   await user.save();
-  const userPopulated = await user.populate('role');
+  await user.populate('role');
   const token = jwt.sign({ id: user._id, role: user.role.name }, process.env.JWT_SECRET || 'changeme', {
     expiresIn: '8h'
   });
