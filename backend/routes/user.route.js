@@ -127,7 +127,7 @@ router.use(auth, role(['administrador']));
  *             schema:
  *               $ref: '#/components/schemas/User'
  */
-router.post('/', auth, role(['admin']), userCtrl.createUser);
+router.post('/', auth, role(['administrador']), userCtrl.createUser);
 /**
  * @swagger
  * /users:
@@ -164,7 +164,7 @@ router.post('/', auth, role(['admin']), userCtrl.createUser);
  *               items:
  *                 $ref: '#/components/schemas/User'
  */
-router.get('/', auth, role(['admin']), userCtrl.getUsers);
+router.get('/', auth, role(['administrador']), userCtrl.getUsers);
 /**
  * @swagger
  * /users/{id}:
@@ -188,7 +188,7 @@ router.get('/', auth, role(['admin']), userCtrl.getUsers);
  *             schema:
  *               $ref: '#/components/schemas/User'
  */
-router.get('/:id', auth, role(['admin']), userCtrl.getUser);
+router.get('/:id', auth, role(['administrador']), userCtrl.getUser);
 /**
  * @swagger
  * /users/{id}:
@@ -214,7 +214,7 @@ router.get('/:id', auth, role(['admin']), userCtrl.getUser);
  *       200:
  *         description: Usuario actualizado
  */
-router.put('/:id', auth, role(['admin']), userCtrl.updateUser);
+router.put('/:id', auth, role(['administrador']), userCtrl.updateUser);
 /**
  * @swagger
  * /users/{id}/approve:
@@ -234,7 +234,7 @@ router.put('/:id', auth, role(['admin']), userCtrl.updateUser);
  *       200:
  *         description: Usuario aprobado exitosamente
  */
-router.put('/:id/approve', auth, role(['admin']), userCtrl.approveUser);
+router.put('/:id/approve', auth, role(['administrador']), userCtrl.approveUser);
 /**
  * @swagger
  * /users/{id}/reject:
@@ -254,7 +254,7 @@ router.put('/:id/approve', auth, role(['admin']), userCtrl.approveUser);
  *       200:
  *         description: Usuario rechazado exitosamente
  */
-router.put('/:id/reject', auth, role(['admin']), userCtrl.rejectUser);
+router.put('/:id/reject', auth, role(['administrador']), userCtrl.rejectUser);
 /**
  * @swagger
  * /users/{id}:
@@ -274,6 +274,6 @@ router.put('/:id/reject', auth, role(['admin']), userCtrl.rejectUser);
  *       200:
  *         description: Usuario eliminado exitosamente
  */
-router.delete('/:id', auth, role(['admin']), userCtrl.deleteUser);
+router.delete('/:id', auth, role(['administrador']), userCtrl.deleteUser);
 
 module.exports = router;
