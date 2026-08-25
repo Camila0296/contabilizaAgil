@@ -13,14 +13,22 @@ describe('Factura Controller - Validaciones y Paginación', () => {
 
   beforeAll(async () => {
     // Crear rol si no existe
-    let adminRole = await Role.findOne({ name: 'admin' });
+    let adminRole = await Role.findOne({ name: 'administrador' });
     if (!adminRole) {
-      adminRole = await Role.create({ name: 'admin' });
+      adminRole = await Role.create({
+        name: 'administrador',
+        nivel: 1,
+        descripcion: 'Admin role for testing'
+      });
     }
 
-    let userRole = await Role.findOne({ name: 'user' });
+    let userRole = await Role.findOne({ name: 'auxiliar' });
     if (!userRole) {
-      userRole = await Role.create({ name: 'user' });
+      userRole = await Role.create({
+        name: 'auxiliar',
+        nivel: 4,
+        descripcion: 'User role for testing'
+      });
     }
 
     // Crear usuario admin para login

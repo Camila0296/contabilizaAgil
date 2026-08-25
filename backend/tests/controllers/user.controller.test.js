@@ -12,14 +12,14 @@ describe('User Controller - Validaciones y Paginación', () => {
 
   beforeAll(async () => {
     // Crear roles
-    let adminRole = await Role.findOne({ name: 'admin' });
+    let adminRole = await Role.findOne({ name: 'administrador', nivel: 1, descripcion: 'Admin role' });
     if (!adminRole) {
-      adminRole = await Role.create({ name: 'admin' });
+      adminRole = await Role.create({ name: 'administrador', nivel: 1, descripcion: 'Admin role' });
     }
 
-    let userRole = await Role.findOne({ name: 'user' });
+    let userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
     if (!userRole) {
-      userRole = await Role.create({ name: 'user' });
+      userRole = await Role.create({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
     }
 
     // Crear usuario admin
@@ -154,7 +154,7 @@ describe('User Controller - Validaciones y Paginación', () => {
   describe('GET /api/users - Paginación', () => {
     beforeEach(async () => {
       // Crear usuarios de prueba
-      const userRole = await Role.findOne({ name: 'user' });
+      const userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
       for (let i = 1; i <= 15; i++) {
         await User.create({
           nombres: `Usuario ${i}`,

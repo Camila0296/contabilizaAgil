@@ -10,9 +10,9 @@ describe('PUC Controller - Validaciones y Paginación', () => {
 
   beforeAll(async () => {
     // Crear rol
-    let userRole = await Role.findOne({ name: 'user' });
+    let userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
     if (!userRole) {
-      userRole = await Role.create({ name: 'user' });
+      userRole = await Role.create({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
     }
 
     // Crear usuario

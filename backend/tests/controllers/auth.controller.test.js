@@ -5,7 +5,7 @@ describe('Auth Controller', () => {
   describe('register', () => {
     it('should register a new user successfully', async () => {
       // Crear un rol antes de registrar el usuario
-      await createTestRole('user');
+      await createTestRole('auxiliar');
       
       const req = mockRequest({
         body: {
@@ -23,7 +23,7 @@ describe('Auth Controller', () => {
     });
 
     it('should return error if password is not strong enough', async () => {
-      await createTestRole('user');
+      await createTestRole('auxiliar');
 
       const req = mockRequest({
         body: {
@@ -45,7 +45,7 @@ describe('Auth Controller', () => {
 
     it('should return error if required fields are missing', async () => {
       // Crear un rol para que no falle por falta de roles
-      await createTestRole('user');
+      await createTestRole('auxiliar');
       
       const req = mockRequest({
         body: {

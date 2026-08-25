@@ -9,9 +9,9 @@ describe('FacturaCartera Controller', () => {
   let testUser, testRole, testTercero, testPuc;
 
   beforeEach(async () => {
-    testRole = await createTestRole('user');
+    testRole = await createTestRole('auxiliar');
     testUser = await createTestUser({ email: 'test@example.com', role: testRole._id, approved: true });
-    testUser.roles = ['user'];
+    testUser.roles = ['auxiliar'];
 
     testTercero = await Tercero.create({
       tipo: 'cliente',
@@ -43,7 +43,7 @@ describe('FacturaCartera Controller', () => {
           retefuentePct: 2.5,
           icaPct: 0
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res = mockResponse();
 
@@ -71,7 +71,7 @@ describe('FacturaCartera Controller', () => {
           retefuentePct: 0,
           icaPct: 0
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res = mockResponse();
 
@@ -96,7 +96,7 @@ describe('FacturaCartera Controller', () => {
           retefuentePct: 0,
           icaPct: 0
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res = mockResponse();
 
@@ -119,7 +119,7 @@ describe('FacturaCartera Controller', () => {
           detalle: 'First',
           naturaleza: 'debito'
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res1 = mockResponse();
       await facturaCarteraCtrl.createFacturaCartera(req1, res1);
@@ -135,7 +135,7 @@ describe('FacturaCartera Controller', () => {
           detalle: 'Second',
           naturaleza: 'debito'
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res2 = mockResponse();
       await facturaCarteraCtrl.createFacturaCartera(req2, res2);
@@ -151,7 +151,7 @@ describe('FacturaCartera Controller', () => {
           tipo: 'factura',
           fecha: new Date()
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res = mockResponse();
 
@@ -174,7 +174,7 @@ describe('FacturaCartera Controller', () => {
           detalle: 'Test',
           naturaleza: 'debito'
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res = mockResponse();
 
@@ -199,14 +199,14 @@ describe('FacturaCartera Controller', () => {
           detalle: 'Admin view test',
           naturaleza: 'debito'
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res = mockResponse();
       await facturaCarteraCtrl.createFacturaCartera(req, res);
 
       const reqGet = mockRequest({
         query: {},
-        user: { id: testUser._id.toString(), roles: ['admin'] }
+        user: { id: testUser._id.toString(), roles: ['administrador'] }
       });
       const resGet = mockResponse();
 
@@ -232,7 +232,7 @@ describe('FacturaCartera Controller', () => {
           detalle: 'Other user',
           naturaleza: 'debito'
         },
-        user: { id: otherUser._id.toString(), roles: ['user'] }
+        user: { id: otherUser._id.toString(), roles: ['auxiliar'] }
       });
       const res1 = mockResponse();
       await facturaCarteraCtrl.createFacturaCartera(req1, res1);
@@ -247,14 +247,14 @@ describe('FacturaCartera Controller', () => {
           detalle: 'Test user',
           naturaleza: 'debito'
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res2 = mockResponse();
       await facturaCarteraCtrl.createFacturaCartera(req2, res2);
 
       const reqGet = mockRequest({
         query: {},
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const resGet = mockResponse();
 
@@ -278,7 +278,7 @@ describe('FacturaCartera Controller', () => {
           detalle: 'To delete',
           naturaleza: 'debito'
         },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const res = mockResponse();
 
@@ -287,7 +287,7 @@ describe('FacturaCartera Controller', () => {
 
       const reqDel = mockRequest({
         params: { id: factura._id.toString() },
-        user: { id: testUser._id.toString(), roles: ['user'] }
+        user: { id: testUser._id.toString(), roles: ['auxiliar'] }
       });
       const resDel = mockResponse();
 

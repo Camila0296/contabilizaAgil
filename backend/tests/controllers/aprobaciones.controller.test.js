@@ -14,19 +14,19 @@ describe('Aprobaciones Controller', () => {
 
   beforeAll(async () => {
     // Crear roles
-    adminRole = await Role.findOne({ name: 'admin' });
+    adminRole = await Role.findOne({ name: 'administrador', nivel: 1, descripcion: 'Admin role' });
     if (!adminRole) {
-      adminRole = await Role.create({ name: 'admin' });
+      adminRole = await Role.create({ name: 'administrador', nivel: 1, descripcion: 'Admin role' });
     }
 
-    userRole = await Role.findOne({ name: 'user' });
+    userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
     if (!userRole) {
-      userRole = await Role.create({ name: 'user' });
+      userRole = await Role.create({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
     }
 
-    const approverRole = await Role.findOne({ name: 'approver' });
+    const approverRole = await Role.findOne({ name: 'contador', nivel: 2, descripcion: 'Counter role' });
     if (!approverRole) {
-      await Role.create({ name: 'approver' });
+      await Role.create({ name: 'contador', nivel: 2, descripcion: 'Counter role' });
     }
 
     // Crear usuario approver
@@ -44,7 +44,7 @@ describe('Aprobaciones Controller', () => {
 
     // Asignar rol approver
     await User.findByIdAndUpdate(approverId, {
-      role: (await Role.findOne({ name: 'approver' }))._id
+      role: (await Role.findOne({ name: 'contador', nivel: 2, descripcion: 'Counter role' }))._id
     });
   });
 
