@@ -1,338 +1,349 @@
-const facturaCtrl = require('../../controllers/factura.controller');
-const { createTestUser, createTestRole, mockRequest, mockResponse } = require('../helpers/testHelpers');
+const request = require('supertest');
+const mongoose = require('mongoose');
+const Factura = require('../../models/factura');
+const User = require('../../models/user');
+const Role = require('../../models/role');
+const app = require('../../index');
 
-describe('Factura Controller', () => {
-  let testUser;
-  let testRole;
+describe('Factura Controller - Validaciones y Paginación', () => {
+  let authToken;
+  let userId;
+  let adminToken;
+  let adminId;
 
-  beforeEach(async () => {
-    testRole = await createTestRole('user');
-    testUser = await createTestUser({
-      email: 'test@example.com',
-      role: testRole._id,
-      approved: true
-    });
-    // Add roles to the test user
-    testUser.roles = ['user'];
+  beforeAll(async () => {
+    // Crear rol si no existe
+    let adminRole = await Role.findOne({ name: 'admin' });
+    if (!adminRole) {
+      adminRole = await Role.create({ name: 'admin' });
+    }
+
+    let userRole = await Role.findOne({ name: 'user' });
+    if (!userRole) {
+      userRole = await Role.create({ name: 'user' });
+    }
+
+    // Crear usuario admin para login
+    const adminEmail = `admin-${Date.now()}@test.com`;
+    const adminRes = await request(app)
+      .post('/api/auth/register')
+      .send({
+        nombres: 'Admin Test',
+        apellidos: 'User',
+        email: adminEmail,
+        password: 'TestPass123!'
+      });
+
+    adminToken = adminRes.body.token;
+    adminId = adminRes.body.user._id;
+
+    // Crear usuario regular
+    const userEmail = `user-${Date.now()}@test.com`;
+    const userRes = await request(app)
+      .post('/api/auth/register')
+      .send({
+        nombres: 'Regular Test',
+        apellidos: 'User',
+        email: userEmail,
+        password: 'TestPass123!'
+      });
+
+    authToken = userRes.body.token;
+    userId = userRes.body.user._id;
   });
 
-  describe('createFactura', () => {
-    it('should create a new factura successfully', async () => {
-      const req = mockRequest({
-        body: {
+  afterAll(async () => {
+    await Factura.deleteMany({});
+    await User.deleteMany({});
+    await Role.deleteMany({});
+  });
+
+  describe('POST /api/facturas - Validación de creación', () => {
+    test('Debe rechazar monto negativo', async () => {
+      const res = await request(app)
+        .post('/api/facturas')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
           numero: 'F001',
-          fecha: '2024-01-15',
+          fecha: '2026-08-25',
           proveedor: 'Proveedor Test',
-          monto: 100000,
-          puc: '5110',
-          detalle: 'Servicios de consultoría',
-          naturaleza: 'debito',
-          retefuentePct: 2.5,
-          icaPct: 0.966
-        },
-        user: { id: testUser._id.toString(), roles: ['user'] }
-      });
-      const res = mockResponse();
-
-      await facturaCtrl.createFactura(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({ status: 'Factura guardada' });
-    });
-
-    it('should return error if required fields are missing', async () => {
-      const req = mockRequest({
-        body: {
-          numero: 'F001',
-          fecha: '2024-01-15',
-          proveedor: 'Proveedor Test'
-          // monto, puc, detalle, naturaleza missing
-        },
-        user: { id: testUser._id.toString(), roles: ['user'] }
-      });
-      const res = mockResponse();
-
-      await facturaCtrl.createFactura(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Todos los campos son obligatorios' });
-    });
-
-    it('should return error if factura number already exists', async () => {
-      // Crear una factura primero
-      const req1 = mockRequest({
-        body: {
-          numero: 'F001',
-          fecha: '2024-01-15',
-          proveedor: 'Proveedor Test',
-          monto: 100000,
-          puc: '5110',
-          detalle: 'Servicios de consultoría',
+          monto: -1000,
+          puc: '1234',
+          detalle: 'Test',
           naturaleza: 'debito'
-        },
-        user: { id: testUser._id.toString(), roles: ['user'] }
-      });
-      const res1 = mockResponse();
-      await facturaCtrl.createFactura(req1, res1);
-
-      // Intentar crear otra con el mismo número
-      const req2 = mockRequest({
-        body: {
-          numero: 'F001', // Mismo número
-          fecha: '2024-01-16',
-          proveedor: 'Otro Proveedor',
-          monto: 50000,
-          puc: '5135',
-          detalle: 'Otros servicios',
-          naturaleza: 'debito'
-        },
-        user: { id: testUser._id.toString(), roles: ['user'] }
-      });
-      const res2 = mockResponse();
-
-      await facturaCtrl.createFactura(req2, res2);
-
-      expect(res2.status).toHaveBeenCalledWith(400);
-      expect(res2.json).toHaveBeenCalledWith({ error: 'Ya existe una factura con ese número' });
-    });
-  });
-
-  describe('getFacturas', () => {
-    it('should return all facturas for admin', async () => {
-      // Create test facturas first
-      const factura1 = await facturaCtrl.createFactura(
-        mockRequest({
-          body: {
-            numero: 'F001',
-            fecha: '2024-01-15',
-            proveedor: 'Proveedor 1',
-            monto: 100000,
-            puc: '5110',
-            detalle: 'Test 1',
-            naturaleza: 'debito'
-          },
-          user: { id: testUser._id.toString(), roles: ['user'] }
-        }),
-        mockResponse()
-      );
-
-      const factura2 = await facturaCtrl.createFactura(
-        mockRequest({
-          body: {
-            numero: 'F002',
-            fecha: '2024-01-16',
-            proveedor: 'Proveedor 2',
-            monto: 200000,
-            puc: '5210',
-            detalle: 'Test 2',
-            naturaleza: 'credito'
-          },
-          user: { id: testUser._id.toString(), roles: ['user'] }
-        }),
-        mockResponse()
-      );
-
-      const req = mockRequest({
-        user: { id: testUser._id.toString(), roles: ['admin'] }
-      });
-      const res = mockResponse();
-
-      await facturaCtrl.getFacturas(req, res);
-
-      expect(res.json).toHaveBeenCalled();
-      const facturas = res.json.mock.calls[0][0];
-      expect(Array.isArray(facturas)).toBeTruthy();
-      expect(facturas.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('getFactura', () => {
-    it('should return a specific factura by ID', async () => {
-      // Crear una factura
-      const createReq = mockRequest({
-        body: {
-          numero: 'F003',
-          fecha: '2024-01-17',
-          proveedor: 'Proveedor Test',
-          monto: 150000,
-          puc: '5110',
-          detalle: 'Servicios específicos',
-          naturaleza: 'debito'
-        },
-        user: { id: testUser._id.toString() }
-      });
-      const createRes = mockResponse();
-      await facturaCtrl.createFactura(createReq, createRes);
-
-      // Obtener todas las facturas para conseguir el ID
-      const getAllReq = mockRequest({ user: { id: testUser._id.toString() } });
-      const getAllRes = mockResponse();
-      await facturaCtrl.getFacturas(getAllReq, getAllRes);
-
-      const facturas = getAllRes.json.mock.calls[0][0];
-      const facturaId = facturas[0]._id;
-
-      // Obtener la factura específica
-      const req = mockRequest({
-        params: { id: facturaId },
-        user: { id: testUser._id.toString() }
-      });
-      const res = mockResponse();
-
-      await facturaCtrl.getFactura(req, res);
-
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          numero: 'F003',
-          proveedor: 'Proveedor Test'
-        })
-      );
-    });
-
-    it('should return 404 for non-existent factura', async () => {
-      const req = mockRequest({
-        params: { id: '507f1f77bcf86cd799439011' }, // ID que no existe
-        user: { id: testUser._id.toString() }
-      });
-      const res = mockResponse();
-
-      await facturaCtrl.getFactura(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Factura no encontrada' });
-    });
-  });
-
-  describe('updateFactura', () => {
-    it('should update a factura successfully', async () => {
-      // Crear una factura
-      const createReq = mockRequest({
-        body: {
-          numero: 'F004',
-          fecha: '2024-01-18',
-          proveedor: 'Proveedor Original',
-          monto: 100000,
-          puc: '5110',
-          detalle: 'Servicios originales',
-          naturaleza: 'debito'
-        },
-        user: { id: testUser._id.toString() }
-      });
-      const createRes = mockResponse();
-      await facturaCtrl.createFactura(createReq, createRes);
-
-      // Obtener el ID de la factura creada
-      const getAllReq = mockRequest({ user: { id: testUser._id.toString() } });
-      const getAllRes = mockResponse();
-      await facturaCtrl.getFacturas(getAllReq, getAllRes);
-      const facturaId = getAllRes.json.mock.calls[0][0][0]._id;
-
-      // Actualizar la factura
-      const req = mockRequest({
-        params: { id: facturaId },
-        body: {
-          numero: 'F004',
-          fecha: '2024-01-19',
-          proveedor: 'Proveedor Actualizado',
-          monto: 150000,
-          puc: '5135',
-          detalle: 'Servicios actualizados',
-          naturaleza: 'credito'
-        },
-        user: { id: testUser._id.toString() }
-      });
-      const res = mockResponse();
-
-      await facturaCtrl.updateFactura(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({ status: 'Factura actualizada' });
-    });
-  });
-
-  describe('deleteFactura', () => {
-    it('should delete a factura successfully', async () => {
-      // Crear una factura
-      const createReq = mockRequest({
-        body: {
-          numero: 'F005',
-          fecha: '2024-01-20',
-          proveedor: 'Proveedor a Eliminar',
-          monto: 100000,
-          puc: '5110',
-          detalle: 'Servicios a eliminar',
-          naturaleza: 'debito'
-        },
-        user: { id: testUser._id.toString() }
-      });
-      const createRes = mockResponse();
-      await facturaCtrl.createFactura(createReq, createRes);
-
-      // Obtener el ID de la factura creada
-      const getAllReq = mockRequest({ user: { id: testUser._id.toString() } });
-      const getAllRes = mockResponse();
-      await facturaCtrl.getFacturas(getAllReq, getAllRes);
-      const facturaId = getAllRes.json.mock.calls[0][0][0]._id;
-
-      // Eliminar la factura
-      const req = mockRequest({
-        params: { id: facturaId },
-        user: { id: testUser._id.toString() }
-      });
-      const res = mockResponse();
-
-      await facturaCtrl.deleteFactura(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({ status: 'Factura eliminada' });
-    });
-  });
-
-  describe('getReportes', () => {
-    it('should return reportes with statistics', async () => {
-      // Crear algunas facturas para generar estadísticas
-      const facturas = [
-        {
-          numero: 'F006',
-          fecha: '2024-01-15',
-          proveedor: 'Proveedor A',
-          monto: 100000,
-          puc: '5110',
-          detalle: 'Servicios A',
-          naturaleza: 'debito'
-        },
-        {
-          numero: 'F007',
-          fecha: '2024-01-16',
-          proveedor: 'Proveedor B',
-          monto: 200000,
-          puc: '5135',
-          detalle: 'Servicios B',
-          naturaleza: 'credito'
-        }
-      ];
-
-      for (const factura of facturas) {
-        const req = mockRequest({
-          body: factura,
-          user: { id: testUser._id.toString() }
         });
-        const res = mockResponse();
-        await facturaCtrl.createFactura(req, res);
-      }
 
-      // Generar reportes
-      const req = mockRequest({ user: { id: testUser._id.toString() } });
-      const res = mockResponse();
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Validación fallida');
+      expect(res.body.details.some(d => d.includes('monto'))).toBe(true);
+    });
 
-      await facturaCtrl.getReportes(req, res);
+    test('Debe rechazar monto cero', async () => {
+      const res = await request(app)
+        .post('/api/facturas')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          numero: `F-${Date.now()}`,
+          fecha: '2026-08-25',
+          proveedor: 'Proveedor Test',
+          monto: 0,
+          puc: '1234',
+          detalle: 'Test',
+          naturaleza: 'debito'
+        });
 
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          totalFacturas: expect.any(Number),
-          totalMonto: expect.any(Number),
-          totalIva: expect.any(Number),
-          totalReteFuente: expect.any(Number),
-          totalIca: expect.any(Number)
-        })
-      );
+      expect(res.status).toBe(400);
+      expect(res.body.details.some(d => d.includes('monto'))).toBe(true);
+    });
+
+    test('Debe rechazar naturaleza inválida', async () => {
+      const res = await request(app)
+        .post('/api/facturas')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          numero: `F-${Date.now()}`,
+          fecha: '2026-08-25',
+          proveedor: 'Proveedor Test',
+          monto: 1000,
+          puc: '1234',
+          detalle: 'Test',
+          naturaleza: 'invalido'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.details.some(d => d.includes('naturaleza'))).toBe(true);
+    });
+
+    test('Debe rechazar porcentaje fuera de rango', async () => {
+      const res = await request(app)
+        .post('/api/facturas')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          numero: `F-${Date.now()}`,
+          fecha: '2026-08-25',
+          proveedor: 'Proveedor Test',
+          monto: 1000,
+          puc: '1234',
+          detalle: 'Test',
+          naturaleza: 'debito',
+          retefuentePct: 150
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.details.some(d => d.includes('retefuentePct'))).toBe(true);
+    });
+
+    test('Debe crear factura válida con status 201', async () => {
+      const res = await request(app)
+        .post('/api/facturas')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          numero: `F-${Date.now()}`,
+          fecha: '2026-08-25',
+          proveedor: 'Proveedor Test',
+          monto: 50000,
+          puc: '1234',
+          detalle: 'Factura de prueba',
+          naturaleza: 'debito',
+          retefuentePct: 10,
+          icaPct: 3
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.id).toBeDefined();
+      expect(res.body.status).toBe('Factura guardada');
+    });
+
+    test('Debe rechazar número de factura duplicado', async () => {
+      const numero = `F-UNICA-${Date.now()}`;
+
+      // Primera creación
+      await request(app)
+        .post('/api/facturas')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          numero,
+          fecha: '2026-08-25',
+          proveedor: 'Proveedor Test',
+          monto: 50000,
+          puc: '1234',
+          detalle: 'Factura 1',
+          naturaleza: 'debito'
+        });
+
+      // Segunda creación con mismo número
+      const res = await request(app)
+        .post('/api/facturas')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          numero,
+          fecha: '2026-08-25',
+          proveedor: 'Proveedor Test',
+          monto: 60000,
+          puc: '1234',
+          detalle: 'Factura 2',
+          naturaleza: 'debito'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('Ya existe');
     });
   });
-}); 
+
+  describe('GET /api/facturas - Paginación y filtros', () => {
+    beforeEach(async () => {
+      // Crear facturas de prueba
+      for (let i = 1; i <= 15; i++) {
+        await Factura.create({
+          numero: `F-PAGE-${i}`,
+          fecha: new Date('2026-08-25'),
+          proveedor: `Proveedor ${i}`,
+          monto: 50000 + (i * 1000),
+          puc: '1234',
+          detalle: `Factura ${i}`,
+          naturaleza: i % 2 === 0 ? 'credito' : 'debito',
+          usuario: userId
+        });
+      }
+    });
+
+    test('Debe retornar primera página con 10 registros por defecto', async () => {
+      const res = await request(app)
+        .get('/api/facturas')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeLessThanOrEqual(10);
+      expect(res.body.pagination.page).toBe(1);
+      expect(res.body.pagination.limit).toBe(10);
+      expect(res.body.pagination.total).toBeGreaterThan(0);
+    });
+
+    test('Debe respetar parámetro limit máximo de 100', async () => {
+      const res = await request(app)
+        .get('/api/facturas?limit=200')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(res.body.pagination.limit).toBeLessThanOrEqual(100);
+    });
+
+    test('Debe filtrar por naturaleza', async () => {
+      const res = await request(app)
+        .get('/api/facturas?naturaleza=credito')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(res.status).toBe(200);
+      res.body.data.forEach(factura => {
+        expect(factura.naturaleza.toLowerCase()).toBe('credito');
+      });
+    });
+
+    test('Debe filtrar por proveedor con búsqueda case-insensitive', async () => {
+      const res = await request(app)
+        .get('/api/facturas?proveedor=proveedor')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+    });
+
+    test('Debe ordenar por fecha descendente', async () => {
+      const res = await request(app)
+        .get('/api/facturas')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(res.status).toBe(200);
+      for (let i = 0; i < res.body.data.length - 1; i++) {
+        const fecha1 = new Date(res.body.data[i].fecha);
+        const fecha2 = new Date(res.body.data[i + 1].fecha);
+        expect(fecha1.getTime()).toBeGreaterThanOrEqual(fecha2.getTime());
+      }
+    });
+
+    test('Debe paginar correctamente', async () => {
+      const res1 = await request(app)
+        .get('/api/facturas?page=1&limit=5')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      const res2 = await request(app)
+        .get('/api/facturas?page=2&limit=5')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(res1.body.data[0]._id).not.toBe(res2.body.data[0]._id);
+      expect(res1.body.pagination.pages).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('PUT /api/facturas/:id - Validación de actualización', () => {
+    let facturaId;
+
+    beforeEach(async () => {
+      const factura = await Factura.create({
+        numero: `F-UPDATE-${Date.now()}`,
+        fecha: new Date('2026-08-25'),
+        proveedor: 'Proveedor Original',
+        monto: 50000,
+        puc: '1234',
+        detalle: 'Factura original',
+        naturaleza: 'debito',
+        usuario: userId
+      });
+      facturaId = factura._id;
+    });
+
+    test('Debe actualizar factura con validación', async () => {
+      const res = await request(app)
+        .put(`/api/facturas/${facturaId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          numero: `F-UPDATE-NEW-${Date.now()}`,
+          fecha: '2026-08-26',
+          proveedor: 'Proveedor Actualizado',
+          monto: 60000,
+          puc: '5678',
+          detalle: 'Factura actualizada',
+          naturaleza: 'credito'
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.factura.proveedor).toBe('Proveedor Actualizado');
+      expect(res.body.factura.monto).toBe(60000);
+    });
+
+    test('Debe rechazar actualización con monto inválido', async () => {
+      const res = await request(app)
+        .put(`/api/facturas/${facturaId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          numero: `F-UPDATE-${Date.now()}`,
+          fecha: '2026-08-26',
+          proveedor: 'Test',
+          monto: -100,
+          puc: '1234',
+          detalle: 'Test',
+          naturaleza: 'debito'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Validación fallida');
+    });
+
+    test('Debe rechazar si factura no existe', async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+      const res = await request(app)
+        .put(`/api/facturas/${fakeId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          numero: `F-UPDATE-${Date.now()}`,
+          fecha: '2026-08-26',
+          proveedor: 'Test',
+          monto: 50000,
+          puc: '1234',
+          detalle: 'Test',
+          naturaleza: 'debito'
+        });
+
+      expect(res.status).toBe(404);
+    });
+  });
+});

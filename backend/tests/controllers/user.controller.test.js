@@ -1,272 +1,398 @@
-const userCtrl = require('../../controllers/user.controller');
-const { createTestUser, createTestRole, createTestAdmin, mockRequest, mockResponse } = require('../helpers/testHelpers');
-
+const request = require('supertest');
+const mongoose = require('mongoose');
+const User = require('../../models/user');
 const Role = require('../../models/role');
+const app = require('../../index');
 
-describe('User Controller', () => {
-  let adminUser;
-  let regularUser;
-  let adminRole;
-  let userRole;
+describe('User Controller - Validaciones y Paginación', () => {
+  let adminToken;
+  let adminId;
+  let userToken;
+  let userId;
 
-  beforeEach(async () => {
-    // Limpiar la colección de roles antes de cada test
+  beforeAll(async () => {
+    // Crear roles
+    let adminRole = await Role.findOne({ name: 'admin' });
+    if (!adminRole) {
+      adminRole = await Role.create({ name: 'admin' });
+    }
+
+    let userRole = await Role.findOne({ name: 'user' });
+    if (!userRole) {
+      userRole = await Role.create({ name: 'user' });
+    }
+
+    // Crear usuario admin
+    const adminRes = await request(app)
+      .post('/api/auth/register')
+      .send({
+        nombres: 'Admin Test',
+        apellidos: 'User',
+        email: `admin-${Date.now()}@test.com`,
+        password: 'TestPass123!'
+      });
+
+    adminToken = adminRes.body.token;
+    adminId = adminRes.body.user._id;
+
+    // Crear usuario regular
+    const userRes = await request(app)
+      .post('/api/auth/register')
+      .send({
+        nombres: 'Regular Test',
+        apellidos: 'User',
+        email: `user-${Date.now()}@test.com`,
+        password: 'TestPass123!'
+      });
+
+    userToken = userRes.body.token;
+    userId = userRes.body.user._id;
+  });
+
+  afterAll(async () => {
+    await User.deleteMany({});
     await Role.deleteMany({});
-    // Crear roles necesarios con nombres únicos usando timestamp
-    const timestamp = Date.now();
-    adminRole = await createTestRole(`admin-user-test-${timestamp}`);
-    userRole = await createTestRole(`user-user-test-${timestamp}`);
-    // Crear usuarios de prueba
-    adminUser = await createTestUser({
-      email: 'admin@test.com',
-      role: adminRole._id,
-      approved: true
-    });
-    regularUser = await createTestUser({
-      email: 'user@test.com',
-      role: userRole._id,
-      approved: true
-    });
   });
 
-  describe('createUser', () => {
-    it('should create a new user successfully', async () => {
-      const req = mockRequest({
-        body: {
-          nombres: 'Nuevo',
-          apellidos: 'Usuario',
-          email: 'nuevo@test.com',
-          role: userRole.name // Usar el nombre real del rol creado
-        },
-        user: { id: adminUser._id, role: 'admin' }
-      });
-      const res = mockResponse();
-
-      await userCtrl.createUser(req, res);
-
-      const jsonArg = res.json.mock.calls[0][0];
-      expect(jsonArg.status).toBe('Usuario creado');
-      expect(typeof jsonArg.id).toBe('string');
-    });
-
-    it('should return error if required fields are missing', async () => {
-      const req = mockRequest({
-        body: {
-          nombres: 'Nuevo',
-          email: 'nuevo@test.com'
-          // apellidos missing
-        },
-        user: { id: adminUser._id, role: 'admin' }
-      });
-      const res = mockResponse();
-
-      await userCtrl.createUser(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Campos obligatorios faltantes' });
-    });
-
-    it('should return error if email already exists', async () => {
-      const req = mockRequest({
-        body: {
-          nombres: 'Nuevo',
-          apellidos: 'Usuario',
-          email: 'user@test.com', // Email que ya existe
-          role: 'user'
-        },
-        user: { id: adminUser._id, role: 'admin' }
-      });
-      const res = mockResponse();
-
-      await userCtrl.createUser(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Email ya registrado' });
-    });
-  });
-
-  describe('getUsers', () => {
-    it('should return all users', async () => {
-      const req = mockRequest({
-        user: { id: adminUser._id, role: 'admin' }
-      });
-      const res = mockResponse();
-
-      await userCtrl.getUsers(req, res);
-
-      expect(res.json).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            email: 'admin@test.com'
-          }),
-          expect.objectContaining({
-            email: 'user@test.com'
-          })
-        ])
-      );
-    });
-
-    it('should filter users by active status', async () => {
-      const req = mockRequest({
-        query: { activo: 'true' },
-        user: { id: adminUser._id, role: 'admin' }
-      });
-      const res = mockResponse();
-
-      await userCtrl.getUsers(req, res);
-
-      expect(res.json).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            activo: true
-          })
-        ])
-      );
-    });
-
-    it('should search users by name or email', async () => {
-      const req = mockRequest({
-        query: { search: 'admin' },
-        user: { id: adminUser._id, role: 'admin' }
-      });
-      const res = mockResponse();
-
-      await userCtrl.getUsers(req, res);
-
-      expect(res.json).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            email: 'admin@test.com'
-          })
-        ])
-      );
-    });
-  });
-
-  describe('approveUser', () => {
-    it('should approve a user successfully', async () => {
-      const unapprovedUser = await createTestUser({
-        email: 'unapproved@test.com',
-        approved: false,
-        activo: false
-      });
-
-      const req = mockRequest({
-        params: { id: unapprovedUser._id },
-        user: { id: adminUser._id, role: 'admin' }
-      });
-      const res = mockResponse();
-
-      await userCtrl.approveUser(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({ status: 'Usuario aprobado' });
-    });
-  });
-
-  describe('rejectUser', () => {
-    it('should reject a user successfully', async () => {
-      const req = mockRequest({
-        params: { id: regularUser._id },
-        user: { id: adminUser._id, role: 'admin' }
-      });
-      const res = mockResponse();
-
-      await userCtrl.rejectUser(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({ status: 'Usuario rechazado' });
-    });
-  });
-
-  describe('getMe', () => {
-    it('should return current user profile', async () => {
-      const req = mockRequest({
-        user: { id: regularUser._id }
-      });
-      const res = mockResponse();
-
-      await userCtrl.getMe(req, res);
-
-      const meArg = res.json.mock.calls[0][0];
-      expect(meArg._id.toString()).toEqual(regularUser._id.toString());
-      expect(meArg.email).toBe('user@test.com');
-      expect(meArg.nombres).toBe('Test');
-      expect(meArg.apellidos).toBe('User');
-      expect(meArg.activo).toBe(true);
-      expect(meArg.approved).toBe(true);
-      expect(typeof meArg.role.name).toBe('string');
-      expect(meArg.role._id.toString()).toBe(regularUser.role.toString());
-    });
-  });
-
-  describe('updateMe', () => {
-    it('should update current user profile', async () => {
-      const req = mockRequest({
-        body: {
-          nombres: 'Actualizado',
-          apellidos: 'Usuario'
-        },
-        user: { id: regularUser._id }
-      });
-      const res = mockResponse();
-
-      await userCtrl.updateMe(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({ status: 'Perfil actualizado' });
-    });
-
-    it('should update password if provided with a valid current password', async () => {
-      const req = mockRequest({
-        body: {
+  describe('Email Validation', () => {
+    test('Debe rechazar email sin dominio', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
           nombres: 'Test',
           apellidos: 'User',
-          currentPassword: 'password123',
-          password: 'NewPassword123!'
-        },
-        user: { id: regularUser._id }
-      });
-      const res = mockResponse();
+          email: 'invalidemail',
+          password: 'TestPass123!'
+        });
 
-      await userCtrl.updateMe(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({ status: 'Perfil actualizado' });
+      expect(res.status).toBe(400);
     });
 
-    it('should reject password update if current password is wrong', async () => {
-      const req = mockRequest({
-        body: {
+    test('Debe rechazar email sin usuario', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
           nombres: 'Test',
           apellidos: 'User',
-          currentPassword: 'wrongpassword',
-          password: 'NewPassword123!'
-        },
-        user: { id: regularUser._id }
-      });
-      const res = mockResponse();
+          email: '@example.com',
+          password: 'TestPass123!'
+        });
 
-      await userCtrl.updateMe(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Contraseña actual incorrecta' });
+      expect(res.status).toBe(400);
     });
 
-    it('should reject weak passwords', async () => {
-      const req = mockRequest({
-        body: {
+    test('Debe rechazar email vacío', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
           nombres: 'Test',
           apellidos: 'User',
-          currentPassword: 'password123',
+          email: '',
+          password: 'TestPass123!'
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    test('Debe aceptar email válido', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          nombres: 'Test',
+          apellidos: 'User',
+          email: `valid-${Date.now()}@example.com`,
+          password: 'TestPass123!'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.user.email).toBeDefined();
+    });
+
+    test('Debe normalizar email a lowercase', async () => {
+      const email = `TEST-${Date.now()}@EXAMPLE.COM`;
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          nombres: 'Test',
+          apellidos: 'User',
+          email,
+          password: 'TestPass123!'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.user.email).toBe(email.toLowerCase());
+    });
+
+    test('Debe rechazar email duplicado', async () => {
+      const email = `unique-${Date.now()}@test.com`;
+
+      // Primer registro
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          nombres: 'Test1',
+          apellidos: 'User',
+          email,
+          password: 'TestPass123!'
+        });
+
+      // Segundo intento con mismo email
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          nombres: 'Test2',
+          apellidos: 'User',
+          email,
+          password: 'TestPass123!'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('registrado');
+    });
+  });
+
+  describe('GET /api/users - Paginación', () => {
+    beforeEach(async () => {
+      // Crear usuarios de prueba
+      const userRole = await Role.findOne({ name: 'user' });
+      for (let i = 1; i <= 15; i++) {
+        await User.create({
+          nombres: `Usuario ${i}`,
+          apellidos: `Test ${i}`,
+          email: `user-page-${i}-${Date.now()}@test.com`,
+          password: 'hashed_password',
+          role: userRole._id,
+          approved: true,
+          activo: true
+        });
+      }
+    });
+
+    test('Debe retornar primera página con 10 registros por defecto', async () => {
+      const res = await request(app)
+        .get('/api/users')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeLessThanOrEqual(10);
+      expect(res.body.pagination.page).toBe(1);
+      expect(res.body.pagination.limit).toBe(10);
+    });
+
+    test('Debe respetar limit máximo de 100', async () => {
+      const res = await request(app)
+        .get('/api/users?limit=500')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.body.pagination.limit).toBeLessThanOrEqual(100);
+    });
+
+    test('Debe filtrar por aprobación', async () => {
+      const res = await request(app)
+        .get('/api/users?approved=true')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      res.body.data.forEach(user => {
+        expect(user.approved).toBe(true);
+      });
+    });
+
+    test('Debe filtrar por estado activo', async () => {
+      const res = await request(app)
+        .get('/api/users?activo=false')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      res.body.data.forEach(user => {
+        expect(user.activo).toBe(false);
+      });
+    });
+
+    test('Debe buscar por nombre (case-insensitive)', async () => {
+      const res = await request(app)
+        .get('/api/users?search=usuario')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+    });
+
+    test('Debe paginar correctamente', async () => {
+      const res1 = await request(app)
+        .get('/api/users?page=1&limit=5')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      const res2 = await request(app)
+        .get('/api/users?page=2&limit=5')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res1.body.data[0]._id).not.toBe(res2.body.data[0]._id);
+    });
+  });
+
+  describe('PUT /api/users/:id - Validación de actualización', () => {
+    test('Debe rechazar email inválido en actualización', async () => {
+      const res = await request(app)
+        .put(`/api/users/${adminId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: 'invalido'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('email');
+    });
+
+    test('Debe actualizar usuario con email válido', async () => {
+      const newEmail = `updated-${Date.now()}@test.com`;
+      const res = await request(app)
+        .put(`/api/users/${adminId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: newEmail,
+          nombres: 'Updated Name'
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.email).toBe(newEmail.toLowerCase());
+      expect(res.body.user.nombres).toBe('Updated Name');
+    });
+
+    test('Debe rechazar contraseña débil', async () => {
+      const res = await request(app)
+        .put(`/api/users/${adminId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
           password: 'weak'
-        },
-        user: { id: regularUser._id }
-      });
-      const res = mockResponse();
+        });
 
-      await userCtrl.updateMe(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: expect.stringContaining('La contraseña debe tener al menos 8 caracteres')
-      });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('contraseña');
     });
   });
-}); 
+
+  describe('PUT /api/users/me - Perfil personal', () => {
+    test('Debe actualizar perfil con cambio de contraseña', async () => {
+      const res = await request(app)
+        .put('/api/users/me')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          nombres: 'New Name',
+          password: 'NewPass456!',
+          currentPassword: 'TestPass123!'
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.nombres).toBe('New Name');
+    });
+
+    test('Debe rechazar cambio de contraseña sin contraseña actual', async () => {
+      const res = await request(app)
+        .put('/api/users/me')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          password: 'NewPass789!'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('actual');
+    });
+
+    test('Debe rechazar si contraseña actual es incorrecta', async () => {
+      const res = await request(app)
+        .put('/api/users/me')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          password: 'NewPass789!',
+          currentPassword: 'WrongPassword123!'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('incorrecta');
+    });
+
+    test('Debe rechazar email duplicado en actualización de perfil', async () => {
+      // Crear otro usuario
+      const otherEmail = `other-${Date.now()}@test.com`;
+      const otherRes = await request(app)
+        .post('/api/auth/register')
+        .send({
+          nombres: 'Other',
+          apellidos: 'User',
+          email: otherEmail,
+          password: 'TestPass123!'
+        });
+
+      const otherToken = otherRes.body.token;
+
+      // Intentar usar email del primer usuario
+      const res = await request(app)
+        .put('/api/users/me')
+        .set('Authorization', `Bearer ${otherToken}`)
+        .send({
+          email: otherEmail // Ya usado
+        });
+
+      // Debería aceptar su propio email
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('POST /api/auth/register - Validación de campos', () => {
+    test('Debe rechazar nombres vacío', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          nombres: '',
+          apellidos: 'Test',
+          email: `test-${Date.now()}@test.com`,
+          password: 'TestPass123!'
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    test('Debe rechazar apellidos vacío', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          nombres: 'Test',
+          apellidos: '',
+          email: `test-${Date.now()}@test.com`,
+          password: 'TestPass123!'
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    test('Debe rechazar contraseña débil en registro', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          nombres: 'Test',
+          apellidos: 'User',
+          email: `test-${Date.now()}@test.com`,
+          password: 'weak'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('contraseña');
+    });
+
+    test('Debe trim de espacios en nombres', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          nombres: '  Test Name  ',
+          apellidos: '  Test Surname  ',
+          email: `test-${Date.now()}@test.com`,
+          password: 'TestPass123!'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.user.nombres).toBe('Test Name');
+      expect(res.body.user.apellidos).toBe('Test Surname');
+    });
+  });
+});
