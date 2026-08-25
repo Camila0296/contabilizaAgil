@@ -10,20 +10,27 @@ describe('PUC Controller - Validaciones y Paginación', () => {
 
   beforeAll(async () => {
     // Crear usuario
+    const email = `puc-user-${Date.now()}@test.com`;
+    const password = 'TestPass123!';
     const res = await request(app)
       .post('/api/auth/register')
       .send({
         nombres: 'Test',
         apellidos: 'User',
-        email: `puc-user-${Date.now()}@test.com`,
-        password: 'TestPass123!'
+        email,
+        password
       });
 
     // Aprobar usuario
     if (res.body.user && res.body.user._id) {
       const userId = res.body.user._id;
       await User.findByIdAndUpdate(userId, { approved: true });
-      authToken = res.body.token;
+
+      // Login para obtener token válido
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email, password });
+      authToken = loginRes.body.token;
     } else {
       throw new Error('Register failed: ' + JSON.stringify(res.body));
     }

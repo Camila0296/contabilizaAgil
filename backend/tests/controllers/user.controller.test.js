@@ -23,32 +23,46 @@ describe('User Controller - Validaciones y Paginación', () => {
     }
 
     // Crear usuario admin
+    const adminEmail = `admin-${Date.now()}@test.com`;
+    const adminPassword = 'TestPass123!';
     const adminRes = await request(app)
       .post('/api/auth/register')
       .send({
         nombres: 'Admin Test',
         apellidos: 'User',
-        email: `admin-${Date.now()}@test.com`,
-        password: 'TestPass123!'
+        email: adminEmail,
+        password: adminPassword
       });
 
-    adminToken = adminRes.body.token;
     adminId = adminRes.body.user._id;
     await User.findByIdAndUpdate(adminId, { approved: true });
 
+    // Login para obtener token válido
+    const adminLoginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: adminEmail, password: adminPassword });
+    adminToken = adminLoginRes.body.token;
+
     // Crear usuario regular
+    const userEmail = `user-${Date.now()}@test.com`;
+    const userPassword = 'TestPass123!';
     const userRes = await request(app)
       .post('/api/auth/register')
       .send({
         nombres: 'Regular Test',
         apellidos: 'User',
-        email: `user-${Date.now()}@test.com`,
-        password: 'TestPass123!'
+        email: userEmail,
+        password: userPassword
       });
 
-    userToken = userRes.body.token;
     userId = userRes.body.user._id;
     await User.findByIdAndUpdate(userId, { approved: true });
+
+    // Login para obtener token válido
+    const userLoginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: userEmail, password: userPassword });
+    userToken = userLoginRes.body.token;
   });
 
   afterAll(async () => {

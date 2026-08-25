@@ -17,18 +17,25 @@ describe('Tercero Controller - Validaciones y Paginación', () => {
     }
 
     // Crear usuario
+    const email = `tercero-user-${Date.now()}@test.com`;
+    const password = 'TestPass123!';
     const res = await request(app)
       .post('/api/auth/register')
       .send({
         nombres: 'Test',
         apellidos: 'User',
-        email: `tercero-user-${Date.now()}@test.com`,
-        password: 'TestPass123!'
+        email,
+        password
       });
 
-    authToken = res.body.token;
     userId = res.body.user._id;
     await User.findByIdAndUpdate(userId, { approved: true });
+
+    // Login para obtener token válido
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password });
+    authToken = loginRes.body.token;
   });
 
   afterAll(async () => {
