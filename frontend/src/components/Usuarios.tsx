@@ -52,9 +52,15 @@ const Usuarios: React.FC = () => {
     try {
       const res = await apiFetch('/roles');
       const response = await res.json();
-      setRoles(response.data || response);
+      if (Array.isArray(response)) {
+        setRoles(response);
+      } else if (response.data && Array.isArray(response.data)) {
+        setRoles(response.data);
+      } else {
+        setRoles([]);
+      }
     } catch {
-      showError('No se pudieron cargar los roles');
+      setRoles([]);
     }
   };
 

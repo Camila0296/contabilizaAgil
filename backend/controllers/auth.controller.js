@@ -65,4 +65,9 @@ authCtrl.login = async (req, res) => {
   res.json({ status: 'Login exitoso', token, user: { id: user._id, nombres: user.nombres, apellidos: user.apellidos, email: user.email, role: user.role.name } });
 };
 
+// Verificar token válido
+authCtrl.verify = async (req, res) => {
+  res.json({ status: 'Token válido' });
+};
+
 module.exports = authCtrl;
