@@ -33,7 +33,15 @@ authCtrl.register = async (req, res) => {
     approved: false
   });
   await user.save();
-  res.json({ status: 'Usuario registrado' });
+  const userPopulated = await user.populate('role');
+  const token = jwt.sign({ id: user._id, role: user.role.name }, process.env.JWT_SECRET || 'changeme', {
+    expiresIn: '8h'
+  });
+  res.json({
+    status: 'Usuario registrado',
+    token,
+    user: { _id: user._id, id: user._id, nombres: user.nombres, apellidos: user.apellidos, email: user.email, role: user.role.name }
+  });
 };
 
 // Login de usuario
