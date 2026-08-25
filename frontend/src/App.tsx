@@ -347,53 +347,18 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header - Solo mostrar si está logueado */}
-      {isLoggedIn && (
-        <header className="bg-white border-b border-gray-200 fixed top-0 right-0 left-0 z-30 lg:left-64 transition-all duration-300"
-          style={{ boxShadow: '0 1px 8px rgba(79,70,229,0.07)' }}>
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6">
-            {/* Botón de menú móvil */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-400 lg:hidden transition-colors"
-              aria-expanded="false"
-            >
-              <span className="sr-only">Abrir menú</span>
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-lg md:text-xl font-bold font-display" style={{ color: '#0f0f23', letterSpacing: '-0.02em' }}>Sistema de Gestión Contable</h1>
-              <p className="text-xs text-gray-400 hidden sm:block">Contabiliza Ágil — Plataforma profesional para PYMES</p>
-            </div>
-            {/* Indicador de usuario activo */}
-            <div className="flex items-center space-x-2 bg-indigo-50 rounded-xl px-3 py-1.5">
-              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-              <span className="text-xs font-medium text-indigo-700 hidden sm:block">
-                {role === 'administrador' ? 'Administrador' : role === 'contador' ? 'Contador' : role === 'analista' ? 'Analista' : role === 'auxiliar' ? 'Auxiliar' : 'Usuario'}
-              </span>
-            </div>
-          </div>
-        </header>
-      )}
-
       {isLoggedIn ? (
-        <div className="relative min-h-screen flex">
+        <div className="relative min-h-screen flex flex-col lg:flex-row">
           {/* Overlay móvil */}
           {mobileMenuOpen && (
-            <div 
+            <div
               className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
               onClick={() => setMobileMenuOpen(false)}
             ></div>
           )}
-          
+
           {/* Sidebar - Móvil y escritorio */}
-          <div className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 z-30 w-64 transition-transform duration-300 ease-in-out`}>
+          <div className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 z-30 w-64 transition-transform duration-300 ease-in-out lg:relative lg:inset-auto`}>
             <div className="h-full overflow-y-auto">
               <Sidebar
                 role={role}
@@ -401,14 +366,49 @@ function App() {
                 onSection={(section) => {
                   setSection(section);
                   setMobileMenuOpen(false); // Cerrar menú al seleccionar una opción
-                }} 
-                section={section} 
+                }}
+                section={section}
               />
             </div>
           </div>
-          
-          {/* Contenido principal */}
-          <main className="flex-1 pt-16 lg:pt-0 lg:ml-64 p-4 sm:p-6 transition-all duration-300">
+
+          {/* Header + Contenido principal */}
+          <div className="flex-1 flex flex-col">
+            {/* Header */}
+            <header className="bg-white border-b border-gray-200 sticky top-0 z-20 lg:relative"
+              style={{ boxShadow: '0 1px 8px rgba(79,70,229,0.07)' }}>
+              <div className="flex items-center justify-between h-16 px-4 sm:px-6">
+                {/* Botón de menú móvil */}
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-2 rounded-xl text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-400 lg:hidden transition-colors"
+                  aria-expanded="false"
+                >
+                  <span className="sr-only">Abrir menú</span>
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {mobileMenuOpen ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
+                <div>
+                  <h1 className="text-lg md:text-xl font-bold font-display" style={{ color: '#0f0f23', letterSpacing: '-0.02em' }}>Sistema de Gestión Contable</h1>
+                  <p className="text-xs text-gray-400 hidden sm:block">Contabiliza Ágil — Plataforma profesional para PYMES</p>
+                </div>
+                {/* Indicador de usuario activo */}
+                <div className="flex items-center space-x-2 bg-indigo-50 rounded-xl px-3 py-1.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                  <span className="text-xs font-medium text-indigo-700 hidden sm:block">
+                    {role === 'administrador' ? 'Administrador' : role === 'contador' ? 'Contador' : role === 'analista' ? 'Analista' : role === 'auxiliar' ? 'Auxiliar' : 'Usuario'}
+                  </span>
+                </div>
+              </div>
+            </header>
+
+            {/* Contenido principal */}
+            <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
             {section === 'panel' && (role === 'administrador' || role === 'contador') && <Home onSectionChange={setSection} />}
             {section === 'facturacion' && <Facturas userId={localStorage.getItem('userId')} />}
             {section === 'facturacion-cartera' && <FacturaCartera userId={localStorage.getItem('userId')} />}
@@ -419,6 +419,7 @@ function App() {
             {section === 'aprobaciones' && role === 'administrador' && <Aprobaciones />}
             {section === 'perfil' && <Perfil onLogout={handleLogout} />}
           </main>
+          </div>
 
           <ChatBot
             currentSection={section}
