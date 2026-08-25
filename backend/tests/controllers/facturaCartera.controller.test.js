@@ -219,7 +219,7 @@ describe('FacturaCartera Controller', () => {
     });
 
     it('should return only user own facturas for non-admin', async () => {
-      const otherRole = await createTestRole('other-user');
+      const otherRole = await createTestRole('auxiliar');
       const otherUser = await createTestUser({ email: 'other@example.com', role: otherRole._id });
 
       const req1 = mockRequest({

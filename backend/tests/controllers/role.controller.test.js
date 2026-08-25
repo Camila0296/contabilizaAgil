@@ -6,9 +6,9 @@ describe('Role Controller', () => {
     it('should create a new role successfully', async () => {
       const req = mockRequest({
         body: {
-          name: 'test-role',
-          nivel: 5,
-          descripcion: 'Rol de prueba'
+          name: 'auxiliar',
+          nivel: 4,
+          descripcion: 'Rol auxiliar de prueba'
         }
       });
       const res = mockResponse();
@@ -19,9 +19,9 @@ describe('Role Controller', () => {
         expect.objectContaining({
           status: 'Rol creado',
           role: expect.objectContaining({
-            name: 'test-role',
-            nivel: 5,
-            descripcion: 'Rol de prueba'
+            name: 'auxiliar',
+            nivel: 4,
+            descripcion: 'Rol auxiliar de prueba'
           })
         })
       );
@@ -45,7 +45,7 @@ describe('Role Controller', () => {
       const req = mockRequest({
         body: {
           name: '',
-          nivel: 5,
+          nivel: 4,
           descripcion: 'Descripción'
         }
       });

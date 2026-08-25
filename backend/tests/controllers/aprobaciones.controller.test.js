@@ -42,9 +42,9 @@ describe('Aprobaciones Controller', () => {
     approverToken = approverRes.body.token;
     approverId = approverRes.body.user._id;
 
-    // Asignar rol approver
+    // Asignar rol contador
     await User.findByIdAndUpdate(approverId, {
-      role: (await Role.findOne({ name: 'contador', nivel: 2, descripcion: 'Counter role' }))._id
+      role: (await Role.findOne({ name: 'contador' }))._id
     });
   });
 
