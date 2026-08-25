@@ -3,18 +3,97 @@ const Factura = require('../models/factura');
 
 const facturaCtrl = {};
 
+// Validar datos de factura
+function validateFacturaData(data) {
+  const errors = [];
+
+  if (!data.numero || typeof data.numero !== 'string' || data.numero.trim() === '') {
+    errors.push('número: debe ser un string no vacío');
+  }
+
+  if (!data.fecha) {
+    errors.push('fecha: es obligatoria');
+  } else {
+    const fecha = new Date(data.fecha);
+    if (isNaN(fecha.getTime())) {
+      errors.push('fecha: debe ser una fecha válida (ISO 8601)');
+    }
+  }
+
+  if (!data.proveedor || typeof data.proveedor !== 'string' || data.proveedor.trim() === '') {
+    errors.push('proveedor: debe ser un string no vacío');
+  }
+
+  if (!data.monto || typeof data.monto !== 'number' || data.monto <= 0) {
+    errors.push('monto: debe ser un número positivo');
+  }
+
+  if (!data.puc || typeof data.puc !== 'string' || data.puc.trim() === '') {
+    errors.push('puc: debe ser un string no vacío');
+  }
+
+  if (!data.detalle || typeof data.detalle !== 'string' || data.detalle.trim() === '') {
+    errors.push('detalle: debe ser un string no vacío');
+  }
+
+  if (!data.naturaleza || !['credito', 'debito'].includes(data.naturaleza.toLowerCase())) {
+    errors.push('naturaleza: debe ser "credito" o "debito"');
+  }
+
+  if (data.retefuentePct !== undefined && (typeof data.retefuentePct !== 'number' || data.retefuentePct < 0 || data.retefuentePct > 100)) {
+    errors.push('retefuentePct: debe estar entre 0 y 100');
+  }
+
+  if (data.icaPct !== undefined && (typeof data.icaPct !== 'number' || data.icaPct < 0 || data.icaPct > 100)) {
+    errors.push('icaPct: debe estar entre 0 y 100');
+  }
+
+  return errors;
+}
+
 facturaCtrl.getFacturas = async (req, res) => {
   try {
     let query = {};
-    // Si el usuario no es administrador, solo puede ver sus propias facturas
     if (!req.user || !Array.isArray(req.user.roles) || !req.user.roles.includes('admin')) {
       query.usuario = req.user?.id;
     }
-    
-    // Buscar facturas con el filtro aplicado
-    const facturas = await Factura.find(query).populate('usuario', 'nombre email');
-    
-    res.json(facturas);
+
+    // Paginación
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    // Filtros opcionales
+    if (req.query.proveedor) {
+      query.proveedor = { $regex: req.query.proveedor, $options: 'i' };
+    }
+    if (req.query.naturaleza && ['credito', 'debito'].includes(req.query.naturaleza.toLowerCase())) {
+      query.naturaleza = req.query.naturaleza.toLowerCase();
+    }
+    if (req.query.puc) {
+      query.puc = req.query.puc;
+    }
+
+    // Contar total de registros
+    const total = await Factura.countDocuments(query);
+
+    // Buscar facturas con paginación
+    const facturas = await Factura
+      .find(query)
+      .populate('usuario', 'nombres apellidos email')
+      .sort({ fecha: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      data: facturas,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.error('Error al obtener facturas:', error);
     res.status(500).json({ error: 'Error al obtener las facturas' });
@@ -41,59 +120,70 @@ facturaCtrl.getFactura = async (req, res) => {
 };
 
 facturaCtrl.createFactura = async (req, res) => {
-  const { numero, fecha, proveedor, monto, puc, detalle, naturaleza } = req.body;
-  if (!numero || !fecha || !proveedor || !monto || !puc || !detalle || !naturaleza) {
-    return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+  try {
+    const validationErrors = validateFacturaData(req.body);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        error: 'Validación fallida',
+        details: validationErrors
+      });
+    }
+
+    const exists = await Factura.findOne({ numero: req.body.numero });
+    if (exists) {
+      return res.status(400).json({ error: 'Ya existe una factura con ese número' });
+    }
+
+    const facturaData = {
+      ...req.body,
+      usuario: req.user.id
+    };
+
+    const factura = new Factura(facturaData);
+    await factura.save();
+    res.status(201).json({ status: 'Factura guardada', id: factura._id });
+  } catch (error) {
+    console.error('Error al crear factura:', error);
+    res.status(500).json({ error: 'Error al crear la factura' });
   }
-  const exists = await Factura.findOne({ numero });
-  if (exists) return res.status(400).json({ error: 'Ya existe una factura con ese número' });
-  
-  // Agregar el usuario que crea la factura
-  const facturaData = {
-    ...req.body,
-    usuario: req.user.id
-  };
-  
-  const factura = new Factura(facturaData);
-  await factura.save();
-  res.json({ status: 'Factura guardada' });
 };
 
 facturaCtrl.updateFactura = async (req, res) => {
   try {
-    const { numero, fecha, proveedor, monto, puc, detalle, naturaleza } = req.body;
-    if (!numero || !fecha || !proveedor || !monto || !puc || !detalle || !naturaleza) {
-      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+    const validationErrors = validateFacturaData(req.body);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        error: 'Validación fallida',
+        details: validationErrors
+      });
     }
 
-    // Primero obtener la factura para verificar permisos
     const facturaExistente = await Factura.findById(req.params.id);
     if (!facturaExistente) {
       return res.status(404).json({ error: 'Factura no encontrada' });
     }
 
-    // Verificar permisos: el usuario es admin o es el dueño de la factura
     if ((!req.user || !Array.isArray(req.user.roles) || !req.user.roles.includes('admin')) && facturaExistente.usuario.toString() !== req.user?.id) {
       return res.status(403).json({ error: 'No tienes permiso para actualizar esta factura' });
     }
 
-    // Verificar si ya existe otra factura con el mismo número
-    const existeConMismoNumero = await Factura.findOne({ 
-      numero, 
-      _id: { $ne: req.params.id } 
-    });
-    
-    if (existeConMismoNumero) {
-      return res.status(400).json({ error: 'Ya existe una factura con ese número' });
+    // Solo verificar número único si cambió
+    if (req.body.numero !== facturaExistente.numero) {
+      const existeConMismoNumero = await Factura.findOne({
+        numero: req.body.numero,
+        _id: { $ne: req.params.id }
+      });
+      if (existeConMismoNumero) {
+        return res.status(400).json({ error: 'Ya existe una factura con ese número' });
+      }
     }
 
-    // Actualizar la factura
     const facturaActualizada = await Factura.findByIdAndUpdate(
-      req.params.id, 
-      req.body, 
-      { new: true }
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
     ).populate('usuario', 'nombres apellidos');
-    
+
     res.json({ status: 'Factura actualizada', factura: facturaActualizada });
   } catch (error) {
     console.error('Error al actualizar factura:', error);
