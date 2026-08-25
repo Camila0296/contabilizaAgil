@@ -55,7 +55,7 @@ const role = require('../middleware/role');
  *             schema:
  *               $ref: '#/components/schemas/Role'
  */
-router.post('/', auth, role(['administrador', 'contador']), roleCtrl.createRole);
+router.post('/', auth, role('administrador', 'contador'), roleCtrl.createRole);
 
 /**
  * @swagger
@@ -75,6 +75,6 @@ router.post('/', auth, role(['administrador', 'contador']), roleCtrl.createRole)
  *               items:
  *                 $ref: '#/components/schemas/Role'
  */
-router.get('/', auth, role(['administrador', 'contador']), roleCtrl.getRoles);
+router.get('/', auth, role('administrador', 'contador'), roleCtrl.getRoles);
 
 module.exports = router;
