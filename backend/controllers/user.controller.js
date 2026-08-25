@@ -5,20 +5,50 @@ const { isStrongPassword, PASSWORD_ERROR, BCRYPT_ROUNDS, generateTempPassword } 
 
 const userCtrl = {};
 
+// Validar formato de email
+function isValidEmail(email) {
+  if (!email || typeof email !== 'string') return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 255;
+}
+
 // Crear nuevo usuario (solo admin)
 userCtrl.createUser = async (req, res) => {
   try {
     const { nombres, apellidos, email, role } = req.body;
-    const randomPass = generateTempPassword();
-    if (!nombres || !apellidos || !email) {
-      return res.status(400).json({ error: 'Campos obligatorios faltantes' });
+
+    // Validaciones
+    const errors = [];
+    if (!nombres || typeof nombres !== 'string' || nombres.trim() === '') errors.push('nombres: requerido');
+    if (!apellidos || typeof apellidos !== 'string' || apellidos.trim() === '') errors.push('apellidos: requerido');
+    if (!isValidEmail(email)) errors.push('email: formato inválido o faltante');
+
+    if (errors.length > 0) {
+      return res.status(400).json({
+        error: 'Validación fallida',
+        details: errors
+      });
     }
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ error: 'Email ya registrado' });
-    const hashed = await bcrypt.hash(randomPass, BCRYPT_ROUNDS);
+
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing) {
+      return res.status(400).json({ error: 'Email ya registrado' });
+    }
+
     const roleDoc = await Role.findOne({ name: (role || 'user').toLowerCase() });
-    if (!roleDoc) return res.status(400).json({ error: 'Rol no válido' });
-    const user = new User({ nombres, apellidos, email, password: hashed, role: roleDoc._id });
+    if (!roleDoc) {
+      return res.status(400).json({ error: 'Rol no válido' });
+    }
+
+    const randomPass = generateTempPassword();
+    const hashed = await bcrypt.hash(randomPass, BCRYPT_ROUNDS);
+    const user = new User({
+      nombres: nombres.trim(),
+      apellidos: apellidos.trim(),
+      email: email.toLowerCase(),
+      password: hashed,
+      role: roleDoc._id
+    });
     await user.save();
     // Enviar correo con contraseña
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -51,23 +81,64 @@ userCtrl.createUser = async (req, res) => {
 };
 
 userCtrl.getUsers = async (req, res) => {
-  const filter = {};
-  if (req.query.activo === 'true') {
-    filter.$or = [ { activo: true }, { activo: { $exists: false } } ];
-  } else if (req.query.activo === 'false') {
-    filter.activo = false;
-  }
-  if (req.query.approved === 'false') filter.approved = false;
-  else if (req.query.approved === 'true') filter.approved = true;
+  try {
+    const filter = {};
 
-  if (req.query.search) {
-    const term = req.query.search.trim();
-    const regex = new RegExp(term, 'i');
-    filter.$and = filter.$and || [];
-    filter.$and.push({ $or: [ { nombres: regex }, { apellidos: regex }, { email: regex } ] });
+    // Filtros de estado
+    if (req.query.activo === 'true') {
+      filter.$or = [{ activo: true }, { activo: { $exists: false } }];
+    } else if (req.query.activo === 'false') {
+      filter.activo = false;
+    }
+
+    if (req.query.approved === 'false') {
+      filter.approved = false;
+    } else if (req.query.approved === 'true') {
+      filter.approved = true;
+    }
+
+    // Búsqueda por nombre o email
+    if (req.query.search) {
+      const term = req.query.search.trim();
+      if (term.length > 0) {
+        const regex = new RegExp(term, 'i');
+        filter.$or = filter.$or || [];
+        filter.$or = [
+          { nombres: regex },
+          { apellidos: regex },
+          { email: regex }
+        ];
+      }
+    }
+
+    // Paginación
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    // Contar total
+    const total = await User.countDocuments(filter);
+
+    const users = await User
+      .find(filter)
+      .populate('role', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      data: users,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({ error: 'Error al obtener usuarios' });
   }
-  const users = await User.find(filter).populate('role');
-  res.json(users);
 };
 
 userCtrl.getUser = async (req, res) => {
@@ -76,15 +147,42 @@ userCtrl.getUser = async (req, res) => {
 };
 
 userCtrl.updateUser = async (req, res) => {
-  const update = { ...req.body };
-  if (update.password) {
-    if (!isStrongPassword(update.password)) {
-      return res.status(400).json({ error: PASSWORD_ERROR });
+  try {
+    const update = { ...req.body };
+
+    // Validar email si se proporciona
+    if (update.email && !isValidEmail(update.email)) {
+      return res.status(400).json({ error: 'Email: formato inválido' });
     }
-    update.password = await bcrypt.hash(update.password, BCRYPT_ROUNDS);
+
+    if (update.email) {
+      const existing = await User.findOne({
+        email: update.email.toLowerCase(),
+        _id: { $ne: req.params.id }
+      });
+      if (existing) {
+        return res.status(400).json({ error: 'Email ya registrado' });
+      }
+      update.email = update.email.toLowerCase();
+    }
+
+    if (update.password) {
+      if (!isStrongPassword(update.password)) {
+        return res.status(400).json({ error: PASSWORD_ERROR });
+      }
+      update.password = await bcrypt.hash(update.password, BCRYPT_ROUNDS);
+    }
+
+    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true }).populate('role');
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json({ status: 'Usuario actualizado', user });
+  } catch (error) {
+    console.error('Error al actualizar usuario:', error);
+    res.status(500).json({ error: 'Error al actualizar usuario' });
   }
-  await User.findByIdAndUpdate(req.params.id, update, { new: true });
-  res.json({ status: 'Usuario actualizado' });
 };
 
 userCtrl.getMe = async (req, res) => {
@@ -93,28 +191,54 @@ userCtrl.getMe = async (req, res) => {
 };
 
 userCtrl.updateMe = async (req, res) => {
-  const { nombres, apellidos, email, password, currentPassword } = req.body;
-  const update = { nombres, apellidos };
-  if (email) {
-    const existing = await User.findOne({ email, _id: { $ne: req.user.id } });
-    if (existing) {
-      return res.status(400).json({ error: 'Email ya registrado' });
+  try {
+    const { nombres, apellidos, email, password, currentPassword } = req.body;
+    const update = {};
+
+    if (nombres && typeof nombres === 'string') {
+      update.nombres = nombres.trim();
     }
-    update.email = email;
+    if (apellidos && typeof apellidos === 'string') {
+      update.apellidos = apellidos.trim();
+    }
+
+    if (email) {
+      if (!isValidEmail(email)) {
+        return res.status(400).json({ error: 'Email: formato inválido' });
+      }
+      const existing = await User.findOne({
+        email: email.toLowerCase(),
+        _id: { $ne: req.user.id }
+      });
+      if (existing) {
+        return res.status(400).json({ error: 'Email ya registrado' });
+      }
+      update.email = email.toLowerCase();
+    }
+
+    if (password) {
+      if (!isStrongPassword(password)) {
+        return res.status(400).json({ error: PASSWORD_ERROR });
+      }
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Debes proporcionar tu contraseña actual' });
+      }
+
+      const user = await User.findById(req.user.id);
+      const isValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isValid) {
+        return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+      }
+
+      update.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    }
+
+    const updated = await User.findByIdAndUpdate(req.user.id, update, { new: true }).populate('role');
+    res.json({ status: 'Perfil actualizado', user: updated });
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    res.status(500).json({ error: 'Error al actualizar perfil' });
   }
-  if (password) {
-    if (!isStrongPassword(password)) {
-      return res.status(400).json({ error: PASSWORD_ERROR });
-    }
-    const user = await User.findById(req.user.id);
-    const valid = currentPassword && await bcrypt.compare(currentPassword, user.password);
-    if (!valid) {
-      return res.status(400).json({ error: 'Contraseña actual incorrecta' });
-    }
-    update.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  }
-  await User.findByIdAndUpdate(req.user.id, update, { new: true });
-  res.json({ status: 'Perfil actualizado' });
 };
 
 userCtrl.approveUser = async (req, res) => {
