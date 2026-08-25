@@ -19,7 +19,15 @@ describe('Auth Controller', () => {
 
       await authCtrl.register(req, res);
 
-      expect(res.json).toHaveBeenCalledWith({ status: 'Usuario registrado' });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'Usuario registrado',
+          token: expect.any(String),
+          user: expect.objectContaining({
+            email: 'john@example.com'
+          })
+        })
+      );
     });
 
     it('should return error if password is not strong enough', async () => {
