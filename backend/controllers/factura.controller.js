@@ -135,7 +135,16 @@ facturaCtrl.createFactura = async (req, res) => {
 
     const exists = await Factura.findOne({ numero: req.body.numero });
     if (exists) {
-      return res.status(400).json({ error: 'Ya existe una factura con ese número' });
+      // Obtener el siguiente consecutivo disponible sugerido
+      const lastFactura = await Factura.findOne().sort({ createdAt: -1 });
+      const suggestedNext = lastFactura ? `${parseInt(req.body.numero.split('-').pop()) + 1}` : '001';
+
+      return res.status(400).json({
+        error: 'Consecutivo no disponible',
+        message: `El número de factura "${req.body.numero}" ya está registrado en el sistema`,
+        suggestedNext: suggestedNext,
+        status: 'DUPLICATE_NUMBER'
+      });
     }
 
     const facturaData = {
@@ -513,6 +522,93 @@ facturaCtrl.getReportes = async (req, res) => {
   } catch (error) {
     console.error('Error generando reportes:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Verificar disponibilidad de consecutivo y obtener sugerencias
+facturaCtrl.checkConsecutivo = async (req, res) => {
+  try {
+    const { numero } = req.query;
+
+    if (!numero) {
+      return res.status(400).json({ error: 'Número de factura es requerido' });
+    }
+
+    // Verificar si el número ya existe
+    const exists = await Factura.findOne({ numero: numero });
+
+    if (exists) {
+      return res.json({
+        available: false,
+        numero: numero,
+        message: `El consecutivo "${numero}" ya está registrado`,
+        registeredOn: exists.createdAt,
+        registeredBy: exists.usuario
+      });
+    }
+
+    // Si no existe, es disponible
+    return res.json({
+      available: true,
+      numero: numero,
+      message: `El consecutivo "${numero}" está disponible`
+    });
+  } catch (error) {
+    console.error('Error verificando consecutivo:', error);
+    res.status(500).json({ error: 'Error al verificar disponibilidad' });
+  }
+};
+
+// Obtener siguiente consecutivo sugerido
+facturaCtrl.getNextConsecutivo = async (req, res) => {
+  try {
+    // Buscar todas las facturas ordenadas por número
+    const facturas = await Factura.find({}).sort({ numero: 1 }).select('numero');
+
+    if (facturas.length === 0) {
+      return res.json({
+        nextSuggested: 'F-2026-001',
+        available: true,
+        totalRegistered: 0
+      });
+    }
+
+    // Obtener la última factura
+    const lastFactura = facturas[facturas.length - 1];
+    let nextNumber = 'F-2026-001';
+
+    // Intentar extraer el número y sugerir el siguiente
+    const match = lastFactura.numero.match(/(\d+)$/);
+    if (match) {
+      const currentNum = parseInt(match[1]);
+      const nextNum = String(currentNum + 1).padStart(3, '0');
+      const year = new Date().getFullYear();
+      nextNumber = `F-${year}-${nextNum}`;
+    }
+
+    // Verificar que el siguiente número no exista
+    let counter = 0;
+    while (await Factura.findOne({ numero: nextNumber })) {
+      const match = nextNumber.match(/(\d+)$/);
+      if (match) {
+        const currentNum = parseInt(match[1]);
+        const nextNum = String(currentNum + 1).padStart(3, '0');
+        const year = new Date().getFullYear();
+        nextNumber = `F-${year}-${nextNum}`;
+      }
+      counter++;
+      if (counter > 1000) break; // Prevenir loop infinito
+    }
+
+    return res.json({
+      nextSuggested: nextNumber,
+      available: true,
+      totalRegistered: facturas.length,
+      lastRegistered: lastFactura.numero
+    });
+  } catch (error) {
+    console.error('Error obteniendo siguiente consecutivo:', error);
+    res.status(500).json({ error: 'Error al obtener siguiente consecutivo' });
   }
 };
 

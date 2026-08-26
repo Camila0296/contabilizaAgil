@@ -77,10 +77,45 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showRetentionGuide, setShowRetentionGuide] = useState(false);
+  const [nextConsecutivo, setNextConsecutivo] = useState<string>('');
+  const [consecutivoAvailable, setConsecutivoAvailable] = useState<boolean | null>(null);
+  const [consecutivoMessage, setConsecutivoMessage] = useState<string>('');
 
   useEffect(() => {
     fetchFacturas();
+    fetchNextConsecutivo();
   }, []);
+
+  const fetchNextConsecutivo = async () => {
+    try {
+      const res = await apiFetch('/facturas/siguiente/consecutivo');
+      const data = await res.json();
+      setNextConsecutivo(data.nextSuggested || 'F-2026-001');
+    } catch (error) {
+      console.error('Error obteniendo siguiente consecutivo:', error);
+      setNextConsecutivo('F-2026-001');
+    }
+  };
+
+  const checkConsecutivoAvailability = async (numero: string) => {
+    if (!numero) {
+      setConsecutivoAvailable(null);
+      setConsecutivoMessage('');
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/facturas/verificar/disponibilidad?numero=${encodeURIComponent(numero)}`);
+      const data = await res.json();
+
+      setConsecutivoAvailable(data.available);
+      setConsecutivoMessage(data.message);
+    } catch (error) {
+      console.error('Error verificando consecutivo:', error);
+      setConsecutivoAvailable(false);
+      setConsecutivoMessage('Error al verificar disponibilidad');
+    }
+  };
 
   const fetchFacturas = async () => {
     setLoading(true);
@@ -147,6 +182,15 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
           impuestos
         };
       });
+    } else if (name === 'numero') {
+      setForm(prev => ({ ...prev, [name]: value }));
+      // Validar disponibilidad del consecutivo
+      if (value.trim()) {
+        checkConsecutivoAvailability(value);
+      } else {
+        setConsecutivoAvailable(null);
+        setConsecutivoMessage('');
+      }
     } else {
       setForm(prev => ({ ...prev, [name]: value }));
     }
@@ -393,16 +437,39 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Número */}
                   <div className="form-group">
-                    <label className="form-label">Número de Factura</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="form-label">Número de Factura</label>
+                      <button
+                        type="button"
+                        className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition"
+                        onClick={() => {
+                          setForm(prev => ({ ...prev, numero: nextConsecutivo }));
+                          checkConsecutivoAvailability(nextConsecutivo);
+                        }}
+                        title="Usar el siguiente consecutivo disponible"
+                      >
+                        Usar: {nextConsecutivo}
+                      </button>
+                    </div>
                     <input
                       type="text"
-                      className="form-input"
+                      className={`form-input ${
+                        form.numero && consecutivoAvailable === false ? 'border-danger-500 bg-danger-50' :
+                        form.numero && consecutivoAvailable === true ? 'border-success-500 bg-success-50' : ''
+                      }`}
                       name="numero"
                       value={form.numero}
                       onChange={handleChange}
                       required
                       placeholder="F-2024-001"
                     />
+                    {form.numero && consecutivoMessage && (
+                      <p className={`text-xs mt-2 ${
+                        consecutivoAvailable ? 'text-success-600' : 'text-danger-600'
+                      }`}>
+                        {consecutivoMessage}
+                      </p>
+                    )}
                   </div>
 
                   {/* Fecha */}

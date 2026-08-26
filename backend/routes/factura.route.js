@@ -138,6 +138,10 @@ router.use(auth);
 // Ruta para crear una factura - cualquier usuario autenticado puede crear facturas
 router.post('/', facturaCtrl.createFactura);
 
+// Rutas de verificación de consecutivos (deben ir antes de :id)
+router.get('/verificar/disponibilidad', facturaCtrl.checkConsecutivo);
+router.get('/siguiente/consecutivo', facturaCtrl.getNextConsecutivo);
+
 // Ruta para generar reportes (accesible para todos los usuarios autenticados, pero filtrados por usuario)
 router.get('/reportes', facturaCtrl.getReportes);
 
