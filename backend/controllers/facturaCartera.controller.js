@@ -213,7 +213,7 @@ facturaCarteraCtrl.deleteFacturaCartera = async (req, res) => {
     }
 
     console.log('[DELETE] Validando permisos. isAdmin:', req.user.roles.includes('administrador'), 'isContador:', req.user.roles.includes('contador'));
-    if ((!req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) && factura.usuario !== req.user.id) {
+    if ((!req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) && factura.usuario.toString() !== req.user.id) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar esta factura' });
     }
 
