@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+let mongod = null; // Guardar referencia global
 
 async function connectDB() {
   let uri = 'mongodb://localhost:27017/CABD';
@@ -6,7 +7,7 @@ async function connectDB() {
   // Usa base en memoria si está en Codespaces o NODE_ENV=development
   if (process.env.CODESPACES || process.env.USE_MEM_MONGO === 'true' || process.env.NODE_ENV === 'development') {
     const { MongoMemoryServer } = require('mongodb-memory-server');
-    const mongod = await MongoMemoryServer.create();
+    mongod = await MongoMemoryServer.create();
     uri = mongod.getUri();
     console.log('Usando MongoDB en memoria');
   }
