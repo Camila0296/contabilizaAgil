@@ -404,7 +404,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-strong max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-strong max-w-4xl w-full max-h-[95vh] overflow-y-auto">
               <form onSubmit={handleSubmit}>
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -423,7 +423,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                 </div>
 
               {/* Body */}
-              <div className="p-6">
+              <div className="p-6 pb-24">
                 {error && (
                   <div className="mb-6 p-4 bg-danger-50 border border-danger-200 rounded-lg">
                     <div className="flex">
@@ -620,28 +620,43 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                 </div>
 
                 {/* Resumen de Impuestos */}
-                <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Desglose de Impuestos</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Monto Base:</span>
-                      <span className="font-semibold text-gray-900">{formatCurrency(form.monto)}</span>
+                <div className="mt-12 mb-8 p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 rounded-lg shadow-sm">
+                  <h3 className="text-base font-bold text-blue-900 mb-6 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Desglose de Impuestos
+                  </h3>
+
+                  <div className="space-y-3 text-sm bg-white bg-opacity-70 p-4 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">Monto Base:</span>
+                      <span className="font-semibold text-gray-900 text-lg">{formatCurrency(form.monto)}</span>
                     </div>
-                    <div className="flex justify-between text-green-600">
-                      <span>+ IVA (19%):</span>
-                      <span className="font-semibold">{formatCurrency(form.impuestos.iva)}</span>
+
+                    <div className="border-t border-blue-200 pt-3">
+                      <div className="flex justify-between text-green-700">
+                        <span className="font-medium">+ IVA (19%):</span>
+                        <span className="font-bold text-green-600 text-lg">{formatCurrency(form.impuestos.iva)}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-red-600">
-                      <span>- ReteFuente ({(form.retefuentePct || 0).toFixed(2)}%):</span>
-                      <span className="font-semibold">-{formatCurrency(form.impuestos.retefuente)}</span>
+
+                    <div className="border-t border-blue-200 pt-3 space-y-2">
+                      <div className="flex justify-between text-red-700">
+                        <span className="font-medium">- ReteFuente ({(form.retefuentePct || 0).toFixed(2)}%):</span>
+                        <span className="font-bold text-red-600">{formatCurrency(form.impuestos.retefuente)}</span>
+                      </div>
+                      <div className="flex justify-between text-red-700">
+                        <span className="font-medium">- ICA ({(form.icaPct || 0).toFixed(3)}%):</span>
+                        <span className="font-bold text-red-600">{formatCurrency(form.impuestos.ica)}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-red-600">
-                      <span>- ICA ({(form.icaPct || 0).toFixed(3)}%):</span>
-                      <span className="font-semibold">-{formatCurrency(form.impuestos.ica)}</span>
-                    </div>
-                    <div className="flex justify-between border-t border-blue-300 pt-2 mt-2">
-                      <span className="font-bold text-gray-900">Total a Pagar:</span>
-                      <span className="font-bold text-lg text-blue-600">{formatCurrency(form.impuestos.totalAPagar)}</span>
+
+                    <div className="border-t-2 border-blue-400 pt-3 mt-3">
+                      <div className="flex justify-between items-center bg-blue-100 p-3 rounded-lg">
+                        <span className="font-bold text-blue-900 text-base">TOTAL A PAGAR:</span>
+                        <span className="font-bold text-blue-700 text-2xl">{formatCurrency(form.impuestos.totalAPagar)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
