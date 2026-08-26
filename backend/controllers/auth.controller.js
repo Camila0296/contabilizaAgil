@@ -31,15 +31,24 @@ authCtrl.register = async (req, res) => {
     return res.status(400).json({ error: PASSWORD_ERROR });
   }
 
+  // Normalizar email a lowercase
+  const emailLower = email.toLowerCase();
+
+  // Verificar si email ya existe
+  const existing = await User.findOne({ email: emailLower });
+  if (existing) {
+    return res.status(400).json({ error: 'Email ya registrado' });
+  }
+
   const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const userRole = await Role.findOne({ name: "auxiliar" }) || await Role.findOne({ nivel: 4 }); // Asigna rol auxiliar por defecto
   if (!userRole) {
     return res.status(500).json({ error: 'No hay roles definidos en la base de datos' });
   }
   const user = new User({
-    nombres,
-    apellidos,
-    email,
+    nombres: nombres.trim(),
+    apellidos: apellidos.trim(),
+    email: emailLower,
     password: hashedPassword,
     role: userRole._id,
     approved: false
@@ -59,7 +68,7 @@ authCtrl.register = async (req, res) => {
 // Login de usuario
 authCtrl.login = async (req, res) => {
   const { email, password } = req.body;
-  let user = await User.findOne({ email }).populate('role');
+  let user = await User.findOne({ email: email.toLowerCase() }).populate('role');
   if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta' });

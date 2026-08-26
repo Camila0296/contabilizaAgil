@@ -159,13 +159,14 @@ describe('Tercero Controller - Validaciones y Paginación', () => {
   describe('GET /api/terceros - Paginación y filtros', () => {
     beforeEach(async () => {
       // Crear terceros de prueba
+      const timestamp = Date.now();
       for (let i = 1; i <= 12; i++) {
         await Tercero.create({
           tipo: i % 2 === 0 ? 'proveedor' : 'cliente',
           razonSocial: `Empresa ${i}`,
           tipoDocumento: 'NIT',
-          numeroDocumento: `NIT-PAGINATION-${i}`,
-          email: `empresa${i}@test.com`,
+          numeroDocumento: `NIT-PAGINATION-${timestamp}-${i}`,
+          email: `empresa${timestamp}-${i}@test.com`,
           activo: i > 2
         });
       }

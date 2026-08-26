@@ -122,7 +122,7 @@ userCtrl.getUsers = async (req, res) => {
     const users = await User
       .find(filter)
       .populate('role', 'name')
-      .sort({ createdAt: -1 })
+      .sort({ _id: -1 })
       .skip(skip)
       .limit(limit);
 
@@ -152,7 +152,7 @@ userCtrl.updateUser = async (req, res) => {
 
     // Validar email si se proporciona
     if (update.email && !isValidEmail(update.email)) {
-      return res.status(400).json({ error: 'Email: formato inválido' });
+      return res.status(400).json({ error: 'email: formato inválido' });
     }
 
     if (update.email) {

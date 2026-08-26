@@ -10,6 +10,7 @@ const { resetAllStores } = require('../helpers/mockReset');
 
 describe('User Controller - Validaciones y Paginación', () => {
   let adminToken;
+  let adminId;
   let userToken;
 
   beforeAll(async () => {
@@ -23,8 +24,9 @@ describe('User Controller - Validaciones y Paginación', () => {
       .send({ nombres: 'Admin Test', apellidos: 'User', email: adminEmail, password: adminPassword });
 
     if (adminRes.body.user && adminRes.body.user._id) {
+      adminId = adminRes.body.user._id;
       const adminRole = await Role.findOne({ name: 'administrador' });
-      await User.findByIdAndUpdate(adminRes.body.user._id, { approved: true, role: adminRole._id });
+      await User.findByIdAndUpdate(adminId, { approved: true, role: adminRole._id });
       const adminLoginRes = await request(app)
         .post('/api/auth/login')
         .send({ email: adminEmail, password: adminPassword });
@@ -152,11 +154,12 @@ describe('User Controller - Validaciones y Paginación', () => {
     beforeEach(async () => {
       // Crear usuarios de prueba
       const userRole = await Role.findOne({ name: 'auxiliar' });
+      const timestamp = Date.now();
       for (let i = 1; i <= 15; i++) {
         await User.create({
           nombres: `Usuario ${i}`,
           apellidos: `Test ${i}`,
-          email: `user-page-${i}-${Date.now()}@test.com`,
+          email: `user-page-${timestamp}-${i}@test.com`,
           password: 'hashed_password',
           role: userRole._id,
           approved: true,

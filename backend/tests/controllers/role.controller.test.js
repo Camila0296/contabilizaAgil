@@ -52,35 +52,21 @@ describe('Role Controller', () => {
       });
     });
 
-    it('should handle duplicate role name error', async () => {
-      const uniqueName = `dup-test-${Date.now()}`;
-      const req1 = mockRequest({
+    it('should return error if role name is not in enum', async () => {
+      const roleName = `invalid-role-${Date.now()}`;
+      const req = mockRequest({
         body: {
-          name: uniqueName,
-          nivel: 1,
-          descripcion: 'Test role'
+          name: roleName,
+          nivel: 4,
+          descripcion: 'Rol de prueba'
         }
       });
-      const res1 = mockResponse();
-      await roleCtrl.createRole(req1, res1);
+      const res = mockResponse();
 
-      const req2 = mockRequest({
-        body: {
-          name: uniqueName,
-          nivel: 1,
-          descripcion: 'Duplicate'
-        }
-      });
-      const res2 = mockResponse();
+      await roleCtrl.createRole(req, res);
 
-      await roleCtrl.createRole(req2, res2);
-
-      expect(res2.status).toHaveBeenCalledWith(500);
-      expect(res2.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: 'Error al crear el rol'
-        })
-      );
+      // Los roles están predefinidos en enum, así que rechazar otros nombres es correcto
+      expect(res.status).toHaveBeenCalledWith(400);
     });
   });
 

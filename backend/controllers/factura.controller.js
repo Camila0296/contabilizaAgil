@@ -84,7 +84,7 @@ facturaCtrl.getFacturas = async (req, res) => {
     const facturas = await Factura
       .find(query)
       .populate('usuario', 'nombres apellidos email')
-      .sort({ fecha: -1 })
+      .sort({ _id: -1 })
       .skip(skip)
       .limit(limit);
 
@@ -152,10 +152,7 @@ facturaCtrl.createFactura = async (req, res) => {
       }
 
       return res.status(400).json({
-        error: 'Consecutivo no disponible',
-        message: `El número de factura "${req.body.numero}" ya está registrado en el sistema`,
-        suggestedNext: suggestedNext,
-        status: 'DUPLICATE_NUMBER'
+        error: 'Ya existe una factura con ese número'
       });
     }
 
@@ -317,7 +314,7 @@ facturaCtrl.getDashboardStats = async (req, res) => {
     
     // Facturas recientes (últimas 5)
     const facturasRecientes = await Factura.find(matchFilter)
-      .sort({ fecha: -1 })
+      .sort({ _id: -1 })
       .limit(5)
       .populate('usuario', 'nombre email');
     
@@ -483,7 +480,7 @@ facturaCtrl.getReportes = async (req, res) => {
     
     // Facturas recientes (últimas 10)
     const facturasRecientes = await Factura.find(baseMatch)
-      .sort({ fecha: -1 })
+      .sort({ _id: -1 })
       .limit(10)
       .populate('usuario', 'nombre email');
     

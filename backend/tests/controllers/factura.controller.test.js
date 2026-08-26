@@ -188,9 +188,10 @@ describe('Factura Controller - Validaciones y Paginación', () => {
   describe('GET /api/facturas - Paginación y filtros', () => {
     beforeEach(async () => {
       // Crear facturas de prueba
+      const timestamp = Date.now();
       for (let i = 1; i <= 15; i++) {
         await Factura.create({
-          numero: `F-PAGE-${i}`,
+          numero: `F-PAGE-${timestamp}-${i}`,
           fecha: new Date('2026-08-25'),
           proveedor: `Proveedor ${i}`,
           monto: 50000 + (i * 1000),

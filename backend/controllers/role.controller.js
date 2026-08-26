@@ -12,6 +12,10 @@ roleCtrl.createRole = async (req, res) => {
     await role.save();
     res.json({ status: 'Rol creado', role });
   } catch (err) {
+    // Mongoose retorna ValidationError si el enum no es válido
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: 'Error de validación: ' + err.message });
+    }
     res.status(500).json({ error: 'Error al crear el rol', details: err.message });
   }
 };
