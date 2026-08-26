@@ -1,58 +1,83 @@
-// Guía de Retenciones en Colombia - DIAN 2026
-// Porcentajes vigentes según resoluciones DIAN
+// Guía de Retenciones en Colombia - DIAN 2026 (TABLA OFICIAL)
+// Porcentajes vigentes con base de UVT (Unidad de Valor Tributario)
+// UVT 2026 = $52,400
 
 export const retentionGuide = [
   {
-    category: 'SERVICIOS PROFESIONALES',
+    category: 'HONORARIOS Y COMISIONES (PRINCIPAL)',
     items: [
-      { type: 'Honorarios (profesionales independientes)', rate: '10%', description: 'Servicios de profesionales independientes: abogados, contadores, ingenieros, médicos' },
-      { type: 'Consultoría', rate: '6%', description: 'Servicios de asesoría y consultoría empresarial' },
-      { type: 'Administración', rate: '4%', description: 'Servicios de administración y gestión' },
+      { type: 'Personas jurídicas/Declarantes', rate: '11%', description: 'Contratos mayores a 3.300 UVT ($172.720.000)' },
+      { type: 'Personas naturales no declarantes', rate: '10%', description: 'Servicios de profesionales independientes' },
+      { type: 'Software y derechos de uso', rate: '3.5%', description: 'Licenciamiento y derecho de uso de software' },
     ]
   },
   {
-    category: 'SERVICIOS TÉCNICOS Y TECNOLOGÍA',
+    category: 'COMPRA DE BIENES - PRODUCTOS ESPECIALES',
     items: [
-      { type: 'Sistemas/Informática', rate: '8%', description: 'Servicios de desarrollo de sistemas, software, programación' },
-      { type: 'Publicidad/Marketing', rate: '8%', description: 'Servicios de publicidad, marketing, estrategia digital' },
-      { type: 'Diseño gráfico', rate: '8%', description: 'Servicios de diseño, diagramación, diseño gráfico' },
-      { type: 'Servicios técnicos', rate: '3%', description: 'Reparación, mantenimiento, inspección técnica' },
-      { type: 'Aseo/Limpieza', rate: '8%', description: 'Servicios de limpieza y aseo de oficinas' },
+      { type: 'Combustibles derivados petróleo', rate: '0.1%', description: 'Gasolina, diésel, ACPM, fuel oil (muy baja retención)' },
+      { type: 'Compra de vehículos', rate: '1%', description: 'Vehículos nuevos o usados' },
+      { type: 'Café pergamino o cereza', rate: '0.5%', description: 'Productos agrícolas sin procesamiento' },
     ]
   },
   {
-    category: 'SERVICIOS DE CONSTRUCCIÓN Y AFINES',
+    category: 'COMPRA DE BIENES - GENERAL',
     items: [
-      { type: 'Construcción', rate: '3.5%', description: 'Servicios de construcción, obras civiles, reforma' },
-      { type: 'Transporte de carga', rate: '3%', description: 'Servicios de transporte terrestre de mercancías' },
-      { type: 'Vigilancia/Seguridad', rate: '3%', description: 'Servicios de vigilancia y seguridad privada' },
-      { type: 'Servicios hoteleros', rate: '3.5%', description: 'Servicios hoteleros y de hospedaje' },
+      { type: 'Con tarjeta débito/crédito', rate: '1.5%', description: 'Compras pagadas con tarjeta bancaria' },
+      { type: 'Bienes agrícolas sin procesamiento', rate: '1.5%', description: 'Productos agrícolas sin transformación industrial' },
+      { type: 'Declarantes (general)', rate: '2.5%', description: 'Compras generales - Contribuyentes declarantes' },
+      { type: 'Bienes raíces (vivienda)', rate: '2.5%', description: 'Compra de vivienda de habitación' },
+      { type: 'No declarantes (general)', rate: '3.5%', description: 'Compras generales - Contribuyentes no declarantes' },
+      { type: 'Bienes agrícolas procesados (no declarantes)', rate: '3.5%', description: 'Productos agrícolas con transformación industrial' },
     ]
   },
   {
-    category: 'COMPRA DE BIENES Y MATERIALES',
+    category: 'SERVICIOS - GENERALES',
     items: [
-      { type: 'Compra de mercancías', rate: '3%', description: 'Compra de mercancías diversas' },
-      { type: 'Materiales de construcción', rate: '3%', description: 'Compra de materiales y suministros de construcción' },
-      { type: 'Metales y derivados', rate: '3%', description: 'Compra de metales, minería, derivados' },
-      { type: 'Combustibles (derivados)', rate: '8%', description: 'Compra de gasolina, diésel y derivados del petróleo' },
-      { type: 'Combustibles (otros)', rate: '3%', description: 'Compra de combustibles no derivados del petróleo' },
+      { type: 'Declarantes', rate: '4%', description: 'Servicios generales - Contribuyentes declarantes (base: $105.000)' },
+      { type: 'No declarantes', rate: '6%', description: 'Servicios generales - Contribuyentes no declarantes (base: $105.000)' },
     ]
   },
   {
-    category: 'ARRENDAMIENTO E INMUEBLES',
+    category: 'SERVICIOS - TRANSPORTE Y VIGILANCIA',
     items: [
-      { type: 'Arrendamiento de inmuebles', rate: '2%', description: 'Arrendamiento de casas, oficinas, locales comerciales' },
-      { type: 'Administración de inmuebles', rate: '0.5% (ICA)', description: 'Administración de propiedad inmueble' },
+      { type: 'Transporte de carga', rate: '1%', description: 'Transporte terrestre de mercancías (base: $105.000)' },
+      { type: 'Transporte aéreo/marítimo pasajeros', rate: '1%', description: 'Transporte de pasajeros por aire o mar' },
+      { type: 'Vigilancia y aseo (sobre AIU)', rate: '2%', description: 'Servicios de vigilancia y aseo profesional' },
+      { type: 'Transporte terrestre pasajeros', rate: '3.5%', description: 'Transporte nacional terrestre de pasajeros' },
     ]
   },
   {
-    category: 'SEGUROS Y FINANCIERO',
+    category: 'SERVICIOS - HOTELERÍA, SALUD Y TEMPORALES',
     items: [
-      { type: 'Seguros', rate: '1%', description: 'Pólizas de seguros diversos' },
-      { type: 'Comisiones financieras', rate: '2.5%', description: 'Comisiones bancarias, financieras, de servicios' },
-      { type: 'Dividendos', rate: '5%', description: 'Dividendos y ganancias ocasionales' },
-      { type: 'Ingresos financieros', rate: '11%', description: 'Ingresos por servicios financieros (Instituciones financieras)' },
+      { type: 'Hoteles y restaurantes', rate: '3.5%', description: 'Servicios de hospedaje y alimentación' },
+      { type: 'Servicios de salud (IPS)', rate: '2%', description: 'Servicios integrales de salud prestados por instituciones' },
+      { type: 'Servicios temporales', rate: '1%', description: 'Servicios prestados por empresas de servicios temporales' },
+      { type: 'Emolumentos eclesiásticos (declarantes)', rate: '4%', description: 'Emolumentos pagados por entidades religiosas' },
+    ]
+  },
+  {
+    category: 'ARRENDAMIENTO',
+    items: [
+      { type: 'Bienes inmuebles', rate: '3.5%', description: 'Arrendamiento de casas, oficinas, locales comerciales' },
+      { type: 'Bienes muebles', rate: '4%', description: 'Arrendamiento de maquinaria, equipos, vehículos' },
+    ]
+  },
+  {
+    category: 'INGRESOS FINANCIEROS Y OTROS',
+    items: [
+      { type: 'Rendimientos títulos renta fija', rate: '4%', description: 'Intereses de bonos, CDT, TES' },
+      { type: 'Intereses/Rendimientos generales', rate: '7%', description: 'Intereses de préstamos y rendimientos financieros' },
+      { type: 'Construcción y urbanización', rate: '2%', description: 'Contratos de construcción y urbanización' },
+      { type: 'Otros ingresos (declarantes)', rate: '4%', description: 'Otros ingresos tributarios - declarantes' },
+    ]
+  },
+  {
+    category: 'RETENCIONES ESPECIALES',
+    items: [
+      { type: 'Retención por IVA (Servicios)', rate: '15%', description: 'Retención en IVA recibido en servicios' },
+      { type: 'Retención por IVA (Compras)', rate: '15%', description: 'Retención en IVA recibido en compras' },
+      { type: 'Loterías, rifas, apuestas', rate: '20%', description: 'Ganancias por loterías y juegos de suerte' },
+      { type: 'Juegos de azar independientes', rate: '3%', description: 'Retención en juegos de suerte y azar (colocación independiente)' },
     ]
   }
 ];
@@ -104,94 +129,109 @@ export const icaGuide = [
 ];
 
 // Función auxiliar para obtener la retención recomendada basada en palabra clave
+// Basado en tabla oficial DIAN 2026
 export const getRecommendedRetention = (keyword: string): number | null => {
   const keyword_lower = keyword.toLowerCase();
 
-  // Palabras clave para retenciones comunes - ORDENADAS POR PRIORIDAD
+  // Palabras clave para retenciones - SEGÚN TABLA DIAN OFICIAL
   const retentionMap: { [key: string]: number } = {
-    // Servicios profesionales
-    'honorarios': 10,
-    'profesional': 10,
-    'abogado': 10,
-    'contador': 10,
-    'ingeniero': 10,
-    'médico': 10,
-    'consultor independiente': 10,
+    // HONORARIOS Y COMISIONES - 11% o 10%
+    'honorarios': 11,
+    'honorario': 11,
+    'comisión': 11,
+    'comisiones': 11,
+    'profesional independiente': 10,
+    'abogado': 11,
+    'contador': 11,
+    'auditor': 11,
 
-    // Sistemas/IT con 8%
-    'sistema': 8,
-    'software': 8,
-    'informática': 8,
-    'desarrollo': 8,
-    'programación': 8,
-    'app': 8,
-    'aplicación': 8,
+    // SOFTWARE - 3.5%
+    'software': 3.5,
+    'licencia software': 3.5,
+    'derecho de uso': 3.5,
 
-    // Publicidad y Marketing con 8%
-    'publicidad': 8,
-    'marketing': 8,
-    'diseño gráfico': 8,
-    'diseño': 8,
-    'diagramación': 8,
-    'aseo': 8,
-    'limpieza': 8,
+    // SERVICIOS GENERALES - 4% (declarantes) o 6% (no declarantes)
+    'servicio': 4,
+    'servicios': 4,
+    'asesoría': 4,
+    'asesor': 4,
 
-    // Consultoría con 6%
-    'consultoría': 6,
-    'asesoría': 6,
-    'asesor': 6,
+    // TRANSPORTE - 1% o 3.5%
+    'transporte de carga': 1,
+    'flete': 1,
+    'acarreo': 1,
+    'transporte pasajeros': 3.5,
 
-    // Administración con 4%
-    'administración': 4,
-    'gestión': 4,
+    // VIGILANCIA Y ASEO - 2%
+    'vigilancia': 2,
+    'aseo': 2,
+    'limpieza': 2,
+    'seguridad privada': 2,
 
-    // Servicios técnicos con 3%
-    'técnico': 3,
-    'reparación': 3,
-    'mantenimiento': 3,
-    'instalación': 3,
-    'inspección': 3,
-    'vigilancia': 3,
-    'seguridad': 3,
-    'transporte': 3,
-    'flete': 3,
-    'acarreo': 3,
+    // SALUD - 2%
+    'salud': 2,
+    'hospital': 2,
+    'clínica': 2,
+    'médico': 2,
 
-    // Construcción con 3.5%
-    'construcción': 3.5,
-    'obra': 3.5,
-    'contratista': 3.5,
-    'hotelero': 3.5,
+    // HOTELES Y RESTAURANTES - 3.5%
+    'hotel': 3.5,
+    'restaurante': 3.5,
+    'hospedaje': 3.5,
 
-    // Compra de bienes con 3%
-    'mercancía': 3,
-    'material': 3,
-    'bien': 3,
-    'producto': 3,
-    'compra': 3,
-    'combustible': 3,
+    // CONSTRUCCIÓN - 2%
+    'construcción': 2,
+    'obra': 2,
+    'contratista': 2,
+    'urbanización': 2,
 
-    // Compra de derivados del petróleo con 8%
-    'gasolina': 8,
-    'diésel': 8,
-    'petróleo': 8,
+    // ARRENDAMIENTO - 3.5% (inmuebles) o 4% (muebles)
+    'arriendo': 3.5,
+    'arrendamiento': 3.5,
+    'alquiler': 3.5,
+    'arriendo muebles': 4,
 
-    // Arrendamiento con 2%
-    'arriendo': 2,
-    'arrendamiento': 2,
-    'alquiler': 2,
+    // COMBUSTIBLES - 0.1% (BAJA RETENCIÓN)
+    'combustible': 0.1,
+    'gasolina': 0.1,
+    'diésel': 0.1,
+    'acpm': 0.1,
 
-    // Seguros con 1%
-    'seguro': 1,
-    'póliza': 1,
+    // COMPRA DE BIENES GENERALES - 2.5% (declarantes) o 3.5% (no declarantes)
+    'compra': 2.5,
+    'mercancía': 2.5,
+    'material': 2.5,
+    'bien': 2.5,
+    'producto': 2.5,
 
-    // Dividendos con 5%
-    'dividendo': 5,
-    'ganancia': 5,
-    'utilidad': 5,
+    // COMPRA CON TARJETA - 1.5%
+    'tarjeta': 1.5,
+    'débito': 1.5,
+    'crédito': 1.5,
 
-    // Comisiones con 2.5%
-    'comisión': 2.5,
+    // BIENES AGRÍCOLAS - 1.5% (sin procesamiento) o 2.5%/3.5% (con procesamiento)
+    'agrícola': 1.5,
+    'ganadería': 1.5,
+    'café': 0.5,
+
+    // VEHÍCULOS - 1%
+    'vehículo': 1,
+    'auto': 1,
+    'camión': 1,
+
+    // INTERESES Y FINANCIERO - 7% o 4%
+    'interés': 7,
+    'intereses': 7,
+    'rendimiento': 7,
+    'financiero': 7,
+    'renta fija': 4,
+
+    // RETENCIÓN POR IVA - 15%
+    'iva': 15,
+
+    // OTROS
+    'temporales': 1,
+    'servicios temporales': 1,
   };
 
   for (const [key, value] of Object.entries(retentionMap)) {
