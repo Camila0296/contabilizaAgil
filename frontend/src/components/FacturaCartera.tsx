@@ -446,6 +446,34 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                   </div>
 
                   <div className="form-group">
+                    <label className="form-label">Plazo (días)</label>
+                    <select
+                      className="form-select"
+                      name="plazo"
+                      value={form.plazo || 30}
+                      onChange={handleChange}
+                    >
+                      <option value="15">15 días</option>
+                      <option value="30">30 días</option>
+                      <option value="45">45 días</option>
+                      <option value="60">60 días</option>
+                      <option value="90">90 días</option>
+                      <option value="120">120 días</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Fecha Vencimiento</label>
+                    <input
+                      type="date"
+                      className="form-input bg-gray-50"
+                      value={form.fechaVencimiento || ''}
+                      readOnly
+                    />
+                    <p className="text-xs text-gray-500 mt-1">(Se calcula automáticamente)</p>
+                  </div>
+
+                  <div className="form-group">
                     <label className="form-label">Cliente</label>
                     <Select
                       classNamePrefix="react-select"
