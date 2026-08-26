@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 let mongod = null; // Guardar referencia global
 
 async function connectDB() {
+  // En tests, setup.js va a configurar MongoDB. No hacer nada aquí
+  if (process.env.NODE_ENV === 'test') {
+    // setup.js ejecutará beforeAll y conectará. Solo retornar.
+    return;
+  }
+
   let uri = 'mongodb://localhost:27017/CABD';
 
   // Usa base en memoria si está en Codespaces o NODE_ENV=development
@@ -15,7 +21,12 @@ async function connectDB() {
   await mongoose.connect(uri);
   console.log('DB is connected');
 
-  // --- Agregar roles y usuario admin si no existen ---
+  // En tests, NO crear roles/usuarios admin (los tests crean los suyos)
+  if (process.env.NODE_ENV === 'test') {
+    return;
+  }
+
+  // --- Agregar roles y usuario admin si no existen (solo en producción/dev) ---
   const Role = require('./models/role');
   const User = require('./models/user');
   const bcrypt = require('bcryptjs');

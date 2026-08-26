@@ -19,12 +19,16 @@ beforeAll(async () => {
   await mongoose.connect(uri);
 });
 
-// Limpiar la base de datos después de cada prueba
+// Limpiar datos de prueba después de cada test (pero NO usuarios/roles de beforeAll)
 afterEach(async () => {
   const collections = mongoose.connection.collections;
-  for (const key in collections) {
-    const collection = collections[key];
-    await collection.deleteMany();
+  // Solo limpiar colecciones de datos, NO usuarios ni roles que fueron creados en beforeAll
+  const collectionsToClear = ['facturas', 'pucs', 'terceros', 'facturacarteras'];
+
+  for (const collName of collectionsToClear) {
+    if (collections[collName]) {
+      await collections[collName].deleteMany();
+    }
   }
 });
 
