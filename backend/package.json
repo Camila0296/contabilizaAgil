@@ -8,9 +8,11 @@
     "dev": "nodemon index.js",
     "seed": "node seed-data.js",
     "test": "cross-env NODE_ENV=test jest --runInBand",
+    "test:unit": "cross-env NODE_ENV=test jest --runInBand --testPathIgnorePatterns=providers",
+    "test:ia": "cross-env NODE_ENV=test jest --runInBand --testPathPattern=providers",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage",
-    "test:ci": "cross-env NODE_ENV=test jest --ci --coverage --watchAll=false"
+    "test:ci": "cross-env NODE_ENV=test jest --ci --coverage --watchAll=false --testPathIgnorePatterns=providers"
   },
   "dependencies": {
     "axios": "^1.19.0",
