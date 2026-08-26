@@ -56,4 +56,7 @@ class MockGroq {
   }
 }
 
-module.exports = MockGroq;
+// Exportar como named export para que `const { Groq } = require('groq-sdk')` funcione,
+// y también como default para compatibilidad.
+module.exports = { Groq: MockGroq, default: MockGroq };
+module.exports.MockGroq = MockGroq;

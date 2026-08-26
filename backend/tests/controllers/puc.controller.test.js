@@ -4,6 +4,7 @@ const Puc = require('../../models/puc');
 const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
+const { resetStores } = require('../mocks/db');
 
 describe('PUC Controller - Validaciones y Paginación', () => {
   let authToken;
@@ -48,6 +49,11 @@ describe('PUC Controller - Validaciones y Paginación', () => {
     } else {
       throw new Error('Register failed: ' + JSON.stringify(res.body));
     }
+  });
+
+  afterEach(async () => {
+    // Solo limpiar los datos de prueba, NO el usuario de auth que se creó en beforeAll
+    await Puc.deleteMany({});
   });
 
   afterAll(async () => {

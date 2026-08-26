@@ -6,12 +6,14 @@ process.env.JWT_SECRET = 'test-secret-key';
 process.env.NODE_ENV = 'test';
 process.env.GROQ_API_KEY = 'mock-key-for-testing';
 
-// Mock los modelos de mongoose
+// Mock los 7 modelos de mongoose
 jest.mock('../models/user', () => require('./mocks/models').MockUser);
 jest.mock('../models/role', () => require('./mocks/models').MockRole);
 jest.mock('../models/factura', () => require('./mocks/models').MockFactura);
 jest.mock('../models/tercero', () => require('./mocks/models').MockTercero);
 jest.mock('../models/puc', () => require('./mocks/models').MockPuc);
+jest.mock('../models/facturaCartera', () => require('./mocks/models').MockFacturaCartera);
+jest.mock('../models/sequence', () => require('./mocks/models').MockSequence);
 
 // Mock Groq SDK
 jest.mock('groq-sdk', () => require('./mocks/groq'));

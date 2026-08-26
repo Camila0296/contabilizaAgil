@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { calcularImpuestos } = require('../utils/impuestosCalculator');
 
 const FacturaCarteraSchema = new mongoose.Schema({
   tipo: { type: String, enum: ['factura', 'creditNote', 'debitNote'], default: 'factura' },
@@ -23,10 +24,7 @@ const FacturaCarteraSchema = new mongoose.Schema({
 
 FacturaCarteraSchema.pre('save', function(next) {
   if (this.monto != null) {
-    this.impuestos = this.impuestos || {};
-    this.impuestos.iva = +(this.monto * 0.19).toFixed(2);
-    this.impuestos.retefuente = +(this.monto * (this.retefuentePct || 0) / 100).toFixed(2);
-    this.impuestos.ica = +(this.monto * (this.icaPct || 0) / 100).toFixed(2);
+    this.impuestos = calcularImpuestos(this.monto, this.retefuentePct, this.icaPct);
   }
   next();
 });
@@ -34,10 +32,7 @@ FacturaCarteraSchema.pre('save', function(next) {
 FacturaCarteraSchema.pre('findOneAndUpdate', function(next) {
   const update = this.getUpdate();
   if (update?.monto != null) {
-    update.impuestos = update.impuestos || {};
-    update.impuestos.iva = +(update.monto * 0.19).toFixed(2);
-    update.impuestos.retefuente = +(update.monto * (update.retefuentePct || 0) / 100).toFixed(2);
-    update.impuestos.ica = +(update.monto * (update.icaPct || 0) / 100).toFixed(2);
+    update.impuestos = calcularImpuestos(update.monto, update.retefuentePct || this.retefuentePct, update.icaPct || this.icaPct);
     this.setUpdate(update);
   }
   next();

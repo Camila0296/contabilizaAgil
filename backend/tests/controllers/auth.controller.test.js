@@ -114,9 +114,10 @@ describe('Auth Controller - Con Mocks', () => {
     });
 
     it('should return error for invalid password', async () => {
-      await createTestUser({
+      await createMockUser({
         email: 'test@example.com',
-        password: 'correctpassword'
+        password: 'correctpassword',
+        approved: true
       });
 
       const req = mockRequest({
@@ -134,7 +135,7 @@ describe('Auth Controller - Con Mocks', () => {
     });
 
     it('should return error for unapproved user', async () => {
-      await createTestUser({
+      await createMockUser({
         email: 'test@example.com',
         password: 'password123',
         approved: false

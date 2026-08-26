@@ -1,5 +1,6 @@
 // Factory functions para crear datos de prueba con mocks
-const { MockUser, MockRole, mockModels } = require('../mocks/models');
+const { MockUser, MockRole } = require('../mocks/models');
+const { stores } = require('../mocks/db');
 const bcrypt = require('bcryptjs');
 
 const BCRYPT_ROUNDS = 12;
@@ -15,10 +16,9 @@ async function createMockRole(data = {}) {
   };
 
   // Verificar si ya existe
-  const existing = await MockUser.constructor.findOne({ name: roleData.name });
+  const existing = await MockRole.findOne({ name: roleData.name });
   if (existing) return existing;
 
-  const { MockRole } = require('../mocks/models');
   return new MockRole(roleData).save();
 }
 
@@ -50,10 +50,8 @@ async function createMockUser(data = {}) {
  * Crea un usuario admin mock
  */
 async function createMockAdmin(data = {}) {
-  const { MockRole } = require('../mocks/models');
-
   // Crear rol admin si no existe
-  let adminRole = mockModels.roles.find(r => r.name === 'administrador');
+  let adminRole = stores.Role.find(r => r.name === 'administrador');
   if (!adminRole) {
     adminRole = await new MockRole({
       name: 'administrador',
@@ -84,8 +82,8 @@ async function getMockUserByEmail(email) {
  * Limpia todos los datos de prueba
  */
 function cleanupMocks() {
-  const { resetMocks } = require('../mocks/models');
-  resetMocks();
+  const { resetStores } = require('../mocks/db');
+  resetStores();
 }
 
 module.exports = {

@@ -1,177 +1,144 @@
-// Mocks para modelos Mongoose
-const mockModels = {
-  users: [],
-  roles: [],
-  facturas: [],
-  terceros: [],
-  pucs: []
-};
+// Modelos mock — subclases concretas de MockModel
+const MockModel = require('./MockModel');
+const { calcularImpuestos } = require('../../utils/impuestosCalculator');
 
-// Mock User Model
-class MockUser {
-  constructor(data) {
-    this._id = data._id || Math.random().toString(36).substr(2, 9);
-    this.nombres = data.nombres;
-    this.apellidos = data.apellidos;
-    this.email = data.email;
-    this.password = data.password;
-    this.role = data.role;
+class MockRole extends MockModel {
+  static _name = 'Role';
+
+  static _checkUnique(doc) {
+    if (doc.name) {
+      const existing = this._store.find(d => d.name === doc.name && d._id !== doc._id);
+      if (existing) {
+        throw new Error(`E11000 duplicate key error: name "${doc.name}" already exists`);
+      }
+    }
+  }
+}
+
+class MockUser extends MockModel {
+  static _name = 'User';
+
+  constructor(data = {}) {
+    super(data);
+    this.activo = data.activo !== undefined ? data.activo : true;
     this.approved = data.approved !== undefined ? data.approved : false;
+  }
+
+  static _checkUnique(doc) {
+    if (doc.email) {
+      const existing = this._store.find(d => d.email === doc.email && d._id !== doc._id);
+      if (existing) {
+        throw new Error(`E11000 duplicate key error: email "${doc.email}" already exists`);
+      }
+    }
+  }
+}
+
+class MockTercero extends MockModel {
+  static _name = 'Tercero';
+
+  constructor(data = {}) {
+    super(data);
     this.activo = data.activo !== undefined ? data.activo : true;
   }
 
-  save() {
-    mockModels.users.push(this);
-    return Promise.resolve(this);
-  }
-
-  populate(field) {
-    if (field === 'role' && this.role) {
-      const role = mockModels.roles.find(r => r._id === this.role || r._id.toString() === this.role.toString());
-      this.role = role || this.role;
-    }
-    return Promise.resolve(this);
-  }
-
-  static findOne(query) {
-    return Promise.resolve(
-      mockModels.users.find(u =>
-        Object.keys(query).every(key => u[key] === query[key])
-      )
-    );
-  }
-
-  static findById(id) {
-    return Promise.resolve(
-      mockModels.users.find(u => u._id === id || u._id.toString() === id.toString())
-    );
-  }
-
-  static findByIdAndUpdate(id, update, options = {}) {
-    const user = mockModels.users.find(u => u._id === id || u._id.toString() === id.toString());
-    if (user) {
-      Object.assign(user, update);
-      return Promise.resolve(options.new ? user : null);
-    }
-    return Promise.resolve(null);
-  }
-
-  static deleteMany(query = {}) {
-    if (Object.keys(query).length === 0) {
-      mockModels.users = [];
-    } else {
-      mockModels.users = mockModels.users.filter(u =>
-        !Object.keys(query).every(key => u[key] === query[key])
+  static _checkUnique(doc) {
+    if (doc.numeroDocumento) {
+      const existing = this._store.find(
+        d => d.numeroDocumento === doc.numeroDocumento && d._id !== doc._id
       );
+      if (existing) {
+        throw new Error(`E11000 duplicate key error: numeroDocumento "${doc.numeroDocumento}" already exists`);
+      }
     }
-    return Promise.resolve({ deletedCount: mockModels.users.length });
   }
 }
 
-// Mock Role Model
-class MockRole {
-  constructor(data) {
-    this._id = data._id || Math.random().toString(36).substr(2, 9);
-    this.name = data.name;
-    this.nivel = data.nivel;
-    this.descripcion = data.descripcion;
+class MockPuc extends MockModel {
+  static _name = 'Puc';
+
+  constructor(data = {}) {
+    super(data);
+    this.activo = data.activo !== undefined ? data.activo : true;
   }
 
-  save() {
-    mockModels.roles.push(this);
-    return Promise.resolve(this);
+  static _checkUnique(doc) {
+    if (doc.codigo) {
+      const existing = this._store.find(d => d.codigo === doc.codigo && d._id !== doc._id);
+      if (existing) {
+        throw new Error(`E11000 duplicate key error: codigo "${doc.codigo}" already exists`);
+      }
+    }
+  }
+}
+
+class MockFactura extends MockModel {
+  static _name = 'Factura';
+
+  constructor(data = {}) {
+    super(data);
+    this.impuestos = data.impuestos || { iva: 0, retefuente: 0, ica: 0 };
   }
 
-  static findOne(query) {
-    return Promise.resolve(
-      mockModels.roles.find(r =>
-        Object.keys(query).every(key => r[key] === query[key])
-      )
-    );
+  static _runPreSave(doc) {
+    if (doc.monto != null) {
+      doc.impuestos = calcularImpuestos(doc.monto, doc.retefuentePct, doc.icaPct);
+    }
   }
 
-  static create(data) {
-    const role = new MockRole(data);
-    mockModels.roles.push(role);
-    return Promise.resolve(role);
+  static _runPreUpdate(doc, update) {
+    if (update.monto != null) {
+      doc.impuestos = calcularImpuestos(update.monto, update.retefuentePct || doc.retefuentePct, update.icaPct || doc.icaPct);
+    }
   }
 
-  static deleteMany(query = {}) {
-    if (Object.keys(query).length === 0) {
-      mockModels.roles = [];
-    } else {
-      mockModels.roles = mockModels.roles.filter(r =>
-        !Object.keys(query).every(key => r[key] === query[key])
+  static _checkUnique(doc) {
+    if (doc.numero) {
+      const existing = this._store.find(d => d.numero === doc.numero && d._id !== doc._id);
+      if (existing) {
+        throw new Error(`E11000 duplicate key error: numero "${doc.numero}" already exists`);
+      }
+    }
+  }
+}
+
+class MockFacturaCartera extends MockModel {
+  static _name = 'FacturaCartera';
+
+  constructor(data = {}) {
+    super(data);
+    this.estado = data.estado || 'activa';
+    this.impuestos = data.impuestos || { iva: 0, retefuente: 0, ica: 0 };
+    this.activo = data.activo !== undefined ? data.activo : true;
+  }
+
+  static _runPreSave(doc) {
+    doc.estado = doc.estado || 'activa';
+    if (doc.monto != null) {
+      doc.impuestos = calcularImpuestos(doc.monto, doc.retefuentePct, doc.icaPct);
+    }
+  }
+
+  static _runPreUpdate(doc, update) {
+    if (update.monto != null) {
+      doc.impuestos = calcularImpuestos(update.monto, update.retefuentePct || doc.retefuentePct, update.icaPct || doc.icaPct);
+    }
+  }
+
+  static _checkUnique(doc) {
+    if (doc.numeroDocumento) {
+      const existing = this._store.find(
+        d => d.numeroDocumento === doc.numeroDocumento && d._id !== doc._id
       );
+      if (existing) {
+        throw new Error(`E11000 duplicate key error: numeroDocumento "${doc.numeroDocumento}" already exists`);
+      }
     }
-    return Promise.resolve({ deletedCount: mockModels.roles.length });
   }
 }
 
-// Mock Factura Model
-class MockFactura {
-  constructor(data) {
-    this._id = data._id || Math.random().toString(36).substr(2, 9);
-    this.numero = data.numero;
-    this.fecha = data.fecha;
-    this.proveedor = data.proveedor;
-    this.monto = data.monto;
-    this.puc = data.puc;
-    this.detalle = data.detalle;
-    this.naturaleza = data.naturaleza;
-    this.usuario = data.usuario;
-    this.activo = data.activo !== undefined ? data.activo : true;
-  }
-
-  static deleteMany(query = {}) {
-    if (Object.keys(query).length === 0) {
-      mockModels.facturas = [];
-    }
-    return Promise.resolve({ deletedCount: 0 });
-  }
-}
-
-// Mock Tercero Model
-class MockTercero {
-  constructor(data) {
-    this._id = data._id || Math.random().toString(36).substr(2, 9);
-    this.tipo = data.tipo;
-    this.razonSocial = data.razonSocial;
-    this.numeroDocumento = data.numeroDocumento;
-    this.activo = data.activo !== undefined ? data.activo : true;
-  }
-
-  static deleteMany(query = {}) {
-    if (Object.keys(query).length === 0) {
-      mockModels.terceros = [];
-    }
-    return Promise.resolve({ deletedCount: 0 });
-  }
-}
-
-// Mock Puc Model
-class MockPuc {
-  constructor(data) {
-    this._id = data._id || Math.random().toString(36).substr(2, 9);
-    this.codigo = data.codigo;
-    this.nombre = data.nombre;
-    this.naturaleza = data.naturaleza;
-  }
-
-  static deleteMany(query = {}) {
-    if (Object.keys(query).length === 0) {
-      mockModels.pucs = [];
-    }
-    return Promise.resolve({ deletedCount: 0 });
-  }
-}
-
-function resetMocks() {
-  mockModels.users = [];
-  mockModels.roles = [];
-  mockModels.facturas = [];
-  mockModels.terceros = [];
-  mockModels.pucs = [];
+class MockSequence extends MockModel {
+  static _name = 'Sequence';
 }
 
 module.exports = {
@@ -180,6 +147,6 @@ module.exports = {
   MockFactura,
   MockTercero,
   MockPuc,
-  mockModels,
-  resetMocks
+  MockFacturaCartera,
+  MockSequence
 };
