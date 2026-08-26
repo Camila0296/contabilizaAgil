@@ -1,10 +1,14 @@
 const authCtrl = require('../../controllers/auth.controller');
-const { createMockRole, createMockUser, mockRequest, mockResponse } = require('../helpers/testHelpers');
+const { createMockRole, createMockUser, mockRequest, mockResponse, cleanupMocks } = require('../helpers/testHelpers');
 
 describe('Auth Controller - Con Mocks', () => {
+  let auxiliarRole;
+
   beforeEach(async () => {
+    // Limpiar datos de usuario entre tests
+    cleanupMocks();
     // Crear rol auxiliar para todos los tests
-    await createMockRole({ name: 'auxiliar', nivel: 4 });
+    auxiliarRole = await createMockRole({ name: 'auxiliar', nivel: 4 });
   });
 
   describe('register', () => {
@@ -74,7 +78,8 @@ describe('Auth Controller - Con Mocks', () => {
       const user = await createMockUser({
         email: 'test@example.com',
         password: plainPassword,
-        approved: true
+        approved: true,
+        role: auxiliarRole._id
       });
 
       const req = mockRequest({
@@ -117,7 +122,8 @@ describe('Auth Controller - Con Mocks', () => {
       await createMockUser({
         email: 'test@example.com',
         password: 'correctpassword',
-        approved: true
+        approved: true,
+        role: auxiliarRole._id
       });
 
       const req = mockRequest({
@@ -138,7 +144,8 @@ describe('Auth Controller - Con Mocks', () => {
       await createMockUser({
         email: 'test@example.com',
         password: 'password123',
-        approved: false
+        approved: false,
+        role: auxiliarRole._id
       });
 
       const req = mockRequest({
