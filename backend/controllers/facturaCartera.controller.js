@@ -203,6 +203,57 @@ facturaCarteraCtrl.updateFacturaCartera = async (req, res) => {
   }
 };
 
+facturaCarteraCtrl.registrarPago = async (req, res) => {
+  try {
+    const { monto, referencia, cuenta } = req.body;
+
+    if (!monto || monto <= 0) {
+      return res.status(400).json({ error: 'Monto debe ser mayor a 0' });
+    }
+
+    const factura = await FacturaCartera.findById(req.params.id);
+    if (!factura) {
+      return res.status(404).json({ error: 'Factura no encontrada' });
+    }
+
+    // Validar que el usuario sea propietario o admin
+    if (factura.usuario.toString() !== req.user.id && !req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) {
+      return res.status(403).json({ error: 'No tienes permiso para registrar pagos en esta factura' });
+    }
+
+    // Validar que el monto no exceda el saldo pendiente
+    const saldoPendiente = factura.monto - (factura.totalPagado || 0);
+    if (monto > saldoPendiente) {
+      return res.status(400).json({ error: `El monto excede el saldo pendiente (${saldoPendiente})` });
+    }
+
+    // Agregar pago al array
+    if (!factura.pagos) factura.pagos = [];
+    factura.pagos.push({
+      fechaPago: new Date(),
+      monto,
+      referencia,
+      cuenta
+    });
+
+    // Actualizar total pagado
+    factura.totalPagado = (factura.totalPagado || 0) + monto;
+
+    // Guardar factura
+    await factura.save();
+
+    res.json({
+      message: 'Pago registrado correctamente',
+      factura,
+      estadoPago: factura.estadoPago,
+      saldoPendiente: factura.saldoPendiente
+    });
+  } catch (error) {
+    console.error('Error al registrar pago:', error);
+    res.status(500).json({ error: 'Error al registrar el pago' });
+  }
+};
+
 facturaCarteraCtrl.deleteFacturaCartera = async (req, res) => {
   try {
     console.log('[DELETE] Buscando factura con id:', req.params.id);
