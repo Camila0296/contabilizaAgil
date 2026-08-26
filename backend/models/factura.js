@@ -14,7 +14,8 @@ const FacturaSchema = new mongoose.Schema({
   impuestos: {
     iva: { type: Number, default: 0 },
     retefuente: { type: Number, default: 0 },
-    ica: { type: Number, default: 0 }
+    ica: { type: Number, default: 0 },
+    totalAPagar: { type: Number, default: 0 }
   },
   usuario: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });

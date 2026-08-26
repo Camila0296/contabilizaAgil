@@ -74,10 +74,13 @@ facturaCtrl.getFacturas = async (req, res) => {
       query.puc = req.query.puc;
     }
 
+    console.log('[FACTURA] Query:', JSON.stringify(query));
     // Contar total de registros
     const total = await Factura.countDocuments(query);
+    console.log('[FACTURA] Total encontrado:', total);
 
     // Buscar facturas con paginación
+    console.log('[FACTURA] Ejecutando find...');
     const facturas = await Factura
       .find(query)
       .populate('usuario', 'nombres apellidos email')
@@ -85,6 +88,7 @@ facturaCtrl.getFacturas = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    console.log('[FACTURA] Facturas encontradas:', facturas.length);
     res.json({
       data: facturas,
       pagination: {
@@ -95,7 +99,7 @@ facturaCtrl.getFacturas = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error al obtener facturas:', error);
+    console.error('Error al obtener facturas:', error.message, error.stack);
     res.status(500).json({ error: 'Error al obtener las facturas' });
   }
 };
@@ -384,11 +388,12 @@ facturaCtrl.getReportes = async (req, res) => {
     // Calcular totales de impuestos
     const totalesImpuestosAgg = [
       { $match: baseMatch },
-      { $group: { 
-        _id: null, 
+      { $group: {
+        _id: null,
         totalIva: { $sum: '$impuestos.iva' },
         totalReteFuente: { $sum: '$impuestos.retefuente' },
-        totalIca: { $sum: '$impuestos.ica' }
+        totalIca: { $sum: '$impuestos.ica' },
+        totalAPagar: { $sum: '$impuestos.totalAPagar' }
       }}
     ];
     const totalesImpuestos = await Factura.aggregate(totalesImpuestosAgg);
@@ -492,6 +497,7 @@ facturaCtrl.getReportes = async (req, res) => {
       totalIva: totalesImpuestos[0]?.totalIva || 0,
       totalReteFuente: totalesImpuestos[0]?.totalReteFuente || 0,
       totalIca: totalesImpuestos[0]?.totalIca || 0,
+      totalAPagar: totalesImpuestos[0]?.totalAPagar || 0,
       facturasPorMes,
       topProveedores: topProveedoresFormateado,
       facturasRecientes,

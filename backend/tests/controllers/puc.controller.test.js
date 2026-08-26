@@ -1,65 +1,46 @@
+// Mocks ya configurados globalmente en tests/setup-mocks.js
 const request = require('supertest');
 const mongoose = require('mongoose');
 const Puc = require('../../models/puc');
 const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
-const { resetStores } = require('../mocks/db');
+const { resetAllStores } = require('../helpers/mockReset');
 
 describe('PUC Controller - Validaciones y Paginación', () => {
   let authToken;
 
   beforeAll(async () => {
-    // Asegurar que el rol auxiliar existe
-    let auxRole = await Role.findOne({ name: 'auxiliar' });
-    if (!auxRole) {
-      auxRole = await Role.create({ name: 'auxiliar', nivel: 4, descripcion: 'Entrada de datos' });
-    }
-
-    // Crear usuario
-    const email = `puc-user-${Date.now()}@test.com`;
+    const email = `puc-user-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const password = 'TestPass123!';
     const res = await request(app)
       .post('/api/auth/register')
-      .send({
-        nombres: 'Test',
-        apellidos: 'User',
-        email,
-        password
-      });
+      .send({ nombres: 'Test', apellidos: 'User', email, password });
 
-    // Aprobar usuario
     if (res.body.user && res.body.user._id) {
       const userId = res.body.user._id;
-      await User.findByIdAndUpdate(userId, { approved: true });
+      const contadorRole = await Role.findOne({ name: 'contador' });
+      await User.findByIdAndUpdate(userId, { approved: true, role: contadorRole._id });
 
-      // Login para obtener token válido
       const loginRes = await request(app)
         .post('/api/auth/login')
         .send({ email, password });
 
       if (loginRes.status !== 200) {
-        throw new Error(`Login failed with status ${loginRes.status}: ${JSON.stringify(loginRes.body)}`);
+        throw new Error(`Login failed: ${loginRes.status}`);
       }
       authToken = loginRes.body.token;
-
-      if (!authToken) {
-        throw new Error(`Login successful but no token returned: ${JSON.stringify(loginRes.body)}`);
-      }
     } else {
       throw new Error('Register failed: ' + JSON.stringify(res.body));
     }
   });
 
   afterEach(async () => {
-    // Solo limpiar los datos de prueba, NO el usuario de auth que se creó en beforeAll
     await Puc.deleteMany({});
   });
 
   afterAll(async () => {
     await Puc.deleteMany({});
-    await User.deleteMany({});
-    await Role.deleteMany({});
   });
 
   describe('POST /api/puc - Validación de creación', () => {
@@ -91,11 +72,13 @@ describe('PUC Controller - Validaciones y Paginación', () => {
     });
 
     test('Debe crear PUC válido con status 201', async () => {
+      const timestamp = Date.now();
+      const codigoEsperado = `TEST-${timestamp}`.toUpperCase();
       const res = await request(app)
         .post('/api/puc')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          codigo: `TEST-${Date.now()}`,
+          codigo: `TEST-${timestamp}`,
           nombre: 'Cuenta Test',
           naturaleza: 'debito',
           descripcion: 'Descripción de prueba'
@@ -103,7 +86,7 @@ describe('PUC Controller - Validaciones y Paginación', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
-      expect(res.body.puc.codigo).toBe(`TEST-${Date.now()}`.toUpperCase());
+      expect(res.body.puc.codigo).toBe(codigoEsperado);
       expect(res.body.puc.activo).toBe(true);
     });
 

@@ -1,56 +1,47 @@
+// Mocks ya configurados globalmente en tests/setup-mocks.js
+
+
 const request = require('supertest');
 const mongoose = require('mongoose');
 const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
+const { resetAllStores } = require('../helpers/mockReset');
 
 describe('Aprobaciones Controller', () => {
   let approverToken;
-  let approverId;
   let pendingUserId;
   let approvedUserId;
-  let userRole;
-  let adminRole;
 
   beforeAll(async () => {
-    // Crear roles
-    adminRole = await Role.findOne({ name: 'administrador', nivel: 1, descripcion: 'Admin role' });
-    if (!adminRole) {
-      adminRole = await Role.create({ name: 'administrador', nivel: 1, descripcion: 'Admin role' });
-    }
+    // Roles ya creados globalmente en setup-mocks.js
 
-    userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
-    if (!userRole) {
-      userRole = await Role.create({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
-    }
-
-    const approverRole = await Role.findOne({ name: 'contador', nivel: 2, descripcion: 'Counter role' });
-    if (!approverRole) {
-      await Role.create({ name: 'contador', nivel: 2, descripcion: 'Counter role' });
-    }
-
-    // Crear usuario approver
+    const email = `approver-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
+    const password = 'TestPass123!';
     const approverRes = await request(app)
       .post('/api/auth/register')
-      .send({
-        nombres: 'Approver',
-        apellidos: 'User',
-        email: `approver-${Date.now()}@test.com`,
-        password: 'TestPass123!'
+      .send({ nombres: 'Approver', apellidos: 'User', email, password });
+
+    if (approverRes.body.user && approverRes.body.user._id) {
+      await User.findByIdAndUpdate(approverRes.body.user._id, {
+        approved: true,
+        role: (await Role.findOne({ name: 'administrador' }))._id
       });
 
-    approverToken = approverRes.body.token;
-    approverId = approverRes.body.user._id;
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email, password });
 
-    // Asignar rol administrador
-    await User.findByIdAndUpdate(approverId, {
-      role: (await Role.findOne({ name: 'administrador' }))._id
-    });
+      approverToken = loginRes.body.token;
+    }
+  });
+
+  afterEach(async () => {
+    await User.deleteMany({ email: { $regex: /(pending|approved)-/ } });
   });
 
   afterAll(async () => {
-    await User.deleteMany({});
-    await Role.deleteMany({});
+    // NO limpiar User/Role - otros tests las necesitan
   });
 
   beforeEach(async () => {

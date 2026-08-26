@@ -10,10 +10,14 @@ module.exports = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'changeme');
-    
+    console.log('[AUTH] Token decodificado:', { id: decoded.id, role: decoded.role });
+
     // Obtener el usuario completo con sus roles
     const user = await User.findById(decoded.id).populate('role');
+    console.log('[AUTH] User encontrado:', !!user, { id: user?._id, email: user?.email, role: user?.role });
+
     if (!user) {
+      console.log('[AUTH] ERROR: Usuario no encontrado para ID:', decoded.id);
       return res.status(401).json({ error: 'Usuario no encontrado' });
     }
     

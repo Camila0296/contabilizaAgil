@@ -205,19 +205,24 @@ facturaCarteraCtrl.updateFacturaCartera = async (req, res) => {
 
 facturaCarteraCtrl.deleteFacturaCartera = async (req, res) => {
   try {
+    console.log('[DELETE] Buscando factura con id:', req.params.id);
     const factura = await FacturaCartera.findById(req.params.id);
+    console.log('[DELETE] Factura encontrada:', !!factura, { usuario: factura?.usuario, usuarioType: typeof factura?.usuario });
     if (!factura) {
       return res.status(404).json({ error: 'Factura no encontrada' });
     }
 
-    if ((!req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) && factura.usuario._id.toString() !== req.user.id) {
+    console.log('[DELETE] Validando permisos. isAdmin:', req.user.roles.includes('administrador'), 'isContador:', req.user.roles.includes('contador'));
+    if ((!req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) && factura.usuario !== req.user.id) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar esta factura' });
     }
 
-    await FacturaCartera.findByIdAndUpdate(req.params.id, { estado: 'anulada' });
+    console.log('[DELETE] Permisos validados. Actualizando estado...');
+    const result = await FacturaCartera.findByIdAndUpdate(req.params.id, { estado: 'anulada' });
+    console.log('[DELETE] Actualización completada:', !!result);
     res.json({ message: 'Factura anulada correctamente' });
   } catch (error) {
-    console.error('Error al anular factura cartera:', error);
+    console.error('Error al anular factura cartera:', error.message);
     res.status(500).json({ error: 'Error al anular la factura' });
   }
 };

@@ -1,89 +1,56 @@
+// Mocks ya configurados globalmente en tests/setup-mocks.js
+
+
 const request = require('supertest');
 const mongoose = require('mongoose');
 const Factura = require('../../models/factura');
 const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
+const { resetAllStores } = require('../helpers/mockReset');
 
 describe('Factura Controller - Validaciones y Paginación', () => {
   let authToken;
-  let userId;
   let adminToken;
-  let adminId;
+  let userId;
 
   beforeAll(async () => {
-    // Crear rol si no existe
-    let adminRole = await Role.findOne({ name: 'administrador' });
-    if (!adminRole) {
-      adminRole = await Role.create({
-        name: 'administrador',
-        nivel: 1,
-        descripcion: 'Admin role for testing'
-      });
-    }
+    // Roles ya creados globalmente en setup-mocks.js
 
-    let userRole = await Role.findOne({ name: 'auxiliar' });
-    if (!userRole) {
-      userRole = await Role.create({
-        name: 'auxiliar',
-        nivel: 4,
-        descripcion: 'User role for testing'
-      });
-    }
-
-    // Crear usuario admin para login
-    const adminEmail = `admin-${Date.now()}@test.com`;
+    // Crear usuario admin
+    const adminEmail = `admin-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const adminRes = await request(app)
       .post('/api/auth/register')
-      .send({
-        nombres: 'Admin Test',
-        apellidos: 'User',
-        email: adminEmail,
-        password: 'TestPass123!'
-      });
+      .send({ nombres: 'Admin Test', apellidos: 'User', email: adminEmail, password: 'TestPass123!' });
 
-    adminId = adminRes.body.user._id;
-    const adminPassword = 'TestPass123!';
-    await User.findByIdAndUpdate(adminId, { approved: true });
+    if (adminRes.body.user && adminRes.body.user._id) {
+      const adminRole = await Role.findOne({ name: 'administrador' });
+      await User.findByIdAndUpdate(adminRes.body.user._id, { approved: true, role: adminRole._id });
+      const adminLoginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: adminEmail, password: 'TestPass123!' });
+      adminToken = adminLoginRes.body.token;
+    }
 
-    // Login para obtener token válido
-    const adminLoginRes = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: adminEmail,
-        password: adminPassword
-      });
-    adminToken = adminLoginRes.body.token;
-
-    // Crear usuario regular
-    const userEmail = `user-${Date.now()}@test.com`;
-    const userPassword = 'TestPass123!';
+    // Crear usuario regular (contador)
+    const userEmail = `user-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const userRes = await request(app)
       .post('/api/auth/register')
-      .send({
-        nombres: 'Regular Test',
-        apellidos: 'User',
-        email: userEmail,
-        password: userPassword
-      });
+      .send({ nombres: 'Regular Test', apellidos: 'User', email: userEmail, password: 'TestPass123!' });
 
-    userId = userRes.body.user._id;
-    await User.findByIdAndUpdate(userId, { approved: true });
-
-    // Login para obtener token válido
-    const userLoginRes = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: userEmail,
-        password: userPassword
-      });
-    authToken = userLoginRes.body.token;
+    if (userRes.body.user && userRes.body.user._id) {
+      userId = userRes.body.user._id;
+      const contadorRole = await Role.findOne({ name: 'contador' });
+      await User.findByIdAndUpdate(userId, { approved: true, role: contadorRole._id });
+      const userLoginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: userEmail, password: 'TestPass123!' });
+      authToken = userLoginRes.body.token;
+    }
   });
 
   afterAll(async () => {
     await Factura.deleteMany({});
-    await User.deleteMany({});
-    await Role.deleteMany({});
   });
 
   describe('POST /api/facturas - Validación de creación', () => {
@@ -271,6 +238,9 @@ describe('Factura Controller - Validaciones y Paginación', () => {
         .get('/api/facturas?proveedor=proveedor')
         .set('Authorization', `Bearer ${authToken}`);
 
+      if (res.status !== 200) {
+        console.log('ERROR 500 Response:', res.body);
+      }
       expect(res.status).toBe(200);
       expect(res.body.data.length).toBeGreaterThan(0);
     });

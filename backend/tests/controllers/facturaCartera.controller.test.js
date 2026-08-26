@@ -1,32 +1,41 @@
+// Mocks ya configurados globalmente en tests/setup-mocks.js
+
 const facturaCarteraCtrl = require('../../controllers/facturaCartera.controller');
 const FacturaCartera = require('../../models/facturaCartera');
 const Tercero = require('../../models/tercero');
 const Puc = require('../../models/puc');
 const Sequence = require('../../models/sequence');
+const User = require('../../models/user');
+const Role = require('../../models/role');
 const { createTestUser, createTestRole, mockRequest, mockResponse } = require('../helpers/testHelpers');
+const { resetAllStores } = require('../helpers/mockReset');
 
 describe('FacturaCartera Controller', () => {
   let testUser, testRole, testTercero, testPuc;
 
   beforeEach(async () => {
     testRole = await createTestRole('auxiliar');
-    testUser = await createTestUser({ email: 'test@example.com', role: testRole._id, approved: true });
+    testUser = await createTestUser({ email: `test-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`, role: testRole._id, approved: true });
     testUser.roles = ['auxiliar'];
 
     testTercero = await Tercero.create({
       tipo: 'cliente',
       razonSocial: 'Test Client',
       tipoDocumento: 'NIT',
-      numeroDocumento: '1111111111'
+      numeroDocumento: `NIT-${Date.now()}-${Math.random().toString(36).slice(2)}`
     });
 
     testPuc = await Puc.create({
-      codigo: '5110',
+      codigo: `CODE-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       nombre: 'Honorarios',
       naturaleza: 'debito'
     });
 
     await Sequence.deleteMany({});
+  });
+
+  afterEach(async () => {
+    await FacturaCartera.deleteMany({});
   });
 
   describe('createFacturaCartera', () => {
@@ -162,7 +171,11 @@ describe('FacturaCartera Controller', () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        error: 'Todos los campos son obligatorios'
+        error: 'Validación fallida',
+        details: expect.arrayContaining([
+          expect.stringContaining('tercero'),
+          expect.stringContaining('monto')
+        ])
       });
     });
 
@@ -265,7 +278,8 @@ describe('FacturaCartera Controller', () => {
       await facturaCarteraCtrl.getFacturasCartera(reqGet, resGet);
 
       expect(resGet.json).toHaveBeenCalled();
-      const facturas = resGet.json.mock.calls[0][0];
+      const response = resGet.json.mock.calls[0][0];
+      const facturas = response.data;
       expect(facturas.every(f => f.usuario._id.toString() === testUser._id.toString())).toBe(true);
     });
   });

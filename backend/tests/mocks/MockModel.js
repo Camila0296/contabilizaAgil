@@ -42,6 +42,9 @@ function matchField(value, cond) {
         case '$regex':
           const regexOpts = cond.$options || '';
           return new RegExp(arg, regexOpts).test(String(value ?? ''));
+        case '$options':
+          // $options es manejado junto con $regex, ignorar aquí
+          return true;
         default:
           throw new Error(`Mock matcher: operador no soportado "${op}"`);
       }
@@ -141,7 +144,13 @@ class MockModel {
 
   static findOne(filter = {}) {
     return new MockQuery(
-      () => Promise.resolve(this._store.find(d => matches(d, filter)) || null),
+      () => {
+        const result = this._store.find(d => matches(d, filter)) || null;
+        if (this._name === 'User' && filter._id) {
+          console.log(`[MockModel] ${this._name}.findOne({ _id: ${filter._id} }): found=${!!result}, storeSize=${this._store.length}`);
+        }
+        return Promise.resolve(result);
+      },
       { many: false, modelName: this._name }
     );
   }

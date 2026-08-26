@@ -1,20 +1,5 @@
-// Resetear módulos cacheados para evitar conflictos con otros test files
-jest.resetModules();
+// Mocks ya configurados globalmente en tests/setup-mocks.js
 
-// Configurar variables de entorno y mocks ANTES de importar la app
-process.env.JWT_SECRET = 'test-secret-key';
-process.env.NODE_ENV = 'test';
-process.env.GROQ_API_KEY = 'mock-key-for-testing';
-
-// Mock los modelos ANTES de importar la app
-jest.mock('../../models/user', () => require('../mocks/models').MockUser);
-jest.mock('../../models/role', () => require('../mocks/models').MockRole);
-jest.mock('../../models/tercero', () => require('../mocks/models').MockTercero);
-jest.mock('../../models/factura', () => require('../mocks/models').MockFactura);
-jest.mock('../../models/puc', () => require('../mocks/models').MockPuc);
-jest.mock('../../models/facturaCartera', () => require('../mocks/models').MockFacturaCartera);
-jest.mock('../../models/sequence', () => require('../mocks/models').MockSequence);
-jest.mock('groq-sdk', () => require('../mocks/groq'));
 
 const request = require('supertest');
 const mongoose = require('mongoose');
@@ -26,42 +11,34 @@ const { resetAllStores } = require('../helpers/mockReset');
 
 describe('Tercero Controller - Validaciones y Paginación', () => {
   let authToken;
-  let userId;
 
   beforeAll(async () => {
-    // Resetear TODOS los stores para asegurar suite independiente
-    resetAllStores();
-
-    // Crear rol
-    let userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
-    if (!userRole) {
-      userRole = await Role.create({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
-    }
-
-    // Crear usuario
-    const email = `tercero-user-${Date.now()}@test.com`;
+    // Rol 'auxiliar' ya creado globalmente en setup-mocks.js
+    const email = `tercero-user-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const password = 'TestPass123!';
     const res = await request(app)
       .post('/api/auth/register')
-      .send({
-        nombres: 'Test',
-        apellidos: 'User',
-        email,
-        password
-      });
+      .send({ nombres: 'Test', apellidos: 'User', email, password });
 
-    userId = res.body.user._id;
-    await User.findByIdAndUpdate(userId, { approved: true });
+    if (res.body.user && res.body.user._id) {
+      const userId = res.body.user._id;
+      const contadorRole = await Role.findOne({ name: 'contador' });
+      await User.findByIdAndUpdate(userId, { approved: true, role: contadorRole._id });
 
-    // Login para obtener token válido
-    const loginRes = await request(app)
-      .post('/api/auth/login')
-      .send({ email, password });
-    authToken = loginRes.body.token;
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email, password });
+
+      if (loginRes.status !== 200) {
+        throw new Error(`Login failed: ${loginRes.status}`);
+      }
+      authToken = loginRes.body.token;
+    } else {
+      throw new Error('Register failed: ' + JSON.stringify(res.body));
+    }
   });
 
   afterAll(async () => {
-    // SOLO limpiar Terceros. NO limpiar User/Role porque otros tests globales los necesitan
     await Tercero.deleteMany({});
   });
 

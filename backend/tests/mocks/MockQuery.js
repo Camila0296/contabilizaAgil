@@ -43,18 +43,29 @@ class MockQuery {
   }
 
   async _resolvePopulateOn(doc) {
-    if (!doc) return doc;
+    if (!doc) {
+      if (this._populates.length > 0) console.log('[MockQuery] _resolvePopulateOn: doc es null/undefined');
+      return doc;
+    }
     for (const { path, projection } of this._populates) {
       const raw = doc[path];
-      if (raw == null) continue;
+      if (raw == null) {
+        console.log(`[MockQuery] ${this._modelName}.populate('${path}'): campo null/undefined`);
+        continue;
+      }
 
       const refId = typeof raw === 'object' && raw._id ? raw._id : raw;
       const refModelName = REF_MAP[this._modelName]?.[path];
       const refStore = stores[refModelName] || [];
 
+      console.log(`[MockQuery] ${this._modelName}.populate('${path}'): refId=${refId}, refModel=${refModelName}, refStoreSize=${refStore.length}`);
+
       const found = refStore.find(r => idsEqual(r._id, refId));
       if (found) {
+        console.log(`[MockQuery] populate('${path}'): Encontrado, asignando`);
         doc[path] = projection ? projectFields(found, projection) : found;
+      } else {
+        console.log(`[MockQuery] populate('${path}'): NO encontrado en store`);
       }
       // si no se encuentra, se deja el id crudo (igual que mongoose real)
     }

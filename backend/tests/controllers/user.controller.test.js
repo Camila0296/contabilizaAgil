@@ -1,73 +1,54 @@
+// Mocks ya configurados globalmente en tests/setup-mocks.js
+
+
 const request = require('supertest');
 const mongoose = require('mongoose');
 const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
+const { resetAllStores } = require('../helpers/mockReset');
 
 describe('User Controller - Validaciones y Paginación', () => {
   let adminToken;
-  let adminId;
   let userToken;
-  let userId;
 
   beforeAll(async () => {
-    // Crear roles
-    let adminRole = await Role.findOne({ name: 'administrador', nivel: 1, descripcion: 'Admin role' });
-    if (!adminRole) {
-      adminRole = await Role.create({ name: 'administrador', nivel: 1, descripcion: 'Admin role' });
-    }
-
-    let userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
-    if (!userRole) {
-      userRole = await Role.create({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
-    }
+    // Roles ya creados globalmente en setup-mocks.js
 
     // Crear usuario admin
-    const adminEmail = `admin-${Date.now()}@test.com`;
+    const adminEmail = `admin-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const adminPassword = 'TestPass123!';
     const adminRes = await request(app)
       .post('/api/auth/register')
-      .send({
-        nombres: 'Admin Test',
-        apellidos: 'User',
-        email: adminEmail,
-        password: adminPassword
-      });
+      .send({ nombres: 'Admin Test', apellidos: 'User', email: adminEmail, password: adminPassword });
 
-    adminId = adminRes.body.user._id;
-    await User.findByIdAndUpdate(adminId, { approved: true });
-
-    // Login para obtener token válido
-    const adminLoginRes = await request(app)
-      .post('/api/auth/login')
-      .send({ email: adminEmail, password: adminPassword });
-    adminToken = adminLoginRes.body.token;
+    if (adminRes.body.user && adminRes.body.user._id) {
+      const adminRole = await Role.findOne({ name: 'administrador' });
+      await User.findByIdAndUpdate(adminRes.body.user._id, { approved: true, role: adminRole._id });
+      const adminLoginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: adminEmail, password: adminPassword });
+      adminToken = adminLoginRes.body.token;
+    }
 
     // Crear usuario regular
-    const userEmail = `user-${Date.now()}@test.com`;
+    const userEmail = `user-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const userPassword = 'TestPass123!';
     const userRes = await request(app)
       .post('/api/auth/register')
-      .send({
-        nombres: 'Regular Test',
-        apellidos: 'User',
-        email: userEmail,
-        password: userPassword
-      });
+      .send({ nombres: 'Regular Test', apellidos: 'User', email: userEmail, password: userPassword });
 
-    userId = userRes.body.user._id;
-    await User.findByIdAndUpdate(userId, { approved: true });
-
-    // Login para obtener token válido
-    const userLoginRes = await request(app)
-      .post('/api/auth/login')
-      .send({ email: userEmail, password: userPassword });
-    userToken = userLoginRes.body.token;
+    if (userRes.body.user && userRes.body.user._id) {
+      await User.findByIdAndUpdate(userRes.body.user._id, { approved: true });
+      const userLoginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: userEmail, password: userPassword });
+      userToken = userLoginRes.body.token;
+    }
   });
 
   afterAll(async () => {
-    await User.deleteMany({});
-    await Role.deleteMany({});
+    // NO limpiar User/Role - otros tests las necesitan
   });
 
   describe('Email Validation', () => {

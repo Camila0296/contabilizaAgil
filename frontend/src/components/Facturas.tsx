@@ -23,6 +23,7 @@ interface Factura {
     retefuentePct?: number;
     icaPct?: number;
     ica: number;
+    totalAPagar: number;
   };
   usuario?: any;
 }
@@ -45,6 +46,7 @@ const initialForm: Factura = {
     iva: 0,
     retefuente: 0,
     ica: 0,
+    totalAPagar: 0,
   },
 };
 
@@ -225,16 +227,18 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Fecha</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Proveedor</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">PUC</th>
-                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Monto</th>
+                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Monto Base</th>
+                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell whitespace-nowrap">IVA (19%)</th>
                 <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell whitespace-nowrap">ReteFte</th>
                 <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell whitespace-nowrap">ICA</th>
+                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap font-bold">Total</th>
                 <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Acciones</th>
               </tr>
             </thead>
             <tbody className="table-body">
             {loading ? (
               <tr>
-                  <td colSpan={8} className="text-center py-8">
+                  <td colSpan={10} className="text-center py-8">
                     <div className="flex items-center justify-center space-x-2">
                       <svg className="animate-spin h-5 w-5 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -246,7 +250,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
               </tr>
             ) : facturas.length === 0 ? (
               <tr>
-                  <td colSpan={8} className="text-center py-12">
+                  <td colSpan={10} className="text-center py-12">
                     <div className="text-gray-500">
                       <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -283,12 +287,19 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                   {formatCurrency(factura.monto)}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm text-gray-500 hidden md:table-cell">
-                  <div>{formatCurrency(factura.impuestos.retefuente)}</div>
+                  <div className="text-green-600 font-medium">{formatCurrency(factura.impuestos.iva)}</div>
+                  <div className="text-xs text-gray-400">19%</div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right text-sm text-gray-500 hidden md:table-cell">
+                  <div className="text-red-600">-{formatCurrency(factura.impuestos.retefuente)}</div>
                   <div className="text-xs text-gray-400">({(factura.retefuentePct || 0).toFixed(2)}%)</div>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm text-gray-500 hidden md:table-cell">
-                  <div>{formatCurrency(factura.impuestos.ica)}</div>
+                  <div className="text-red-600">-{formatCurrency(factura.impuestos.ica)}</div>
                   <div className="text-xs text-gray-400">({(factura.icaPct || 0).toFixed(3)}%)</div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-bold text-gray-900 bg-blue-50 rounded">
+                  {formatCurrency(factura.impuestos.totalAPagar)}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end space-x-2">
@@ -512,6 +523,33 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     <p className="text-xs text-gray-500 mt-1">
                       Valor: {formatCurrency(form.impuestos.ica)}
                     </p>
+                  </div>
+                </div>
+
+                {/* Resumen de Impuestos */}
+                <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Desglose de Impuestos</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Monto Base:</span>
+                      <span className="font-semibold text-gray-900">{formatCurrency(form.monto)}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600">
+                      <span>+ IVA (19%):</span>
+                      <span className="font-semibold">{formatCurrency(form.impuestos.iva)}</span>
+                    </div>
+                    <div className="flex justify-between text-red-600">
+                      <span>- ReteFuente ({(form.retefuentePct || 0).toFixed(2)}%):</span>
+                      <span className="font-semibold">-{formatCurrency(form.impuestos.retefuente)}</span>
+                    </div>
+                    <div className="flex justify-between text-red-600">
+                      <span>- ICA ({(form.icaPct || 0).toFixed(3)}%):</span>
+                      <span className="font-semibold">-{formatCurrency(form.impuestos.ica)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-blue-300 pt-2 mt-2">
+                      <span className="font-bold text-gray-900">Total a Pagar:</span>
+                      <span className="font-bold text-lg text-blue-600">{formatCurrency(form.impuestos.totalAPagar)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
