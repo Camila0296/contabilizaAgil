@@ -136,8 +136,20 @@ facturaCtrl.createFactura = async (req, res) => {
     const exists = await Factura.findOne({ numero: req.body.numero });
     if (exists) {
       // Obtener el siguiente consecutivo disponible sugerido
-      const lastFactura = await Factura.findOne().sort({ createdAt: -1 });
-      const suggestedNext = lastFactura ? `${parseInt(req.body.numero.split('-').pop()) + 1}` : '001';
+      const year = new Date().getFullYear();
+      const facturasDelAno = await Factura.find({
+        numero: { $regex: `^FAC-${year}-` }
+      }).sort({ numero: -1 }).limit(1);
+
+      let suggestedNext = `FAC-${year}-001`;
+      if (facturasDelAno.length > 0) {
+        const match = facturasDelAno[0].numero.match(/(\d+)$/);
+        if (match) {
+          const currentNum = parseInt(match[1]);
+          const nextNum = String(currentNum + 1).padStart(3, '0');
+          suggestedNext = `FAC-${year}-${nextNum}`;
+        }
+      }
 
       return res.status(400).json({
         error: 'Consecutivo no disponible',
@@ -562,28 +574,26 @@ facturaCtrl.checkConsecutivo = async (req, res) => {
 // Obtener siguiente consecutivo sugerido
 facturaCtrl.getNextConsecutivo = async (req, res) => {
   try {
-    // Buscar todas las facturas ordenadas por número
-    const facturas = await Factura.find({}).sort({ numero: 1 }).select('numero');
+    const year = new Date().getFullYear();
+    const yearPrefix = `FAC-${year}-`;
 
-    if (facturas.length === 0) {
-      return res.json({
-        nextSuggested: 'F-2026-001',
-        available: true,
-        totalRegistered: 0
-      });
-    }
+    // Buscar facturas del año actual ordenadas por número
+    const facturasDelAno = await Factura.find({
+      numero: { $regex: `^FAC-${year}-` }
+    }).sort({ numero: -1 }).select('numero').limit(1);
 
-    // Obtener la última factura
-    const lastFactura = facturas[facturas.length - 1];
-    let nextNumber = 'F-2026-001';
+    let nextNumber = `${yearPrefix}001`;
 
-    // Intentar extraer el número y sugerir el siguiente
-    const match = lastFactura.numero.match(/(\d+)$/);
-    if (match) {
-      const currentNum = parseInt(match[1]);
-      const nextNum = String(currentNum + 1).padStart(3, '0');
-      const year = new Date().getFullYear();
-      nextNumber = `F-${year}-${nextNum}`;
+    if (facturasDelAno.length > 0) {
+      // Obtener el último número del año actual
+      const lastFactura = facturasDelAno[0];
+      const match = lastFactura.numero.match(/(\d+)$/);
+
+      if (match) {
+        const currentNum = parseInt(match[1]);
+        const nextNum = String(currentNum + 1).padStart(3, '0');
+        nextNumber = `${yearPrefix}${nextNum}`;
+      }
     }
 
     // Verificar que el siguiente número no exista
@@ -593,18 +603,23 @@ facturaCtrl.getNextConsecutivo = async (req, res) => {
       if (match) {
         const currentNum = parseInt(match[1]);
         const nextNum = String(currentNum + 1).padStart(3, '0');
-        const year = new Date().getFullYear();
-        nextNumber = `F-${year}-${nextNum}`;
+        nextNumber = `${yearPrefix}${nextNum}`;
       }
       counter++;
-      if (counter > 1000) break; // Prevenir loop infinito
+      if (counter > 10000) break; // Prevenir loop infinito
     }
+
+    // Obtener total de facturas del año actual
+    const totalAnoActual = await Factura.countDocuments({
+      numero: { $regex: `^FAC-${year}-` }
+    });
 
     return res.json({
       nextSuggested: nextNumber,
       available: true,
-      totalRegistered: facturas.length,
-      lastRegistered: lastFactura.numero
+      totalRegisteredThisYear: totalAnoActual,
+      year: year,
+      format: 'FAC-YYYY-NNN'
     });
   } catch (error) {
     console.error('Error obteniendo siguiente consecutivo:', error);

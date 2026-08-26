@@ -90,10 +90,11 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
     try {
       const res = await apiFetch('/facturas/siguiente/consecutivo');
       const data = await res.json();
-      setNextConsecutivo(data.nextSuggested || 'F-2026-001');
+      setNextConsecutivo(data.nextSuggested || 'FAC-2026-001');
     } catch (error) {
       console.error('Error obteniendo siguiente consecutivo:', error);
-      setNextConsecutivo('F-2026-001');
+      const year = new Date().getFullYear();
+      setNextConsecutivo(`FAC-${year}-001`);
     }
   };
 
@@ -461,7 +462,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       value={form.numero}
                       onChange={handleChange}
                       required
-                      placeholder="F-2024-001"
+                      placeholder="FAC-2026-001"
                     />
                     {form.numero && consecutivoMessage && (
                       <p className={`text-xs mt-2 ${
