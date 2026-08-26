@@ -11,6 +11,8 @@ interface FacturaCartera {
   numeroDocumento?: string;
   consecutivo?: number;
   fecha: string;
+  fechaVencimiento?: string;
+  plazo?: number;
   tercero: any;
   monto: number;
   puc: any;
@@ -18,10 +20,20 @@ interface FacturaCartera {
   naturaleza: 'credito' | 'debito';
   retefuentePct?: number;
   icaPct?: number;
+  estadoPago?: 'Pendiente' | 'Pagada' | 'Parcialmente Pagada';
+  saldoPendiente?: number;
+  totalPagado?: number;
+  pagos?: Array<{
+    fechaPago: string;
+    monto: number;
+    referencia: string;
+    cuenta: string;
+  }>;
   impuestos: {
     iva: number;
     retefuente: number;
     ica: number;
+    totalAPagar?: number;
   };
   usuario?: any;
 }
@@ -40,6 +52,8 @@ interface Puc {
 const initialForm: FacturaCartera = {
   tipo: 'factura',
   fecha: '',
+  fechaVencimiento: '',
+  plazo: 30,
   tercero: '',
   monto: 0,
   puc: '',
@@ -47,10 +61,15 @@ const initialForm: FacturaCartera = {
   naturaleza: 'debito',
   retefuentePct: 0,
   icaPct: 0,
+  estadoPago: 'Pendiente',
+  saldoPendiente: 0,
+  totalPagado: 0,
+  pagos: [],
   impuestos: {
     iva: 0,
     retefuente: 0,
-    ica: 0
+    ica: 0,
+    totalAPagar: 0
   }
 };
 
@@ -67,6 +86,13 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedFactura, setSelectedFactura] = useState<FacturaCartera | null>(null);
+  const [paymentForm, setPaymentForm] = useState({
+    monto: 0,
+    referencia: '',
+    cuenta: '1110'
+  });
 
   const terceroOptions = useMemo(
     () => terceros.map(t => ({ value: t._id, label: t.razonSocial })),
