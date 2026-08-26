@@ -36,7 +36,15 @@ describe('PUC Controller - Validaciones y Paginación', () => {
       const loginRes = await request(app)
         .post('/api/auth/login')
         .send({ email, password });
+
+      if (loginRes.status !== 200) {
+        throw new Error(`Login failed with status ${loginRes.status}: ${JSON.stringify(loginRes.body)}`);
+      }
       authToken = loginRes.body.token;
+
+      if (!authToken) {
+        throw new Error(`Login successful but no token returned: ${JSON.stringify(loginRes.body)}`);
+      }
     } else {
       throw new Error('Register failed: ' + JSON.stringify(res.body));
     }
