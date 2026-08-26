@@ -550,6 +550,48 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                     />
                   </div>
 
+                  {editing && (
+                    <div className="md:col-span-2 lg:col-span-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Estado de Pago</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-500">Estado</p>
+                          <p className="text-sm font-semibold">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              form.estadoPago === 'Pagada' ? 'bg-green-100 text-green-700' :
+                              form.estadoPago === 'Parcialmente Pagada' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {form.estadoPago}
+                            </span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Total</p>
+                          <p className="text-sm font-semibold text-gray-900">{formatCurrency(form.monto)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Pagado</p>
+                          <p className="text-sm font-semibold text-green-600">{formatCurrency(form.totalPagado || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Pendiente</p>
+                          <p className="text-sm font-semibold text-red-600">{formatCurrency(form.saldoPendiente || form.monto)}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="mt-4 btn btn-primary w-full text-sm"
+                        onClick={() => {
+                          setSelectedFactura(form as FacturaCartera);
+                          setShowPaymentModal(true);
+                        }}
+                      >
+                        Registrar Pago/Abono
+                      </button>
+                    </div>
+                  )}
+
                   <div className="form-group">
                     <label className="form-label">IVA (19%)</label>
                     <div className="relative">
@@ -617,6 +659,146 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showPaymentModal && selectedFactura && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-xl shadow-strong max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Registrar Pago - {selectedFactura.numeroDocumento}
+              </h2>
+              <button
+                type="button"
+                className="p-2 text-gray-400 hover:text-gray-600"
+                onClick={() => setShowPaymentModal(false)}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Total Factura</p>
+                    <p className="text-lg font-bold text-gray-900">{formatCurrency(selectedFactura.monto)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Total Pagado</p>
+                    <p className="text-lg font-bold text-green-600">{formatCurrency(selectedFactura.totalPagado || 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Saldo Pendiente</p>
+                    <p className="text-lg font-bold text-red-600">{formatCurrency(selectedFactura.saldoPendiente || selectedFactura.monto)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const res = await apiFetch(`/facturas-cartera/${selectedFactura._id}/pagos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(paymentForm)
+                  });
+                  if (res.ok) {
+                    showSuccess('Pago registrado correctamente');
+                    await fetchFacturas();
+                    setShowPaymentModal(false);
+                    setPaymentForm({ monto: 0, referencia: '', cuenta: '1110' });
+                  } else {
+                    showError('Error al registrar el pago');
+                  }
+                } catch {
+                  showError('Error de conexión');
+                }
+              }}>
+                <div className="space-y-4">
+                  <div className="form-group">
+                    <label className="form-label">Monto a Pagar</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500">$</span>
+                      </div>
+                      <input
+                        type="number"
+                        className="form-input pl-7"
+                        value={paymentForm.monto}
+                        onChange={(e) => setPaymentForm(prev => ({ ...prev, monto: Number(e.target.value) }))}
+                        required
+                        step="0.01"
+                        min="0"
+                        max={selectedFactura.saldoPendiente || selectedFactura.monto}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Referencia de Pago</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={paymentForm.referencia}
+                      onChange={(e) => setPaymentForm(prev => ({ ...prev, referencia: e.target.value }))}
+                      placeholder="Cheque, transferencia, referencia..."
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Cuenta Contable</label>
+                    <select
+                      className="form-select"
+                      value={paymentForm.cuenta}
+                      onChange={(e) => setPaymentForm(prev => ({ ...prev, cuenta: e.target.value }))}
+                    >
+                      <option value="1110">1110 - Caja</option>
+                      <option value="1105">1105 - Bancos</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Cuenta donde se recibió el pago</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => setShowPaymentModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-success"
+                  >
+                    Registrar Pago
+                  </button>
+                </div>
+              </form>
+
+              {selectedFactura.pagos && selectedFactura.pagos.length > 0 && (
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Historial de Pagos</h3>
+                  <div className="space-y-2">
+                    {selectedFactura.pagos.map((pago, idx) => (
+                      <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{formatCurrency(pago.monto)}</p>
+                          <p className="text-xs text-gray-500">{pago.referencia || 'Sin referencia'} - {new Date(pago.fechaPago).toLocaleDateString()}</p>
+                        </div>
+                        <p className="text-xs text-gray-500">{pago.cuenta}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
