@@ -1,3 +1,11 @@
+// Configurar variables de entorno
+process.env.JWT_SECRET = 'test-secret-key';
+process.env.NODE_ENV = 'test';
+process.env.GROQ_API_KEY = 'mock-key-for-testing';
+
+// Mock groq-sdk ANTES de importar GroqAIProvider
+jest.mock('groq-sdk', () => require('../mocks/groq'));
+
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
 const GroqAIProvider = require('../../services/providers/groq.provider');
