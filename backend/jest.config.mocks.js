@@ -1,9 +1,9 @@
-// Configuración Jest para tests con mocks (sin BD real)
+// Configuración Jest para tests con mocks (sin BD real ni APIs externas)
 module.exports = {
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/tests/setup-mocks.js'],
   testMatch: ['**/tests/**/*.test.js'],
-  testPathIgnorePatterns: ['/tests/providers/'], // Excluir tests de providers
+  // Incluir todos los tests - providers están mockeados
   collectCoverageFrom: [
     'controllers/**/*.js',
     'models/**/*.js',
