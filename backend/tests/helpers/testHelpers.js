@@ -93,11 +93,28 @@ const mockRequest = (data = {}) => {
   };
 };
 
+// Importar funciones mock (se usan cuando se ejecuta con jest.config.mocks.js)
+let createMockRole, createMockUser, createMockAdmin, cleanupMocks;
+try {
+  const mockFactory = require('./mockFactory');
+  createMockRole = mockFactory.createMockRole;
+  createMockUser = mockFactory.createMockUser;
+  createMockAdmin = mockFactory.createMockAdmin;
+  cleanupMocks = mockFactory.cleanupMocks;
+} catch (e) {
+  // mockFactory no disponible, se usarán las funciones de BD real
+}
+
 module.exports = {
   createTestRole,
   createTestUser,
   createTestToken,
   createTestAdmin,
   mockResponse,
-  mockRequest
+  mockRequest,
+  // Funciones mock (cuando se ejecuta con jest.config.mocks.js)
+  createMockRole,
+  createMockUser,
+  createMockAdmin,
+  cleanupMocks
 }; 

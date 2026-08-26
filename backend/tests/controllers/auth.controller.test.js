@@ -1,12 +1,14 @@
 const authCtrl = require('../../controllers/auth.controller');
-const { createTestUser, createTestRole, mockRequest, mockResponse } = require('../helpers/testHelpers');
+const { createMockRole, createMockUser, mockRequest, mockResponse } = require('../helpers/testHelpers');
 
-describe('Auth Controller', () => {
+describe('Auth Controller - Con Mocks', () => {
+  beforeEach(async () => {
+    // Crear rol auxiliar para todos los tests
+    await createMockRole({ name: 'auxiliar', nivel: 4 });
+  });
+
   describe('register', () => {
     it('should register a new user successfully', async () => {
-      // Crear un rol antes de registrar el usuario
-      await createTestRole('auxiliar');
-      
       const req = mockRequest({
         body: {
           nombres: 'John',
@@ -31,8 +33,6 @@ describe('Auth Controller', () => {
     });
 
     it('should return error if password is not strong enough', async () => {
-      await createTestRole('auxiliar');
-
       const req = mockRequest({
         body: {
           nombres: 'John',
@@ -52,9 +52,6 @@ describe('Auth Controller', () => {
     });
 
     it('should return error if required fields are missing', async () => {
-      // Crear un rol para que no falle por falta de roles
-      await createTestRole('auxiliar');
-      
       const req = mockRequest({
         body: {
           nombres: 'John',
@@ -66,7 +63,6 @@ describe('Auth Controller', () => {
 
       await authCtrl.register(req, res);
 
-      // Ahora el controlador valida campos requeridos
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: 'Faltan campos requeridos' });
     });
@@ -74,15 +70,17 @@ describe('Auth Controller', () => {
 
   describe('login', () => {
     it('should login successfully with valid credentials', async () => {
-      const user = await createTestUser({
+      const plainPassword = 'Password123!';
+      const user = await createMockUser({
         email: 'test@example.com',
-        password: 'password123'
+        password: plainPassword,
+        approved: true
       });
 
       const req = mockRequest({
         body: {
           email: 'test@example.com',
-          password: 'password123'
+          password: plainPassword
         }
       });
       const res = mockResponse();
