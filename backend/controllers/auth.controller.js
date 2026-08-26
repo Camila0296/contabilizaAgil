@@ -49,7 +49,7 @@ authCtrl.register = async (req, res) => {
   const token = jwt.sign({ id: user._id, role: user.role.name }, process.env.JWT_SECRET || 'changeme', {
     expiresIn: '8h'
   });
-  res.json({
+  res.status(201).json({
     status: 'Usuario registrado',
     token,
     user: { _id: user._id, id: user._id, nombres: user.nombres, apellidos: user.apellidos, email: user.email, role: user.role.name }
