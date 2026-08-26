@@ -1,9 +1,25 @@
+// Configurar variables de entorno y mocks ANTES de importar la app
+process.env.JWT_SECRET = 'test-secret-key';
+process.env.NODE_ENV = 'test';
+process.env.GROQ_API_KEY = 'mock-key-for-testing';
+
+// Mock los modelos ANTES de importar la app
+jest.mock('../../models/user', () => require('../mocks/models').MockUser);
+jest.mock('../../models/role', () => require('../mocks/models').MockRole);
+jest.mock('../../models/tercero', () => require('../mocks/models').MockTercero);
+jest.mock('../../models/factura', () => require('../mocks/models').MockFactura);
+jest.mock('../../models/puc', () => require('../mocks/models').MockPuc);
+jest.mock('../../models/facturaCartera', () => require('../mocks/models').MockFacturaCartera);
+jest.mock('../../models/sequence', () => require('../mocks/models').MockSequence);
+jest.mock('groq-sdk', () => require('../mocks/groq'));
+
 const request = require('supertest');
 const mongoose = require('mongoose');
 const Tercero = require('../../models/tercero');
 const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
+const { resetStores } = require('../mocks/db');
 
 describe('Tercero Controller - Validaciones y Paginación', () => {
   let authToken;
@@ -39,9 +55,8 @@ describe('Tercero Controller - Validaciones y Paginación', () => {
   });
 
   afterAll(async () => {
+    // SOLO limpiar Terceros. NO limpiar User/Role porque otros tests globales los necesitan
     await Tercero.deleteMany({});
-    await User.deleteMany({});
-    await Role.deleteMany({});
   });
 
   describe('POST /api/terceros - Validación de creación', () => {
