@@ -1,4 +1,5 @@
 // Setup GLOBAL para tests con mocks — se ejecuta UNA SOLA VEZ
+const { resetStores } = require('./mocks/db');
 const { cleanupMocks } = require('./helpers/mockFactory');
 
 // Configurar variables de entorno
@@ -18,12 +19,8 @@ jest.mock('groq-sdk', () => require('./mocks/groq'));
 
 // Setup global — crear roles estándar UNA SOLA VEZ
 const Role = require('../models/role');
-let rolesCreated = false;
 
-beforeAll(async () => {
-  if (rolesCreated) return;
-  rolesCreated = true;
-
+async function ensureRolesExist() {
   const roleNames = [
     { name: 'administrador', nivel: 1 },
     { name: 'contador', nivel: 2 },
@@ -40,9 +37,18 @@ beforeAll(async () => {
       });
     }
   }
+}
+
+beforeAll(async () => {
+  // Resetear todas las stores al inicio
+  resetStores();
+  // Crear roles estándar
+  await ensureRolesExist();
 });
 
-// Limpiar mocks después de cada test (NO limpiar User/Role)
-afterEach(() => {
+// Limpiar mocks después de cada test (mantener Roles)
+afterEach(async () => {
   cleanupMocks();
+  // Asegurar que roles existan para próximo test
+  await ensureRolesExist();
 });

@@ -82,15 +82,15 @@ async function getMockUserByEmail(email) {
  * Limpia todos los datos de prueba
  */
 function cleanupMocks() {
-  // NO limpiar User/Role - son necesarios para autenticación entre tests
-  // Solo limpiar datos de prueba específicos
   const { stores } = require('../mocks/db');
+  // Limpiar todos los datos de prueba
+  stores.User.length = 0;
   stores.Puc.length = 0;
   stores.Tercero.length = 0;
   stores.Factura.length = 0;
   stores.FacturaCartera.length = 0;
   stores.Sequence.length = 0;
-  // User y Role se mantienen para validación de tokens
+  // Mantener Roles para no recrearlos en cada test
 }
 
 module.exports = {
