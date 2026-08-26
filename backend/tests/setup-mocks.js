@@ -40,8 +40,8 @@ async function ensureRolesExist() {
 }
 
 beforeAll(async () => {
-  // Resetear todas las stores al inicio
-  resetStores();
+  // Resetear todas las stores al inicio EXCEPTO roles
+  resetStores(true);
   // Crear roles estándar
   await ensureRolesExist();
 });

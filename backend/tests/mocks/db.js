@@ -36,8 +36,10 @@ function idsEqual(a, b) {
   return a.toString() === b.toString();
 }
 
-function resetStores() {
+function resetStores(keepRoles = false) {
   Object.keys(stores).forEach(k => {
+    // No limpiar Roles si keepRoles es true
+    if (keepRoles && k === 'Role') return;
     stores[k].length = 0;
   });
 }
