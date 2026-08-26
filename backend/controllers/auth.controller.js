@@ -6,6 +6,13 @@ const { isStrongPassword, PASSWORD_ERROR, BCRYPT_ROUNDS } = require('../utils/pa
 
 const authCtrl = {};
 
+// Validar formato de email
+function isValidEmail(email) {
+  if (!email || typeof email !== 'string') return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 255;
+}
+
 // Registro de usuario
 authCtrl.register = async (req, res) => {
   const { nombres, apellidos, email, password } = req.body;
@@ -13,6 +20,11 @@ authCtrl.register = async (req, res) => {
   // Validar campos requeridos
   if (!nombres || !apellidos || !email || !password) {
     return res.status(400).json({ error: 'Faltan campos requeridos' });
+  }
+
+  // Validar formato de email
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: 'Formato de email inválido' });
   }
 
   if (!isStrongPassword(password)) {
