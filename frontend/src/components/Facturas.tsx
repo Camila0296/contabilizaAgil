@@ -4,6 +4,7 @@ import { formatCurrency } from '../utils/format';
 import { showSuccess, showError } from '../utils/alerts';
 import Select from 'react-select';
 import { retefuenteOptions, icaOptions } from '../data/withholdingOptions';
+import { getRecommendedRetention, retentionGuide } from '../data/retentionGuide';
 import pucAccounts from '../data/pucAccounts';
 
 interface Factura {
@@ -75,6 +76,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showRetentionGuide, setShowRetentionGuide] = useState(false);
 
   useEffect(() => {
     fetchFacturas();
@@ -92,6 +94,14 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
     setLoading(false);
   };
 
+  const calcularImpuestosConTotal = (monto: number, retefuentePct: number, icaPct: number) => {
+    const iva = +(monto * 0.19).toFixed(2);
+    const retefuente = +(monto * (retefuentePct || 0) / 100).toFixed(2);
+    const ica = +(monto * (icaPct || 0) / 100).toFixed(2);
+    const totalAPagar = +(monto + iva - retefuente - ica).toFixed(2);
+    return { iva, retefuente, ica, totalAPagar };
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name.startsWith('impuestos.')) {
@@ -103,23 +113,38 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
     } else if (name === 'monto') {
       const num = Number(value);
       setForm(prev => {
-        const retefuenteVal = +(num * (prev.retefuentePct || 0) / 100).toFixed(2);
-        const icaVal = +(num * (prev.icaPct || 0) / 100).toFixed(2);
+        const impuestos = calcularImpuestosConTotal(num, prev.retefuentePct || 0, prev.icaPct || 0);
         return {
           ...prev,
           monto: num,
-          impuestos: { ...prev.impuestos, iva: +(num * 0.19).toFixed(2), retefuente: retefuenteVal, ica: icaVal }
+          impuestos
         };
       });
     } else if (name === 'retefuentePct' || name === 'icaPct') {
       const pct = Number(value);
       setForm(prev => {
-        const retefuenteVal = name === 'retefuentePct' ? +(prev.monto * pct / 100).toFixed(2) : +(prev.monto * (prev.retefuentePct || 0) / 100).toFixed(2);
-        const icaVal = name === 'icaPct' ? +(prev.monto * pct / 100).toFixed(2) : +(prev.monto * (prev.icaPct || 0) / 100).toFixed(2);
+        const impuestos = calcularImpuestosConTotal(
+          prev.monto,
+          name === 'retefuentePct' ? pct : (prev.retefuentePct || 0),
+          name === 'icaPct' ? pct : (prev.icaPct || 0)
+        );
         return {
           ...prev,
           [name]: pct,
-          impuestos: { ...prev.impuestos, retefuente: retefuenteVal, ica: icaVal }
+          impuestos
+        };
+      });
+    } else if (name === 'detalle') {
+      // Sugerir retención basada en el detalle
+      const suggestedRate = getRecommendedRetention(value);
+      setForm(prev => {
+        const newRetefuentePct = suggestedRate !== null ? suggestedRate : prev.retefuentePct;
+        const impuestos = calcularImpuestosConTotal(prev.monto, newRetefuentePct, prev.icaPct);
+        return {
+          ...prev,
+          [name]: value,
+          retefuentePct: newRetefuentePct,
+          impuestos
         };
       });
     } else {
@@ -555,22 +580,89 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <div className="flex items-center justify-between p-6 border-t border-gray-200">
                 <button
                   type="button"
-                  className="btn btn-outline"
-                  onClick={closeModal}
+                  className="btn btn-outline flex items-center space-x-2"
+                  onClick={() => setShowRetentionGuide(true)}
+                  title="Ver guía de retenciones por tipo de factura"
                 >
-                  Cancelar
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Guía de Retenciones</span>
                 </button>
-                <button
-                  type="submit"
-                  className="btn btn-success"
-                >
-                  {editing ? 'Actualizar Factura' : 'Crear Factura'}
-                </button>
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={closeModal}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-success"
+                  >
+                    {editing ? 'Actualizar Factura' : 'Crear Factura'}
+                  </button>
+                </div>
                 </div>
               </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - Guía de Retenciones */}
+      {showRetentionGuide && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-strong max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-gray-900">
+                Guía de Retenciones en Colombia - DIAN
+              </h2>
+              <button
+                type="button"
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                onClick={() => setShowRetentionGuide(false)}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-6">
+                {retentionGuide.map((section, idx) => (
+                  <div key={idx} className="border-l-4 border-blue-500 pl-4">
+                    <h3 className="text-lg font-bold text-gray-900 mb-3">{section.category}</h3>
+                    <div className="space-y-2">
+                      {section.items.map((item, itemIdx) => (
+                        <div key={itemIdx} className="bg-gray-50 p-3 rounded-lg">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-gray-900">{item.type}</p>
+                              <p className="text-sm text-gray-600">{item.description}</p>
+                            </div>
+                            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold whitespace-nowrap ml-4">
+                              {item.rate}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-8">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Nota:</strong> El sistema sugiere automáticamente el porcentaje de retención basado en el tipo de factura que ingreses.
+                    Puedes modificarlo manualmente según tu situación específica.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
