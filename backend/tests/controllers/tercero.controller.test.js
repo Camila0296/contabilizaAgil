@@ -1,3 +1,6 @@
+// Resetear módulos cacheados para evitar conflictos con otros test files
+jest.resetModules();
+
 // Configurar variables de entorno y mocks ANTES de importar la app
 process.env.JWT_SECRET = 'test-secret-key';
 process.env.NODE_ENV = 'test';
@@ -19,13 +22,16 @@ const Tercero = require('../../models/tercero');
 const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
-const { resetStores } = require('../mocks/db');
+const { resetAllStores } = require('../helpers/mockReset');
 
 describe('Tercero Controller - Validaciones y Paginación', () => {
   let authToken;
   let userId;
 
   beforeAll(async () => {
+    // Resetear TODOS los stores para asegurar suite independiente
+    resetAllStores();
+
     // Crear rol
     let userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
     if (!userRole) {
