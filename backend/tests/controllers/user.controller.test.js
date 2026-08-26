@@ -151,7 +151,7 @@ describe('User Controller - Validaciones y Paginación', () => {
   describe('GET /api/users - Paginación', () => {
     beforeEach(async () => {
       // Crear usuarios de prueba
-      const userRole = await Role.findOne({ name: 'auxiliar', nivel: 4, descripcion: 'Test role' });
+      const userRole = await Role.findOne({ name: 'auxiliar' });
       for (let i = 1; i <= 15; i++) {
         await User.create({
           nombres: `Usuario ${i}`,
