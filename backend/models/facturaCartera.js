@@ -4,7 +4,7 @@ const { calcularImpuestos } = require('../utils/impuestosCalculator');
 const FacturaCarteraSchema = new mongoose.Schema({
   tipo: { type: String, enum: ['factura', 'creditNote', 'debitNote'], default: 'factura' },
   consecutivo: { type: Number, required: true },
-  numeroDocumento: { type: String, required: true, unique: true },
+  numeroDocumento: { type: String, required: true, unique: true, sparse: true },
   fecha: { type: Date, required: true },
   fechaVencimiento: { type: Date },
   plazo: { type: Number, default: 30 }, // plazo en días
