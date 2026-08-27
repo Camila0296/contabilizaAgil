@@ -1,5 +1,7 @@
 const FacturaCartera = require('../models/facturaCartera');
 const Sequence = require('../models/sequence');
+const Tercero = require('../models/tercero');
+const Puc = require('../models/puc');
 
 const facturaCarteraCtrl = {};
 
@@ -17,7 +19,9 @@ function validateFacturaCarteraData(data) {
   }
 
   if (!data.tercero || typeof data.tercero !== 'string' || data.tercero.trim() === '') {
-    errors.push('tercero: debe ser un string no vacío');
+    errors.push('tercero: debe ser un ObjectId válido');
+  } else if (!data.tercero.match(/^[0-9a-fA-F]{24}$/)) {
+    errors.push('tercero: debe ser un ObjectId válido (24 caracteres hexadecimales)');
   }
 
   if (!data.monto || typeof data.monto !== 'number' || data.monto <= 0) {
@@ -25,7 +29,9 @@ function validateFacturaCarteraData(data) {
   }
 
   if (!data.puc || typeof data.puc !== 'string' || data.puc.trim() === '') {
-    errors.push('puc: debe ser un string no vacío');
+    errors.push('puc: debe ser un ObjectId válido');
+  } else if (!data.puc.match(/^[0-9a-fA-F]{24}$/)) {
+    errors.push('puc: debe ser un ObjectId válido (24 caracteres hexadecimales)');
   }
 
   if (!data.detalle || typeof data.detalle !== 'string' || data.detalle.trim() === '') {
@@ -136,6 +142,17 @@ facturaCarteraCtrl.createFacturaCartera = async (req, res) => {
       });
     }
 
+    // Validar que tercero y puc existan
+    const terceroExists = await Tercero.findById(req.body.tercero);
+    if (!terceroExists) {
+      return res.status(400).json({ error: 'El cliente/tercero no existe' });
+    }
+
+    const pucExists = await Puc.findById(req.body.puc);
+    if (!pucExists) {
+      return res.status(400).json({ error: 'La cuenta PUC no existe' });
+    }
+
     const docType = req.body.tipo || 'factura';
     if (!['factura', 'creditNote', 'debitNote'].includes(docType)) {
       return res.status(400).json({ error: 'Tipo de documento inválido' });
@@ -162,7 +179,8 @@ facturaCarteraCtrl.createFacturaCartera = async (req, res) => {
     res.status(201).json({ status: 'Factura guardada', id: factura._id, factura });
   } catch (error) {
     console.error('Error al crear factura cartera:', error);
-    res.status(500).json({ error: 'Error al crear la factura' });
+    const errorMsg = error.message || 'Error al crear la factura';
+    res.status(500).json({ error: errorMsg, details: error.message });
   }
 };
 

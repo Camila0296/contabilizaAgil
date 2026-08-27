@@ -166,7 +166,8 @@ facturaCtrl.createFactura = async (req, res) => {
     res.status(201).json({ status: 'Factura guardada', id: factura._id });
   } catch (error) {
     console.error('Error al crear factura:', error);
-    res.status(500).json({ error: 'Error al crear la factura' });
+    const errorMsg = error.message || 'Error al crear la factura';
+    res.status(500).json({ error: errorMsg, details: error.message });
   }
 };
 

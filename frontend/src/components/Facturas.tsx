@@ -243,10 +243,18 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
         closeModal();
         fetchFacturas();
       } else {
-        showError('No se pudo guardar la factura');
+        try {
+          const errorData = await res.json();
+          const errorMsg = errorData.error || errorData.message || 'No se pudo guardar la factura';
+          showError(errorMsg);
+          setError(errorMsg);
+        } catch {
+          showError('No se pudo guardar la factura');
+        }
       }
-    } catch {
+    } catch (error) {
       showError('Error de conexión al guardar');
+      setError(String(error));
     }
   };
 
