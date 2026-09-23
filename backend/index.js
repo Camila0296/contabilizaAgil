@@ -16,7 +16,7 @@ app.set('port', process.env.PORT || 3000);
 
 app.use(morgan('dev')); 
 
-app.use(express.json()); // método que ayuda a convertir el código para que el servidor pueda entender lo que viene del cliente.
+app.use(express.json({ limit: '8mb' })); // método que ayuda a convertir el código para que el servidor pueda entender lo que viene del cliente. Límite elevado para admitir el cargue de documentos de identidad en base64.
 
 
 app.use(cors({

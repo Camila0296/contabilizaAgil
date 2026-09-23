@@ -6,6 +6,18 @@ import Select from 'react-select';
 import { retefuenteOptions, icaOptions } from '../data/withholdingOptions';
 import { getRecommendedRetention, retentionGuide } from '../data/retentionGuide';
 import pucAccounts from '../data/pucAccounts';
+import {
+  validateNumeroFactura,
+  validateFecha,
+  validateProveedor,
+  validateAmount,
+  validatePuc,
+  validateDetalle,
+  validatePercentage,
+  ValidationError,
+  hasFieldError,
+  getFieldError
+} from '../utils/validation';
 
 interface Factura {
   retefuentePct: number;
@@ -75,6 +87,17 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   const [editing, setEditing] = useState<Factura | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<ValidationError[]>([]);
+  const [touched, setTouched] = useState({
+    numero: false,
+    fecha: false,
+    proveedor: false,
+    monto: false,
+    puc: false,
+    detalle: false,
+    retefuentePct: false,
+    icaPct: false
+  });
   const [showModal, setShowModal] = useState(false);
   const [showRetentionGuide, setShowRetentionGuide] = useState(false);
   const [nextConsecutivo, setNextConsecutivo] = useState<string>('');
@@ -138,6 +161,57 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
     return { iva, retefuente, ica, totalAPagar };
   };
 
+  const validateField = (name: string, value: any) => {
+    const newErrors = errors.filter(e => e.field !== name);
+
+    switch (name) {
+      case 'numero': {
+        const error = validateNumeroFactura(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'fecha': {
+        const error = validateFecha(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'proveedor': {
+        const error = validateProveedor(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'monto': {
+        const error = validateAmount(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'puc': {
+        const error = validatePuc(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'detalle': {
+        const error = validateDetalle(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'retefuentePct':
+      case 'icaPct': {
+        const error = validatePercentage(value, name === 'retefuentePct' ? 'Retención en la Fuente' : 'ICA');
+        if (error) newErrors.push(error);
+        break;
+      }
+    }
+
+    setErrors(newErrors);
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    validateField(name, value);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name.startsWith('impuestos.')) {
@@ -156,6 +230,9 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
           impuestos
         };
       });
+      if (touched.monto) {
+        validateField(name, value);
+      }
     } else if (name === 'retefuentePct' || name === 'icaPct') {
       const pct = Number(value);
       setForm(prev => {
@@ -170,6 +247,9 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
           impuestos
         };
       });
+      if (touched[name as keyof typeof touched]) {
+        validateField(name, value);
+      }
     } else if (name === 'detalle') {
       // Sugerir retención basada en el detalle
       const suggestedRate = getRecommendedRetention(value);
@@ -183,6 +263,9 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
           impuestos
         };
       });
+      if (touched.detalle) {
+        validateField(name, value);
+      }
     } else if (name === 'numero') {
       setForm(prev => ({ ...prev, [name]: value }));
       // Validar disponibilidad del consecutivo
@@ -192,9 +275,46 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
         setConsecutivoAvailable(null);
         setConsecutivoMessage('');
       }
+      if (touched.numero) {
+        validateField(name, value);
+      }
     } else {
       setForm(prev => ({ ...prev, [name]: value }));
+      if (touched[name as keyof typeof touched]) {
+        validateField(name, value);
+      }
     }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationError[] = [];
+
+    const numeroError = validateNumeroFactura(form.numero);
+    if (numeroError) newErrors.push(numeroError);
+
+    const fechaError = validateFecha(form.fecha);
+    if (fechaError) newErrors.push(fechaError);
+
+    const proveedorError = validateProveedor(form.proveedor);
+    if (proveedorError) newErrors.push(proveedorError);
+
+    const montoError = validateAmount(form.monto);
+    if (montoError) newErrors.push(montoError);
+
+    const pucError = validatePuc(form.puc);
+    if (pucError) newErrors.push(pucError);
+
+    const detalleError = validateDetalle(form.detalle);
+    if (detalleError) newErrors.push(detalleError);
+
+    const retefuenteError = validatePercentage(form.retefuentePct, 'Retención en la Fuente');
+    if (retefuenteError) newErrors.push(retefuenteError);
+
+    const icaError = validatePercentage(form.icaPct, 'ICA');
+    if (icaError) newErrors.push(icaError);
+
+    setErrors(newErrors);
+    return newErrors.length === 0;
   };
 
   const openModal = (factura?: Factura) => {
@@ -206,6 +326,17 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
       setForm(initialForm);
     }
     setError('');
+    setErrors([]);
+    setTouched({
+      numero: false,
+      fecha: false,
+      proveedor: false,
+      monto: false,
+      puc: false,
+      detalle: false,
+      retefuentePct: false,
+      icaPct: false
+    });
     setShowModal(true);
   };
 
@@ -214,19 +345,22 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
     setEditing(null);
     setForm(initialForm);
     setError('');
+    setErrors([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!form.numero || !form.fecha || !form.proveedor || !form.monto || !form.puc || !form.detalle) {
-      setError('Por favor completa todos los campos obligatorios.');
+
+    if (!validateForm()) {
       return;
     }
+
     if (!userId) {
       setError('No se ha identificado el usuario.');
       return;
     }
+
     try {
       const method = editing ? 'PUT' : 'POST';
       const url = editing ? `/facturas/${editing._id}` : '/facturas';
@@ -453,16 +587,22 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     <input
                       type="text"
                       className={`form-input ${
+                        hasFieldError(errors, 'numero') ? 'border-danger-500 bg-danger-50' :
                         form.numero && consecutivoAvailable === false ? 'border-danger-500 bg-danger-50' :
                         form.numero && consecutivoAvailable === true ? 'border-success-500 bg-success-50' : ''
                       }`}
                       name="numero"
                       value={form.numero}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
                       placeholder="FAC-2026-001"
+                      aria-invalid={hasFieldError(errors, 'numero')}
                     />
-                    {form.numero && consecutivoMessage && (
+                    {hasFieldError(errors, 'numero') && (
+                      <p className="text-red-500 text-xs mt-1">{getFieldError(errors, 'numero')}</p>
+                    )}
+                    {form.numero && consecutivoMessage && !hasFieldError(errors, 'numero') && (
                       <p className={`text-xs mt-2 ${
                         consecutivoAvailable ? 'text-success-600' : 'text-danger-600'
                       }`}>
@@ -476,12 +616,17 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       <label className="form-label">Fecha</label>
                     <input
                       type="date"
-                      className="form-input"
+                      className={`form-input ${hasFieldError(errors, 'fecha') ? 'border-danger-500 bg-danger-50' : ''}`}
                       name="fecha"
                       value={form.fecha}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
+                      aria-invalid={hasFieldError(errors, 'fecha')}
                     />
+                    {hasFieldError(errors, 'fecha') && (
+                      <p className="text-red-500 text-xs mt-1">{getFieldError(errors, 'fecha')}</p>
+                    )}
                     </div>
 
                   {/* Proveedor */}
@@ -489,13 +634,18 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       <label className="form-label">Proveedor</label>
                     <input
                       type="text"
-                      className="form-input"
+                      className={`form-input ${hasFieldError(errors, 'proveedor') ? 'border-danger-500 bg-danger-50' : ''}`}
                       name="proveedor"
                       value={form.proveedor}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
                       placeholder="Nombre del proveedor"
+                      aria-invalid={hasFieldError(errors, 'proveedor')}
                     />
+                    {hasFieldError(errors, 'proveedor') && (
+                      <p className="text-red-500 text-xs mt-1">{getFieldError(errors, 'proveedor')}</p>
+                    )}
                     </div>
 
                   {/* Monto */}
@@ -507,16 +657,21 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       </div>
                       <input
                         type="number"
-                        className="form-input pl-7"
+                        className={`form-input pl-7 ${hasFieldError(errors, 'monto') ? 'border-danger-500 bg-danger-50' : ''}`}
                         name="monto"
                         value={form.monto}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         required
                         step="0.01"
                         min="0"
                         placeholder="0.00"
+                        aria-invalid={hasFieldError(errors, 'monto')}
                       />
                     </div>
+                    {hasFieldError(errors, 'monto') && (
+                      <p className="text-red-500 text-xs mt-1">{getFieldError(errors, 'monto')}</p>
+                    )}
                     </div>
 
                   {/* PUC */}
@@ -527,12 +682,17 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                           options={pucOptions}
                           placeholder="Seleccione cuenta..."
                           value={pucOptions.find(o => o.value === form.puc) || null}
-                          onChange={option =>
-                            setForm(prev => ({ ...prev, puc: option ? option.value : '' }))
-                          }
+                          onChange={option => {
+                            setForm(prev => ({ ...prev, puc: option ? option.value : '' }));
+                            validateField('puc', option ? option.value : '');
+                          }}
+                          onBlur={() => validateField('puc', form.puc)}
                           isClearable
-                       className="react-select-container"
+                       className={`react-select-container ${hasFieldError(errors, 'puc') ? 'error' : ''}`}
                         />
+                    {hasFieldError(errors, 'puc') && (
+                      <p className="text-red-500 text-xs mt-1">{getFieldError(errors, 'puc')}</p>
+                    )}
                     </div>
 
                   {/* Naturaleza */}
@@ -555,13 +715,18 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     <label className="form-label">Detalle</label>
                     <input
                       type="text"
-                      className="form-input"
+                      className={`form-input ${hasFieldError(errors, 'detalle') ? 'border-danger-500 bg-danger-50' : ''}`}
                       name="detalle"
                       value={form.detalle}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
                       placeholder="Descripción del gasto o ingreso"
+                      aria-invalid={hasFieldError(errors, 'detalle')}
                     />
+                    {hasFieldError(errors, 'detalle') && (
+                      <p className="text-red-500 text-xs mt-1">{getFieldError(errors, 'detalle')}</p>
+                    )}
                   </div>
 
                   {/* Impuestos */}
@@ -584,10 +749,12 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                   <div className="form-group">
                       <label className="form-label">ReteFuente %</label>
                     <select
-                      className="form-select"
+                      className={`form-select ${hasFieldError(errors, 'retefuentePct') ? 'border-danger-500 bg-danger-50' : ''}`}
                       name="retefuentePct"
                       value={form.retefuentePct}
                       onChange={handleChange}
+                      onBlur={handleBlur}
+                      aria-invalid={hasFieldError(errors, 'retefuentePct')}
                     >
                         {retefuenteOptions.map(o => (
                           <option key={o.value} value={o.value}>{o.label}</option>
@@ -596,16 +763,21 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     <p className="text-xs text-gray-500 mt-1">
                       Valor: {formatCurrency(form.impuestos.retefuente)}
                     </p>
+                    {hasFieldError(errors, 'retefuentePct') && (
+                      <p className="text-red-500 text-xs mt-1">{getFieldError(errors, 'retefuentePct')}</p>
+                    )}
                     </div>
 
                   {/* ICA */}
                   <div className="form-group">
                       <label className="form-label">ICA %</label>
                     <select
-                      className="form-select"
+                      className={`form-select ${hasFieldError(errors, 'icaPct') ? 'border-danger-500 bg-danger-50' : ''}`}
                       name="icaPct"
                       value={form.icaPct}
                       onChange={handleChange}
+                      onBlur={handleBlur}
+                      aria-invalid={hasFieldError(errors, 'icaPct')}
                     >
                         {icaOptions.map(o => (
                           <option key={o.value} value={o.value}>{o.label}</option>
@@ -614,6 +786,9 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                     <p className="text-xs text-gray-500 mt-1">
                       Valor: {formatCurrency(form.impuestos.ica)}
                     </p>
+                    {hasFieldError(errors, 'icaPct') && (
+                      <p className="text-red-500 text-xs mt-1">{getFieldError(errors, 'icaPct')}</p>
+                    )}
                   </div>
                 </div>
 

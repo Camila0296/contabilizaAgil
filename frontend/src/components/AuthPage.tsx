@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import Login from './Login';
 import Register from './Register';
+import RecuperarDocumento from './RecuperarDocumento';
 import Logo from './Logo';
+
+type AuthView = 'login' | 'register' | 'upload-doc';
 
 interface AuthPageProps {
   onLogin: (userRole: string) => void;
@@ -41,7 +44,7 @@ const features = [
 ];
 
 const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
-  const [showLogin, setShowLogin] = useState(true);
+  const [view, setView] = useState<AuthView>('login');
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
@@ -69,29 +72,39 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 
             {/* Formulario */}
             <div className="p-8 lg:p-12 flex flex-col justify-center">
-              {showLogin ? (
-                <Login onLogin={onLogin} />
-              ) : (
-                <Register onRegisterSuccess={() => setShowLogin(true)} />
-              )}
+              {view === 'login' && <Login onLogin={onLogin} />}
+              {view === 'register' && <Register onRegisterSuccess={() => setView('login')} />}
+              {view === 'upload-doc' && <RecuperarDocumento onBack={() => setView('login')} />}
 
-              <div className="text-center mt-8">
-                {showLogin ? (
-                  <p className="text-gray-600 text-sm">
-                    ¿No tienes cuenta?{' '}
-                    <button
-                      className="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors duration-200 focus:outline-none underline underline-offset-2"
-                      onClick={() => setShowLogin(false)}
-                    >
-                      Regístrate aquí
-                    </button>
-                  </p>
-                ) : (
+              <div className="text-center mt-8 space-y-2">
+                {view === 'login' && (
+                  <>
+                    <p className="text-gray-600 text-sm">
+                      ¿No tienes cuenta?{' '}
+                      <button
+                        className="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors duration-200 focus:outline-none underline underline-offset-2"
+                        onClick={() => setView('register')}
+                      >
+                        Regístrate aquí
+                      </button>
+                    </p>
+                    <p className="text-gray-500 text-sm">
+                      ¿Te registraste pero no cargaste tu documento de identidad?{' '}
+                      <button
+                        className="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors duration-200 focus:outline-none underline underline-offset-2"
+                        onClick={() => setView('upload-doc')}
+                      >
+                        Complétalo aquí
+                      </button>
+                    </p>
+                  </>
+                )}
+                {view === 'register' && (
                   <p className="text-gray-600 text-sm">
                     ¿Ya tienes cuenta?{' '}
                     <button
                       className="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors duration-200 focus:outline-none underline underline-offset-2"
-                      onClick={() => setShowLogin(true)}
+                      onClick={() => setView('login')}
                     >
                       Inicia sesión
                     </button>

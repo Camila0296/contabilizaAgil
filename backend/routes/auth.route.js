@@ -106,5 +106,6 @@ const auth = require('../middleware/auth');
 router.post('/register', authCtrl.register);
 router.post('/login', authCtrl.login);
 router.get('/verify', auth, authCtrl.verify);
+router.post('/documento-pendiente', authCtrl.recuperarDocumento);
 
 module.exports = router;

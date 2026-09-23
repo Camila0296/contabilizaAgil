@@ -12,16 +12,62 @@ function isValidEmail(email) {
   return emailRegex.test(email) && email.length <= 255;
 }
 
+const TIPOS_DOCUMENTO_PERMITIDOS = ['image/jpeg', 'image/png', 'application/pdf'];
+const MAX_DOCUMENTO_BYTES = 5 * 1024 * 1024; // 5MB
+
+// Valida { tipo, datos } de un documento de identidad cargado en base64.
+// Devuelve un mensaje de error, o null si es válido.
+function validateDocumentoIdentidad(tipo, datos) {
+  if (!tipo || !TIPOS_DOCUMENTO_PERMITIDOS.includes(tipo)) {
+    return 'tipo: debe ser image/jpeg, image/png o application/pdf';
+  }
+  if (!datos || typeof datos !== 'string') {
+    return 'datos: requerido';
+  }
+  const base64Payload = datos.includes(',') ? datos.split(',')[1] : datos;
+  if (!base64Payload) {
+    return 'datos: formato inválido';
+  }
+  let sizeBytes;
+  try {
+    sizeBytes = Buffer.from(base64Payload, 'base64').length;
+  } catch {
+    return 'datos: no es un base64 válido';
+  }
+  if (sizeBytes === 0) {
+    return 'datos: archivo vacío';
+  }
+  if (sizeBytes > MAX_DOCUMENTO_BYTES) {
+    return 'datos: el archivo supera el tamaño máximo permitido (5MB)';
+  }
+  return null;
+}
+
 // Crear nuevo usuario (solo admin)
 userCtrl.createUser = async (req, res) => {
   try {
-    const { nombres, apellidos, email, role } = req.body;
+    const {
+      nombres,
+      apellidos,
+      email,
+      role,
+      telefono,
+      tipoDocumento = 'CC',
+      numeroDocumento,
+      direccion,
+      ciudad
+    } = req.body;
 
     // Validaciones
     const errors = [];
     if (!nombres || typeof nombres !== 'string' || nombres.trim() === '') errors.push('nombres: requerido');
     if (!apellidos || typeof apellidos !== 'string' || apellidos.trim() === '') errors.push('apellidos: requerido');
     if (!isValidEmail(email)) errors.push('email: formato inválido o faltante');
+    if (!telefono || telefono.replace(/[^\d]/g, '').length < 10) errors.push('telefono: requerido (mín 10 dígitos)');
+    if (!numeroDocumento || numeroDocumento.replace(/[^\d]/g, '').length < 5) errors.push('numeroDocumento: requerido');
+    if (!direccion || direccion.trim().length < 5) errors.push('direccion: requerido (mín 5 caracteres)');
+    if (!ciudad || ciudad.trim().length < 2) errors.push('ciudad: requerido');
+    if (!role) errors.push('role: requerido');
 
     if (errors.length > 0) {
       return res.status(400).json({
@@ -35,9 +81,39 @@ userCtrl.createUser = async (req, res) => {
       return res.status(400).json({ error: 'Email ya registrado' });
     }
 
-    const roleDoc = await Role.findOne({ name: (role || 'user').toLowerCase() });
+    // Verificar si documento ya existe
+    const existingDoc = await User.findOne({ numeroDocumento: numeroDocumento.replace(/[^\d]/g, '') });
+    if (existingDoc) {
+      return res.status(400).json({ error: 'Número de documento ya registrado' });
+    }
+
+    // Buscar rol por ID o por nombre
+    let roleDoc;
+    if (!role || typeof role !== 'string' || role.trim() === '') {
+      console.error('[CREATE_USER] Rol vacío o inválido:', role);
+      return res.status(400).json({ error: 'Rol es requerido. Seleccione un rol de la lista.' });
+    }
+
+    const roleStr = role.trim();
+    console.log('[CREATE_USER] Rol recibido:', roleStr, 'Tipo:', typeof roleStr);
+
+    // Verificar si es un ObjectId válido
+    const isObjectId = roleStr.match(/^[0-9a-fA-F]{24}$/);
+    console.log('[CREATE_USER] ¿Es ObjectId?:', isObjectId ? 'Sí' : 'No');
+
+    if (isObjectId) {
+      console.log('[CREATE_USER] Buscando rol por ID:', roleStr);
+      roleDoc = await Role.findById(roleStr);
+      console.log('[CREATE_USER] Resultado de findById:', roleDoc ? 'Encontrado' : 'NO encontrado');
+    } else {
+      console.log('[CREATE_USER] Buscando rol por nombre:', roleStr.toLowerCase());
+      roleDoc = await Role.findOne({ name: roleStr.toLowerCase() });
+      console.log('[CREATE_USER] Resultado de findOne:', roleDoc ? 'Encontrado' : 'NO encontrado');
+    }
+
     if (!roleDoc) {
-      return res.status(400).json({ error: 'Rol no válido' });
+      console.error('[CREATE_USER] Rol no encontrado:', roleStr);
+      return res.status(400).json({ error: 'Rol no válido. Seleccione un rol de la lista.' });
     }
 
     const randomPass = generateTempPassword();
@@ -47,7 +123,14 @@ userCtrl.createUser = async (req, res) => {
       apellidos: apellidos.trim(),
       email: email.toLowerCase(),
       password: hashed,
-      role: roleDoc._id
+      telefono: telefono.replace(/[^\d]/g, ''),
+      tipoDocumento,
+      numeroDocumento: numeroDocumento.replace(/[^\d]/g, ''),
+      direccion: direccion.trim(),
+      ciudad: ciudad.trim(),
+      role: roleDoc._id,
+      approved: true, // Admin crea usuarios ya aprobados
+      activo: true
     });
     await user.save();
     // Enviar correo con contraseña
@@ -121,6 +204,7 @@ userCtrl.getUsers = async (req, res) => {
 
     const users = await User
       .find(filter)
+      .select('-documentoIdentidad.datos')
       .populate('role', 'name')
       .sort({ _id: -1 })
       .skip(skip)
@@ -142,8 +226,55 @@ userCtrl.getUsers = async (req, res) => {
 };
 
 userCtrl.getUser = async (req, res) => {
-  const user = await User.findById(req.params.id).populate('role');
+  const user = await User.findById(req.params.id).select('-documentoIdentidad.datos').populate('role');
   res.json(user);
+};
+
+// Obtener el documento de identidad de un usuario (solo admin)
+userCtrl.getUserDocumento = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('documentoIdentidad');
+    if (!user || !user.documentoIdentidad || !user.documentoIdentidad.datos) {
+      return res.status(404).json({ error: 'El usuario no ha cargado un documento de identidad' });
+    }
+    res.json({ documentoIdentidad: user.documentoIdentidad });
+  } catch (error) {
+    console.error('Error al obtener documento de identidad:', error);
+    res.status(500).json({ error: 'Error al obtener documento de identidad' });
+  }
+};
+
+// Cargar/reemplazar el documento de identidad del usuario autenticado
+userCtrl.uploadMyDocumento = async (req, res) => {
+  try {
+    const { tipo, datos } = req.body;
+    const validationError = validateDocumentoIdentidad(tipo, datos);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        documentoIdentidad: {
+          tipo,
+          datos,
+          fechaCargue: new Date(),
+          verificado: false
+        }
+      },
+      { new: true }
+    ).select('-documentoIdentidad.datos');
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json({ status: 'Documento de identidad cargado', documentoIdentidad: { tipo, fechaCargue: user.documentoIdentidad.fechaCargue, verificado: false } });
+  } catch (error) {
+    console.error('Error al cargar documento de identidad:', error);
+    res.status(500).json({ error: 'Error al cargar documento de identidad' });
+  }
 };
 
 userCtrl.updateUser = async (req, res) => {
@@ -246,9 +377,23 @@ userCtrl.approveUser = async (req, res) => {
   res.json({ status: 'Usuario aprobado' });
 };
 
+// Rechaza una solicitud de registro pendiente: elimina el usuario permanentemente.
+// No permite eliminar así una cuenta que ya fue aprobada.
 userCtrl.rejectUser = async (req, res) => {
-  await User.findByIdAndUpdate(req.params.id, { approved: false, activo: false });
-  res.json({ status: 'Usuario rechazado' });
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    if (user.approved) {
+      return res.status(400).json({ error: 'No puedes rechazar una cuenta que ya fue aprobada' });
+    }
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ status: 'Usuario rechazado y eliminado' });
+  } catch (error) {
+    console.error('Error al rechazar usuario:', error);
+    res.status(500).json({ error: 'Error al rechazar usuario' });
+  }
 };
 
 userCtrl.deleteUser = async (req, res) => {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { apiFetch } from '../api';
 import { showSuccess, showError } from '../utils/alerts';
+import { validateEmail, isValidEmail, ValidationError, hasFieldError, getFieldError } from '../utils/validation';
 
 interface LoginProps {
   onLogin: (userRole: string) => void;
@@ -11,17 +12,64 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     email: '',
     password: ''
   });
+  const [errors, setErrors] = useState<ValidationError[]>([]);
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState({ email: false, password: false });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+
+    if (touched[name as keyof typeof touched]) {
+      validateField(name, value);
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    validateField(name, value);
+  };
+
+  const validateField = (name: string, value: string) => {
+    const newErrors = errors.filter(e => e.field !== name);
+
+    if (name === 'email') {
+      const error = validateEmail(value);
+      if (error) newErrors.push(error);
+    } else if (name === 'password') {
+      if (!value) {
+        newErrors.push({ field: 'password', message: 'La contraseña es requerida' });
+      }
+    }
+
+    setErrors(newErrors);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationError[] = [];
+
+    const emailError = validateEmail(formData.email);
+    if (emailError) newErrors.push(emailError);
+
+    if (!formData.password) {
+      newErrors.push({ field: 'password', message: 'La contraseña es requerida' });
+    }
+
+    setErrors(newErrors);
+    return newErrors.length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -71,10 +119,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             name="email"
             value={formData.email}
             onChange={handleChange}
+            onBlur={handleBlur}
           required
-            className="form-input"
+            className={`form-input ${hasFieldError(errors, 'email') ? 'border-red-500' : ''}`}
             placeholder="tu@email.com"
+            aria-invalid={hasFieldError(errors, 'email')}
         />
+        {hasFieldError(errors, 'email') && (
+          <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'email')}</p>
+        )}
       </div>
 
         <div>
@@ -87,11 +140,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             name="password"
             value={formData.password}
             onChange={handleChange}
+            onBlur={handleBlur}
           required
-            className="form-input"
+            className={`form-input ${hasFieldError(errors, 'password') ? 'border-red-500' : ''}`}
             placeholder="••••••••"
             autoComplete="current-password"
+            aria-invalid={hasFieldError(errors, 'password')}
           />
+          {hasFieldError(errors, 'password') && (
+            <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'password')}</p>
+          )}
         </div>
 
         <button

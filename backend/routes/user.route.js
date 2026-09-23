@@ -87,6 +87,35 @@ router.get('/me', auth, userCtrl.getMe);
  *         description: Perfil actualizado correctamente
  */
 router.put('/me', auth, userCtrl.updateMe);
+/**
+ * @swagger
+ * /users/me/documento:
+ *   put:
+ *     summary: Cargar o reemplazar el documento de identidad del usuario autenticado
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tipo
+ *               - datos
+ *             properties:
+ *               tipo:
+ *                 type: string
+ *                 description: image/jpeg, image/png o application/pdf
+ *               datos:
+ *                 type: string
+ *                 description: Contenido del archivo en base64
+ *     responses:
+ *       200:
+ *         description: Documento cargado correctamente
+ */
+router.put('/me/documento', auth, userCtrl.uploadMyDocumento);
 
 // Protege todas las rutas bajo /users solo para administrador
 router.use(auth, role('administrador'));
@@ -191,6 +220,28 @@ router.get('/', auth, role('administrador'), userCtrl.getUsers);
 router.get('/:id', auth, role('administrador'), userCtrl.getUser);
 /**
  * @swagger
+ * /users/{id}/documento:
+ *   get:
+ *     summary: Obtener el documento de identidad cargado por un usuario (solo admin)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del usuario
+ *     responses:
+ *       200:
+ *         description: Documento de identidad del usuario
+ *       404:
+ *         description: El usuario no ha cargado un documento
+ */
+router.get('/:id/documento', auth, role('administrador'), userCtrl.getUserDocumento);
+/**
+ * @swagger
  * /users/{id}:
  *   put:
  *     summary: Actualizar un usuario (solo admin)
@@ -238,8 +289,8 @@ router.put('/:id/approve', auth, role('administrador'), userCtrl.approveUser);
 /**
  * @swagger
  * /users/{id}/reject:
- *   put:
- *     summary: Rechazar un usuario (solo admin)
+ *   delete:
+ *     summary: Rechazar una solicitud de registro pendiente (elimina al usuario permanentemente, solo admin)
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -252,9 +303,11 @@ router.put('/:id/approve', auth, role('administrador'), userCtrl.approveUser);
  *         description: ID del usuario a rechazar
  *     responses:
  *       200:
- *         description: Usuario rechazado exitosamente
+ *         description: Usuario rechazado y eliminado exitosamente
+ *       400:
+ *         description: La cuenta ya fue aprobada y no puede rechazarse así
  */
-router.put('/:id/reject', auth, role('administrador'), userCtrl.rejectUser);
+router.delete('/:id/reject', auth, role('administrador'), userCtrl.rejectUser);
 /**
  * @swagger
  * /users/{id}:

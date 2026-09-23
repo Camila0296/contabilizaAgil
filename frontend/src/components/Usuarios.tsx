@@ -1,12 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import { showSuccess, showError } from '../utils/alerts';
+import {
+  validateNombres,
+  validateApellidos,
+  validateEmail,
+  validateRole,
+  validateTelefono,
+  validateNumeroDocumento,
+  validateDireccion,
+  validateCiudad,
+  ValidationError,
+  hasFieldError,
+  getFieldError
+} from '../utils/validation';
 
 interface User {
   _id: string;
   nombres: string;
   apellidos: string;
   email: string;
+  telefono?: string;
+  tipoDocumento?: string;
+  numeroDocumento?: string;
+  direccion?: string;
+  ciudad?: string;
   role: {
     _id: string;
     name: string;
@@ -22,10 +40,27 @@ const Usuarios: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+  const [errors, setErrors] = useState<ValidationError[]>([]);
+  const [touched, setTouched] = useState({
+    nombres: false,
+    apellidos: false,
+    email: false,
+    telefono: false,
+    tipoDocumento: false,
+    numeroDocumento: false,
+    direccion: false,
+    ciudad: false,
+    role: false
+  });
   const [form, setForm] = useState({
     nombres: '',
     apellidos: '',
     email: '',
+    telefono: '',
+    tipoDocumento: 'CC',
+    numeroDocumento: '',
+    direccion: '',
+    ciudad: '',
     role: '',
     activo: true,
     approved: false
@@ -51,34 +86,156 @@ const Usuarios: React.FC = () => {
   const fetchRoles = async () => {
     try {
       const res = await apiFetch('/roles');
+      if (!res.ok) {
+        console.error('Error cargando roles:', res.status, res.statusText);
+        showError(`Error al cargar roles: ${res.status}`);
+        setRoles([]);
+        return;
+      }
       const response = await res.json();
+      console.log('Roles cargados:', response);
       if (Array.isArray(response)) {
         setRoles(response);
       } else if (response.data && Array.isArray(response.data)) {
         setRoles(response.data);
       } else {
+        console.warn('Respuesta de roles en formato inesperado:', response);
         setRoles([]);
       }
-    } catch {
+    } catch (err) {
+      console.error('Error en fetchRoles:', err);
+      showError('Error al cargar roles');
       setRoles([]);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+
+    // Para teléfono y número de documento, solo permitir números
+    if ((name === 'telefono' || name === 'numeroDocumento') && type === 'text') {
+      const cleaned = value.replace(/[^\d]/g, '');
+      setForm(prev => ({
+        ...prev,
+        [name]: cleaned
+      }));
+      if (touched[name as keyof typeof touched]) {
+        validateField(name, cleaned);
+      }
+      return;
+    }
+
     setForm(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
+
+    if (touched[name as keyof typeof touched]) {
+      validateField(name, value);
+    }
   };
 
-  const openModal = (usuario?: User) => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    validateField(name, value);
+  };
+
+  const validateField = (name: string, value: string) => {
+    const newErrors = errors.filter(e => e.field !== name);
+
+    switch (name) {
+      case 'nombres': {
+        const error = validateNombres(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'apellidos': {
+        const error = validateApellidos(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'email': {
+        const error = validateEmail(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'role': {
+        const error = validateRole(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'telefono': {
+        const error = validateTelefono(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'numeroDocumento': {
+        const error = validateNumeroDocumento(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'direccion': {
+        const error = validateDireccion(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'ciudad': {
+        const error = validateCiudad(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+    }
+
+    setErrors(newErrors);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationError[] = [];
+
+    const nombresError = validateNombres(form.nombres);
+    if (nombresError) newErrors.push(nombresError);
+
+    const apellidosError = validateApellidos(form.apellidos);
+    if (apellidosError) newErrors.push(apellidosError);
+
+    const emailError = validateEmail(form.email);
+    if (emailError) newErrors.push(emailError);
+
+    const telefonoError = validateTelefono(form.telefono);
+    if (telefonoError) newErrors.push(telefonoError);
+
+    const numeroDocError = validateNumeroDocumento(form.numeroDocumento);
+    if (numeroDocError) newErrors.push(numeroDocError);
+
+    const direccionError = validateDireccion(form.direccion);
+    if (direccionError) newErrors.push(direccionError);
+
+    const ciudadError = validateCiudad(form.ciudad);
+    if (ciudadError) newErrors.push(ciudadError);
+
+    const roleError = validateRole(form.role);
+    if (roleError) newErrors.push(roleError);
+
+    setErrors(newErrors);
+    return newErrors.length === 0;
+  };
+
+  const openModal = async (usuario?: User) => {
+    // Cargar roles al abrir el modal
+    await fetchRoles();
+
     if (usuario) {
       setEditing(usuario);
       setForm({
         nombres: usuario.nombres,
         apellidos: usuario.apellidos,
         email: usuario.email,
+        telefono: usuario.telefono || '',
+        tipoDocumento: usuario.tipoDocumento || 'CC',
+        numeroDocumento: usuario.numeroDocumento || '',
+        direccion: usuario.direccion || '',
+        ciudad: usuario.ciudad || '',
         role: usuario.role._id,
         activo: usuario.activo,
         approved: usuario.approved
@@ -89,35 +246,51 @@ const Usuarios: React.FC = () => {
         nombres: '',
         apellidos: '',
         email: '',
+        telefono: '',
+        tipoDocumento: 'CC',
+        numeroDocumento: '',
+        direccion: '',
+        ciudad: '',
         role: '',
         activo: true,
         approved: false
       });
     }
+    setErrors([]);
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditing(null);
+    setErrors([]);
+    setTouched({
+      nombres: false,
+      apellidos: false,
+      email: false,
+      telefono: false,
+      tipoDocumento: false,
+      numeroDocumento: false,
+      direccion: false,
+      ciudad: false,
+      role: false
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       const method = editing ? 'PUT' : 'POST';
       const url = editing ? `/users/${editing._id}` : '/users';
-      
-      // Validate role is selected
-      if (!form.role) {
-        showError('Por favor seleccione un rol válido');
-        return;
-      }
 
       const userData = {
         ...form,
-        role: form.role  // Always send role ID
+        role: form.role
       };
       
       const res = await apiFetch(url, {
@@ -416,10 +589,10 @@ const Usuarios: React.FC = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-strong max-w-2xl w-full">
+          <div className="bg-white rounded-xl shadow-strong max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleSubmit}>
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 <h2 className="text-xl font-semibold text-gray-900">
                   {editing ? 'Editar Usuario' : 'Nuevo Usuario'}
                 </h2>
@@ -435,59 +608,170 @@ const Usuarios: React.FC = () => {
                 </div>
 
               {/* Body */}
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Nombres */}
                   <div className="form-group">
-                    <label className="form-label">Nombres</label>
+                    <label className="form-label text-xs font-medium">Nombres</label>
                     <input
                       type="text"
-                      className="form-input"
+                      className={`form-input ${hasFieldError(errors, 'nombres') ? 'border-red-500' : ''}`}
                       name="nombres"
                       value={form.nombres}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
                       placeholder="Juan"
+                      aria-invalid={hasFieldError(errors, 'nombres')}
                     />
+                    {hasFieldError(errors, 'nombres') && (
+                      <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'nombres')}</p>
+                    )}
                   </div>
 
                   {/* Apellidos */}
                   <div className="form-group">
-                    <label className="form-label">Apellidos</label>
+                    <label className="form-label text-xs font-medium">Apellidos</label>
                     <input
                       type="text"
-                      className="form-input"
+                      className={`form-input ${hasFieldError(errors, 'apellidos') ? 'border-red-500' : ''}`}
                       name="apellidos"
                       value={form.apellidos}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
                       placeholder="Pérez"
+                      aria-invalid={hasFieldError(errors, 'apellidos')}
                     />
+                    {hasFieldError(errors, 'apellidos') && (
+                      <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'apellidos')}</p>
+                    )}
                   </div>
 
                   {/* Email */}
                   <div className="form-group md:col-span-2">
-                    <label className="form-label">Email</label>
+                    <label className="form-label text-xs font-medium">Email</label>
                     <input
                       type="email"
-                      className="form-input"
+                      className={`form-input ${hasFieldError(errors, 'email') ? 'border-red-500' : ''}`}
                       name="email"
                       value={form.email}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
                       placeholder="juan.perez@email.com"
+                      aria-invalid={hasFieldError(errors, 'email')}
                     />
+                    {hasFieldError(errors, 'email') && (
+                      <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'email')}</p>
+                    )}
+                  </div>
+
+                  {/* Teléfono */}
+                  <div className="form-group">
+                    <label className="form-label text-xs font-medium">Teléfono (solo números)</label>
+                    <input
+                      type="text"
+                      className={`form-input ${hasFieldError(errors, 'telefono') ? 'border-red-500' : ''}`}
+                      name="telefono"
+                      value={form.telefono}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      required
+                      placeholder="3001234567"
+                      aria-invalid={hasFieldError(errors, 'telefono')}
+                      inputMode="numeric"
+                    />
+                    {hasFieldError(errors, 'telefono') && (
+                      <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'telefono')}</p>
+                    )}
+                  </div>
+
+                  {/* Tipo Documento */}
+                  <div className="form-group">
+                    <label className="form-label text-xs font-medium">Tipo de Documento</label>
+                    <select
+                      className="form-select"
+                      name="tipoDocumento"
+                      value={form.tipoDocumento}
+                      onChange={handleChange}
+                    >
+                      <option value="CC">Cédula de Ciudadanía</option>
+                      <option value="NIT">NIT</option>
+                      <option value="CE">Cédula de Extranjería</option>
+                      <option value="PASAPORTE">Pasaporte</option>
+                    </select>
+                  </div>
+
+                  {/* Número Documento */}
+                  <div className="form-group">
+                    <label className="form-label text-xs font-medium">Número de Documento</label>
+                    <input
+                      type="text"
+                      className={`form-input ${hasFieldError(errors, 'numeroDocumento') ? 'border-red-500' : ''}`}
+                      name="numeroDocumento"
+                      value={form.numeroDocumento}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      required
+                      placeholder="1234567890"
+                      aria-invalid={hasFieldError(errors, 'numeroDocumento')}
+                      inputMode="numeric"
+                    />
+                    {hasFieldError(errors, 'numeroDocumento') && (
+                      <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'numeroDocumento')}</p>
+                    )}
+                  </div>
+
+                  {/* Dirección */}
+                  <div className="form-group md:col-span-2">
+                    <label className="form-label text-xs font-medium">Dirección</label>
+                    <input
+                      type="text"
+                      className={`form-input ${hasFieldError(errors, 'direccion') ? 'border-red-500' : ''}`}
+                      name="direccion"
+                      value={form.direccion}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      required
+                      placeholder="Calle Principal #123"
+                      aria-invalid={hasFieldError(errors, 'direccion')}
+                    />
+                    {hasFieldError(errors, 'direccion') && (
+                      <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'direccion')}</p>
+                    )}
+                  </div>
+
+                  {/* Ciudad */}
+                  <div className="form-group md:col-span-1">
+                    <label className="form-label text-xs font-medium">Ciudad</label>
+                    <input
+                      type="text"
+                      className={`form-input ${hasFieldError(errors, 'ciudad') ? 'border-red-500' : ''}`}
+                      name="ciudad"
+                      value={form.ciudad}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      required
+                      placeholder="Bogotá"
+                      aria-invalid={hasFieldError(errors, 'ciudad')}
+                    />
+                    {hasFieldError(errors, 'ciudad') && (
+                      <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'ciudad')}</p>
+                    )}
                   </div>
 
                   {/* Rol */}
-                  <div className="form-group">
-                    <label className="form-label">Rol</label>
+                  <div className="form-group md:col-span-1">
+                    <label className="form-label text-xs font-medium">Rol</label>
                     <select
-                      className="form-select"
+                      className={`form-select ${hasFieldError(errors, 'role') ? 'border-red-500' : ''}`}
                       name="role"
                       value={form.role}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
+                      aria-invalid={hasFieldError(errors, 'role')}
                     >
                       <option value="">Seleccionar rol</option>
                       {roles.map(role => (
@@ -496,11 +780,14 @@ const Usuarios: React.FC = () => {
                         </option>
                       ))}
                     </select>
+                    {hasFieldError(errors, 'role') && (
+                      <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'role')}</p>
+                    )}
                   </div>
 
                   {/* Estado */}
-                  <div className="form-group">
-                    <label className="form-label">Estado</label>
+                  <div className="form-group md:col-span-2">
+                    <label className="form-label text-xs font-medium">Estado</label>
                     <div className="flex items-center space-x-4">
                       <label className="flex items-center">
                         <input
@@ -529,7 +816,7 @@ const Usuarios: React.FC = () => {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <div className="flex items-center justify-end space-x-3 p-4 border-t border-gray-200">
                 <button
                   type="button"
                   className="btn btn-outline"

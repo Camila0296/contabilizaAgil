@@ -61,7 +61,7 @@ router.post('/', auth, role('administrador'), roleCtrl.createRole);
  * @swagger
  * /roles:
  *   get:
- *     summary: Obtener todos los roles (solo admin)
+ *     summary: Obtener todos los roles (solo autenticado)
  *     tags: [Roles]
  *     security:
  *       - bearerAuth: []
@@ -75,6 +75,6 @@ router.post('/', auth, role('administrador'), roleCtrl.createRole);
  *               items:
  *                 $ref: '#/components/schemas/Role'
  */
-router.get('/', auth, role('administrador'), roleCtrl.getRoles);
+router.get('/', auth, roleCtrl.getRoles);
 
 module.exports = router;

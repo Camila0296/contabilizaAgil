@@ -1,7 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import { showSuccess, showError } from '../utils/alerts';
-import { isStrongPassword, PASSWORD_ERROR, PASSWORD_HINT } from '../utils/password';
+import {
+  validateNombres,
+  validateApellidos,
+  validateEmail,
+  validatePassword,
+  validatePasswordMatch,
+  ValidationError,
+  hasFieldError,
+  getFieldError,
+  PASSWORD_HINT
+} from '../utils/validation';
 
 interface UserProfile {
   _id: string;
@@ -25,6 +35,15 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [errors, setErrors] = useState<ValidationError[]>([]);
+  const [touched, setTouched] = useState({
+    nombres: false,
+    apellidos: false,
+    email: false,
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false
+  });
   const [form, setForm] = useState({
     nombres: '',
     apellidos: '',
@@ -81,23 +100,100 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
       ...prev,
       [name]: value
     }));
+
+    if (touched[name as keyof typeof touched]) {
+      validateField(name, value);
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    validateField(name, value);
+  };
+
+  const validateField = (name: string, value: string) => {
+    const newErrors = errors.filter(e => e.field !== name);
+
+    switch (name) {
+      case 'nombres': {
+        const error = validateNombres(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'apellidos': {
+        const error = validateApellidos(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'email': {
+        const error = validateEmail(value);
+        if (error) newErrors.push(error);
+        break;
+      }
+      case 'newPassword': {
+        if (value) {
+          const error = validatePassword(value);
+          if (error) newErrors.push(error);
+          if (form.confirmPassword && form.confirmPassword !== value) {
+            const matchError = errors.find(e => e.field === 'confirmPassword');
+            if (!matchError) {
+              newErrors.push({ field: 'confirmPassword', message: 'Las contraseñas no coinciden' });
+            }
+          }
+        }
+        break;
+      }
+      case 'confirmPassword': {
+        if (form.newPassword) {
+          const matchError = validatePasswordMatch(form.newPassword, value);
+          if (matchError) newErrors.push(matchError);
+        }
+        break;
+      }
+      case 'currentPassword': {
+        if (form.newPassword && !value) {
+          newErrors.push({ field: 'currentPassword', message: 'Ingresa tu contraseña actual para cambiarla' });
+        }
+        break;
+      }
+    }
+
+    setErrors(newErrors);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationError[] = [];
+
+    const nombresError = validateNombres(form.nombres);
+    if (nombresError) newErrors.push(nombresError);
+
+    const apellidosError = validateApellidos(form.apellidos);
+    if (apellidosError) newErrors.push(apellidosError);
+
+    const emailError = validateEmail(form.email);
+    if (emailError) newErrors.push(emailError);
+
+    if (form.newPassword) {
+      const passwordError = validatePassword(form.newPassword);
+      if (passwordError) newErrors.push(passwordError);
+
+      const matchError = validatePasswordMatch(form.newPassword, form.confirmPassword);
+      if (matchError) newErrors.push(matchError);
+
+      if (!form.currentPassword) {
+        newErrors.push({ field: 'currentPassword', message: 'Ingresa tu contraseña actual para cambiarla' });
+      }
+    }
+
+    setErrors(newErrors);
+    return newErrors.length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (form.newPassword && form.newPassword !== form.confirmPassword) {
-      showError('Las contraseñas no coinciden');
-      return;
-    }
 
-    if (form.newPassword && !isStrongPassword(form.newPassword)) {
-      showError(PASSWORD_ERROR);
-      return;
-    }
-
-    if (form.newPassword && !form.currentPassword) {
-      showError('Ingresa tu contraseña actual para poder cambiarla');
+    if (!validateForm()) {
       return;
     }
 
@@ -212,26 +308,36 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
           <label className="form-label">Nombres</label>
                       <input
                         type="text"
-                        className="form-input"
+                        className={`form-input ${hasFieldError(errors, 'nombres') ? 'border-red-500' : ''}`}
                         name="nombres"
                         value={form.nombres}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         required
                         placeholder="Juan"
+                        aria-invalid={hasFieldError(errors, 'nombres')}
                       />
+                      {hasFieldError(errors, 'nombres') && (
+                        <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'nombres')}</p>
+                      )}
         </div>
 
                     <div className="form-group">
           <label className="form-label">Apellidos</label>
                       <input
                         type="text"
-                        className="form-input"
+                        className={`form-input ${hasFieldError(errors, 'apellidos') ? 'border-red-500' : ''}`}
                         name="apellidos"
                         value={form.apellidos}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         required
                         placeholder="Pérez"
+                        aria-invalid={hasFieldError(errors, 'apellidos')}
                       />
+                      {hasFieldError(errors, 'apellidos') && (
+                        <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'apellidos')}</p>
+                      )}
                     </div>
                   </div>
 
@@ -239,13 +345,18 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
                     <label className="form-label">Email</label>
                     <input
                       type="email"
-                      className="form-input"
+                      className={`form-input ${hasFieldError(errors, 'email') ? 'border-red-500' : ''}`}
                       name="email"
                       value={form.email}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       required
                       placeholder="juan.perez@email.com"
+                      aria-invalid={hasFieldError(errors, 'email')}
                     />
+                    {hasFieldError(errors, 'email') && (
+                      <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'email')}</p>
+                    )}
                   </div>
 
                   {/* Cambio de Contraseña */}
@@ -256,13 +367,18 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
                         <label className="form-label">Contraseña Actual</label>
                         <input
                           type="password"
-                          className="form-input"
+                          className={`form-input ${hasFieldError(errors, 'currentPassword') ? 'border-red-500' : ''}`}
                           name="currentPassword"
                           value={form.currentPassword}
                           onChange={handleChange}
+                          onBlur={handleBlur}
                           placeholder="••••••••"
                           autoComplete="current-password"
+                          aria-invalid={hasFieldError(errors, 'currentPassword')}
                         />
+                        {hasFieldError(errors, 'currentPassword') && (
+                          <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'currentPassword')}</p>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -270,28 +386,38 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
                           <label className="form-label">Nueva Contraseña</label>
                           <input
                             type="password"
-                            className="form-input"
+                            className={`form-input ${hasFieldError(errors, 'newPassword') ? 'border-red-500' : ''}`}
                             name="newPassword"
                             value={form.newPassword}
                             onChange={handleChange}
+                            onBlur={handleBlur}
                             placeholder="••••••••"
                             minLength={8}
                             autoComplete="new-password"
+                            aria-invalid={hasFieldError(errors, 'newPassword')}
                           />
                           <p className="text-xs text-gray-500 mt-1">{PASSWORD_HINT}</p>
+                          {hasFieldError(errors, 'newPassword') && (
+                            <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'newPassword')}</p>
+                          )}
                         </div>
 
                         <div className="form-group">
                           <label className="form-label">Confirmar Nueva Contraseña</label>
                           <input
                             type="password"
-                            className="form-input"
+                            className={`form-input ${hasFieldError(errors, 'confirmPassword') ? 'border-red-500' : ''}`}
                             name="confirmPassword"
                             value={form.confirmPassword}
                             onChange={handleChange}
+                            onBlur={handleBlur}
                             placeholder="••••••••"
                             autoComplete="new-password"
+                            aria-invalid={hasFieldError(errors, 'confirmPassword')}
                           />
+                          {hasFieldError(errors, 'confirmPassword') && (
+                            <p className="text-red-500 text-sm mt-1">{getFieldError(errors, 'confirmPassword')}</p>
+                          )}
                         </div>
                       </div>
                     </div>
