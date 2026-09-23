@@ -8,6 +8,24 @@ const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
 const { resetAllStores } = require('../helpers/mockReset');
+const { createTestRole } = require('../helpers/testHelpers');
+
+// numeroDocumento es único en el schema: generar uno distinto por llamada
+let docCounter = 0;
+const uniqueDocumento = () => `33${Date.now()}${docCounter++}`.slice(-10);
+
+const validRegisterPayload = (overrides = {}) => ({
+  nombres: 'Test',
+  apellidos: 'User',
+  email: `payload-${Date.now()}-${Math.random()}@test.com`,
+  password: 'TestPass123!',
+  telefono: '3001234567',
+  tipoDocumento: 'CC',
+  numeroDocumento: uniqueDocumento(),
+  direccion: 'Calle de Prueba #1-23',
+  ciudad: 'Bogota',
+  ...overrides
+});
 
 describe('Factura Controller - Validaciones y Paginación', () => {
   let authToken;
@@ -15,13 +33,15 @@ describe('Factura Controller - Validaciones y Paginación', () => {
   let userId;
 
   beforeAll(async () => {
-    // Roles ya creados globalmente en setup-mocks.js
+    await createTestRole('auxiliar');
+    await createTestRole('administrador');
+    await createTestRole('contador');
 
     // Crear usuario admin
     const adminEmail = `admin-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const adminRes = await request(app)
       .post('/api/auth/register')
-      .send({ nombres: 'Admin Test', apellidos: 'User', email: adminEmail, password: 'TestPass123!' });
+      .send(validRegisterPayload({ nombres: 'Admin Test', email: adminEmail }));
 
     if (adminRes.body.user && adminRes.body.user._id) {
       const adminRole = await Role.findOne({ name: 'administrador' });
@@ -36,7 +56,7 @@ describe('Factura Controller - Validaciones y Paginación', () => {
     const userEmail = `user-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const userRes = await request(app)
       .post('/api/auth/register')
-      .send({ nombres: 'Regular Test', apellidos: 'User', email: userEmail, password: 'TestPass123!' });
+      .send(validRegisterPayload({ nombres: 'Regular Test', email: userEmail }));
 
     if (userRes.body.user && userRes.body.user._id) {
       userId = userRes.body.user._id;

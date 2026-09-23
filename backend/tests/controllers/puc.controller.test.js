@@ -6,16 +6,30 @@ const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
 const { resetAllStores } = require('../helpers/mockReset');
+const { createTestRole } = require('../helpers/testHelpers');
 
 describe('PUC Controller - Validaciones y Paginación', () => {
   let authToken;
 
   beforeAll(async () => {
+    await createTestRole('auxiliar');
+    await createTestRole('contador');
+
     const email = `puc-user-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const password = 'TestPass123!';
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ nombres: 'Test', apellidos: 'User', email, password });
+      .send({
+        nombres: 'Test',
+        apellidos: 'User',
+        email,
+        password,
+        telefono: '3001234567',
+        tipoDocumento: 'CC',
+        numeroDocumento: `34${Date.now()}`.slice(-10),
+        direccion: 'Calle de Prueba #1-23',
+        ciudad: 'Bogota'
+      });
 
     if (res.body.user && res.body.user._id) {
       const userId = res.body.user._id;

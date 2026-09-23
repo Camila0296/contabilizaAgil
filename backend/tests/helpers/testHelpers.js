@@ -27,11 +27,19 @@ const createTestRole = async (name = 'auxiliar') => {
 
 // Crear un usuario de prueba
 const createTestUser = async (userData = {}) => {
+  // numeroDocumento es único en el schema: generar uno distinto en cada llamada
+  const uniqueSuffix = `${Date.now()}${Math.floor(Math.random() * 10000)}`.slice(-10);
+
   const defaultData = {
     nombres: 'Test',
     apellidos: 'User',
     email: 'test@example.com',
     password: 'password123',
+    telefono: '3000000000',
+    tipoDocumento: 'CC',
+    numeroDocumento: uniqueSuffix,
+    direccion: 'Calle de Prueba #1-23',
+    ciudad: 'Bogota',
     approved: true,
     activo: true
   };
@@ -43,8 +51,8 @@ const createTestUser = async (userData = {}) => {
     const role = await createTestRole(`test-role-${timestamp}`);
     roleId = role._id;
   }
-  const hashedPassword = await bcrypt.hash(defaultData.password, 10);
-  
+  const hashedPassword = await bcrypt.hash(userData.password || defaultData.password, 10);
+
   const userDataToSave = {
     ...defaultData,
     ...userData,

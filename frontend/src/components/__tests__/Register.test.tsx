@@ -24,6 +24,15 @@ describe('Register Component', () => {
     jest.clearAllMocks();
   });
 
+  // Llena los campos de seguridad requeridos que no son el foco de cada test
+  // (teléfono, número de documento, dirección, ciudad)
+  const fillSecurityFields = async () => {
+    await userEvent.type(screen.getByLabelText(/teléfono/i), '3001234567');
+    await userEvent.type(screen.getByLabelText(/número de documento/i), '1234567890');
+    await userEvent.type(screen.getByLabelText(/dirección/i), 'Calle Principal #123');
+    await userEvent.type(screen.getByLabelText(/ciudad/i), 'Bogota');
+  };
+
   it('should render registration form', () => {
     render(<Register onRegisterSuccess={mockOnRegisterSuccess} />);
     
@@ -78,23 +87,27 @@ describe('Register Component', () => {
 
   it('should show error when passwords do not match', async () => {
     render(<Register onRegisterSuccess={mockOnRegisterSuccess} />);
-    
-    // Llenar los campos requeridos
+
+    // Llenar los campos requeridos con datos válidos
     await userEvent.type(screen.getByLabelText('Nombres'), 'Test');
     await userEvent.type(screen.getByLabelText('Apellidos'), 'User');
     await userEvent.type(screen.getByLabelText('Correo electrónico'), 'test@example.com');
-    
-    // Establecer contraseñas que no coinciden
-    await userEvent.type(screen.getByLabelText('Contraseña'), 'password123');
-    await userEvent.type(screen.getByLabelText('Confirmar contraseña'), 'different123');
-    
+    await fillSecurityFields();
+
+    // Establecer contraseñas que NO coinciden pero que SÍ son fuertes
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'Password123!');
+    await userEvent.type(screen.getByLabelText('Confirmar contraseña'), 'DifferentPass123!');
+
     // Enviar el formulario
     fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
-    
-    // Verificar que se muestra el error correcto
+
+    // Verificar que el error se muestra en la UI (no como alert, sino en validación)
     await waitFor(() => {
-      expect(showError).toHaveBeenCalledWith('Las contraseñas no coinciden');
+      expect(screen.getByText(/las contraseñas no coinciden/i)).toBeInTheDocument();
     });
+
+    // Verificar que NO se llamó a la API (validación previno el envío)
+    expect(mockApiFetch).not.toHaveBeenCalled();
   });
 
   it('should show error when password does not meet strength requirements', async () => {
@@ -104,6 +117,7 @@ describe('Register Component', () => {
     await userEvent.type(screen.getByLabelText('Nombres'), 'Test');
     await userEvent.type(screen.getByLabelText('Apellidos'), 'User');
     await userEvent.type(screen.getByLabelText('Correo electrónico'), 'test@example.com');
+    await fillSecurityFields();
 
     // Establecer contraseña débil (sin mayúscula, número ni carácter especial)
     await userEvent.type(screen.getByLabelText('Contraseña'), 'weak');
@@ -112,29 +126,32 @@ describe('Register Component', () => {
     // Enviar el formulario
     fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
 
-    // Verificar que se muestra el error correcto
+    // Verificar que se muestra el error en la UI (validación de contraseña débil)
     await waitFor(() => {
-      expect(showError).toHaveBeenCalledWith(
-        expect.stringContaining('La contraseña debe tener al menos 8 caracteres')
-      );
+      // El mensaje puede ser sobre 8 caracteres, mayúscula, minúscula, número o carácter especial
+      expect(screen.getByText(/contraseña debe tener al menos 8 caracteres|incluir mayúscula|incluir minúscula|incluir número|incluir carácter especial/i)).toBeInTheDocument();
     });
+
+    // Verificar que NO se llamó a la API (validación previno el envío)
+    expect(mockApiFetch).not.toHaveBeenCalled();
   });
 
   it('should handle successful registration', async () => {
     // Configurar el mock de la API
     const mockResponse = {
       ok: true,
-      json: async () => ({ message: 'User registered successfully' })
+      json: async () => ({ status: 'Registro exitoso', token: 'fake-jwt-token', user: { email: 'juan@example.com' } })
     };
     mockApiFetch.mockResolvedValueOnce(mockResponse as Response);
 
     render(<Register onRegisterSuccess={mockOnRegisterSuccess} />);
-    
+
     // Llenar el formulario
     await userEvent.type(screen.getByLabelText('Nombres'), 'Juan');
     await userEvent.type(screen.getByLabelText('Apellidos'), 'Pérez');
     await userEvent.type(screen.getByLabelText('Correo electrónico'), 'juan@example.com');
-    
+    await fillSecurityFields();
+
     // Usar fireEvent.change para los campos de contraseña
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'Password123!' } });
     fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'Password123!' } });
@@ -153,21 +170,32 @@ describe('Register Component', () => {
           nombres: 'Juan',
           apellidos: 'Pérez',
           email: 'juan@example.com',
+          telefono: '3001234567',
+          tipoDocumento: 'CC',
+          numeroDocumento: '1234567890',
+          direccion: 'Calle Principal #123',
+          ciudad: 'Bogota',
           password: 'Password123!'
         }),
       });
-      
+
       // Verificar que se mostró el mensaje de éxito
       expect(showSuccess).toHaveBeenCalledWith('Registro exitoso. Tu cuenta está pendiente de aprobación.');
-      
-      // Verificar que se llamó a la función de éxito
-      expect(mockOnRegisterSuccess).toHaveBeenCalled();
     });
+
+    // Tras el registro exitoso, se muestra el paso de carga de documento
+    // (el registro aún no está "completo" hasta que el usuario carga o lo omite)
+    expect(await screen.findByRole('heading', { name: /verifica tu identidad/i })).toBeInTheDocument();
+    expect(mockOnRegisterSuccess).not.toHaveBeenCalled();
+
+    // Omitir la carga de documento debe completar el flujo
+    fireEvent.click(screen.getByRole('button', { name: /omitir por ahora/i }));
+    expect(mockOnRegisterSuccess).toHaveBeenCalled();
   });
 
   it('should handle registration error', async () => {
     const errorMessage = 'El correo ya está registrado';
-    
+
     // Configurar el mock de la API para simular un error
     const mockErrorResponse = {
       ok: false,
@@ -176,12 +204,13 @@ describe('Register Component', () => {
     mockApiFetch.mockResolvedValueOnce(mockErrorResponse as Response);
 
     render(<Register onRegisterSuccess={mockOnRegisterSuccess} />);
-    
+
     // Llenar el formulario
     await userEvent.type(screen.getByLabelText('Nombres'), 'Juan');
     await userEvent.type(screen.getByLabelText('Apellidos'), 'Pérez');
     await userEvent.type(screen.getByLabelText('Correo electrónico'), 'existente@example.com');
-    
+    await fillSecurityFields();
+
     // Usar fireEvent.change para los campos de contraseña
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'Password123!' } });
     fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'Password123!' } });

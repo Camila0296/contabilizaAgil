@@ -7,6 +7,24 @@ const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
 const { resetAllStores } = require('../helpers/mockReset');
+const { createTestRole } = require('../helpers/testHelpers');
+
+// numeroDocumento es único en el schema: generar uno distinto por llamada
+let docCounter = 0;
+const uniqueDocumento = () => `32${Date.now()}${docCounter++}`.slice(-10);
+
+const validRegisterPayload = (overrides = {}) => ({
+  nombres: 'Test',
+  apellidos: 'User',
+  email: `payload-${Date.now()}-${Math.random()}@test.com`,
+  password: 'TestPass123!',
+  telefono: '3001234567',
+  tipoDocumento: 'CC',
+  numeroDocumento: uniqueDocumento(),
+  direccion: 'Calle de Prueba #1-23',
+  ciudad: 'Bogota',
+  ...overrides
+});
 
 describe('Aprobaciones Controller', () => {
   let approverToken;
@@ -14,13 +32,14 @@ describe('Aprobaciones Controller', () => {
   let approvedUserId;
 
   beforeAll(async () => {
-    // Roles ya creados globalmente en setup-mocks.js
+    await createTestRole('auxiliar');
+    await createTestRole('administrador');
 
     const email = `approver-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const password = 'TestPass123!';
     const approverRes = await request(app)
       .post('/api/auth/register')
-      .send({ nombres: 'Approver', apellidos: 'User', email, password });
+      .send(validRegisterPayload({ nombres: 'Approver', email, password }));
 
     if (approverRes.body.user && approverRes.body.user._id) {
       await User.findByIdAndUpdate(approverRes.body.user._id, {
@@ -48,24 +67,14 @@ describe('Aprobaciones Controller', () => {
     // Crear usuario pendiente de aprobación
     const pendingRes = await request(app)
       .post('/api/auth/register')
-      .send({
-        nombres: 'Pending',
-        apellidos: 'User',
-        email: `pending-${Date.now()}@test.com`,
-        password: 'TestPass123!'
-      });
+      .send(validRegisterPayload({ nombres: 'Pending', email: `pending-${Date.now()}@test.com` }));
 
     pendingUserId = pendingRes.body.user._id;
 
     // Crear usuario ya aprobado
     const approvedRes = await request(app)
       .post('/api/auth/register')
-      .send({
-        nombres: 'Approved',
-        apellidos: 'User',
-        email: `approved-${Date.now()}@test.com`,
-        password: 'TestPass123!'
-      });
+      .send(validRegisterPayload({ nombres: 'Approved', email: `approved-${Date.now()}@test.com` }));
 
     approvedUserId = approvedRes.body.user._id;
     await User.findByIdAndUpdate(approvedUserId, { approved: true, activo: true });
@@ -119,12 +128,7 @@ describe('Aprobaciones Controller', () => {
       // Crear usuario sin rol de approver
       const userRes = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Regular',
-          apellidos: 'User',
-          email: `regular-${Date.now()}@test.com`,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ nombres: 'Regular', email: `regular-${Date.now()}@test.com` }));
 
       const res = await request(app)
         .get('/api/aprobaciones/pendientes')
@@ -206,12 +210,7 @@ describe('Aprobaciones Controller', () => {
     beforeEach(async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'ToReject',
-          apellidos: 'User',
-          email: `reject-${Date.now()}@test.com`,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ nombres: 'ToReject', email: `reject-${Date.now()}@test.com` }));
       pendingToReject = res.body.user._id;
     });
 
@@ -249,32 +248,17 @@ describe('Aprobaciones Controller', () => {
     beforeEach(async () => {
       const res1 = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Batch1',
-          apellidos: 'User',
-          email: `batch1-${Date.now()}@test.com`,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ nombres: 'Batch1', email: `batch1-${Date.now()}@test.com` }));
       batchUser1 = res1.body.user._id;
 
       const res2 = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Batch2',
-          apellidos: 'User',
-          email: `batch2-${Date.now()}@test.com`,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ nombres: 'Batch2', email: `batch2-${Date.now()}@test.com` }));
       batchUser2 = res2.body.user._id;
 
       const res3 = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Batch3',
-          apellidos: 'User',
-          email: `batch3-${Date.now()}@test.com`,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ nombres: 'Batch3', email: `batch3-${Date.now()}@test.com` }));
       batchUser3 = res3.body.user._id;
     });
 

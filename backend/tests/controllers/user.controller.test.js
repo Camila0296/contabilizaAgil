@@ -7,6 +7,24 @@ const User = require('../../models/user');
 const Role = require('../../models/role');
 const app = require('../../index');
 const { resetAllStores } = require('../helpers/mockReset');
+const { createTestRole } = require('../helpers/testHelpers');
+
+// numeroDocumento es único en el schema: generar uno distinto por llamada
+let docCounter = 0;
+const uniqueDocumento = () => `31${Date.now()}${docCounter++}`.slice(-10);
+
+const validRegisterPayload = (overrides = {}) => ({
+  nombres: 'Test',
+  apellidos: 'User',
+  email: `payload-${Date.now()}-${Math.random()}@test.com`,
+  password: 'TestPass123!',
+  telefono: '3001234567',
+  tipoDocumento: 'CC',
+  numeroDocumento: uniqueDocumento(),
+  direccion: 'Calle de Prueba #1-23',
+  ciudad: 'Bogota',
+  ...overrides
+});
 
 describe('User Controller - Validaciones y Paginación', () => {
   let adminToken;
@@ -14,14 +32,16 @@ describe('User Controller - Validaciones y Paginación', () => {
   let userToken;
 
   beforeAll(async () => {
-    // Roles ya creados globalmente en setup-mocks.js
+    // El registro asigna el rol "auxiliar" por defecto; el admin necesita "administrador"
+    await createTestRole('auxiliar');
+    await createTestRole('administrador');
 
     // Crear usuario admin
     const adminEmail = `admin-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
     const adminPassword = 'TestPass123!';
     const adminRes = await request(app)
       .post('/api/auth/register')
-      .send({ nombres: 'Admin Test', apellidos: 'User', email: adminEmail, password: adminPassword });
+      .send(validRegisterPayload({ nombres: 'Admin Test', apellidos: 'User', email: adminEmail, password: adminPassword }));
 
     if (adminRes.body.user && adminRes.body.user._id) {
       adminId = adminRes.body.user._id;
@@ -38,7 +58,7 @@ describe('User Controller - Validaciones y Paginación', () => {
     const userPassword = 'TestPass123!';
     const userRes = await request(app)
       .post('/api/auth/register')
-      .send({ nombres: 'Regular Test', apellidos: 'User', email: userEmail, password: userPassword });
+      .send(validRegisterPayload({ nombres: 'Regular Test', apellidos: 'User', email: userEmail, password: userPassword }));
 
     if (userRes.body.user && userRes.body.user._id) {
       await User.findByIdAndUpdate(userRes.body.user._id, { approved: true });
@@ -57,12 +77,7 @@ describe('User Controller - Validaciones y Paginación', () => {
     test('Debe rechazar email sin dominio', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Test',
-          apellidos: 'User',
-          email: 'invalidemail',
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ email: 'invalidemail' }));
 
       expect(res.status).toBe(400);
     });
@@ -70,12 +85,7 @@ describe('User Controller - Validaciones y Paginación', () => {
     test('Debe rechazar email sin usuario', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Test',
-          apellidos: 'User',
-          email: '@example.com',
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ email: '@example.com' }));
 
       expect(res.status).toBe(400);
     });
@@ -83,12 +93,7 @@ describe('User Controller - Validaciones y Paginación', () => {
     test('Debe rechazar email vacío', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Test',
-          apellidos: 'User',
-          email: '',
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ email: '' }));
 
       expect(res.status).toBe(400);
     });
@@ -96,12 +101,7 @@ describe('User Controller - Validaciones y Paginación', () => {
     test('Debe aceptar email válido', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Test',
-          apellidos: 'User',
-          email: `valid-${Date.now()}@example.com`,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ email: `valid-${Date.now()}@example.com` }));
 
       expect(res.status).toBe(201);
       expect(res.body.user.email).toBeDefined();
@@ -111,12 +111,7 @@ describe('User Controller - Validaciones y Paginación', () => {
       const email = `TEST-${Date.now()}@EXAMPLE.COM`;
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Test',
-          apellidos: 'User',
-          email,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ email }));
 
       expect(res.status).toBe(201);
       expect(res.body.user.email).toBe(email.toLowerCase());
@@ -128,22 +123,12 @@ describe('User Controller - Validaciones y Paginación', () => {
       // Primer registro
       await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Test1',
-          apellidos: 'User',
-          email,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ nombres: 'Test1', email }));
 
       // Segundo intento con mismo email
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Test2',
-          apellidos: 'User',
-          email,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ nombres: 'Test2', email }));
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('registrado');
@@ -161,6 +146,11 @@ describe('User Controller - Validaciones y Paginación', () => {
           apellidos: `Test ${i}`,
           email: `user-page-${timestamp}-${i}@test.com`,
           password: 'hashed_password',
+          telefono: '3000000000',
+          tipoDocumento: 'CC',
+          numeroDocumento: uniqueDocumento(),
+          direccion: 'Calle de Prueba #1-23',
+          ciudad: 'Bogota',
           role: userRole._id,
           approved: true,
           activo: true
@@ -317,12 +307,7 @@ describe('User Controller - Validaciones y Paginación', () => {
       const otherEmail = `other-${Date.now()}@test.com`;
       const otherRes = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Other',
-          apellidos: 'User',
-          email: otherEmail,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ nombres: 'Other', email: otherEmail }));
 
       const otherToken = otherRes.body.token;
 
@@ -343,12 +328,7 @@ describe('User Controller - Validaciones y Paginación', () => {
     test('Debe rechazar nombres vacío', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: '',
-          apellidos: 'Test',
-          email: `test-${Date.now()}@test.com`,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ nombres: '', email: `test-${Date.now()}@test.com` }));
 
       expect(res.status).toBe(400);
     });
@@ -356,12 +336,7 @@ describe('User Controller - Validaciones y Paginación', () => {
     test('Debe rechazar apellidos vacío', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Test',
-          apellidos: '',
-          email: `test-${Date.now()}@test.com`,
-          password: 'TestPass123!'
-        });
+        .send(validRegisterPayload({ apellidos: '', email: `test-${Date.now()}@test.com` }));
 
       expect(res.status).toBe(400);
     });
@@ -369,12 +344,7 @@ describe('User Controller - Validaciones y Paginación', () => {
     test('Debe rechazar contraseña débil en registro', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
-          nombres: 'Test',
-          apellidos: 'User',
-          email: `test-${Date.now()}@test.com`,
-          password: 'weak'
-        });
+        .send(validRegisterPayload({ password: 'weak', email: `test-${Date.now()}@test.com` }));
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('contraseña');
@@ -383,12 +353,11 @@ describe('User Controller - Validaciones y Paginación', () => {
     test('Debe trim de espacios en nombres', async () => {
       const res = await request(app)
         .post('/api/auth/register')
-        .send({
+        .send(validRegisterPayload({
           nombres: '  Test Name  ',
           apellidos: '  Test Surname  ',
-          email: `test-${Date.now()}@test.com`,
-          password: 'TestPass123!'
-        });
+          email: `test-${Date.now()}@test.com`
+        }));
 
       expect(res.status).toBe(201);
       expect(res.body.user.nombres).toBe('Test Name');

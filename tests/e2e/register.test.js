@@ -11,6 +11,10 @@ const CONFIG = {
     nombres: 'Test',
     apellidos: 'User',
     email: `testuser_${Date.now()}@example.com`,
+    telefono: '3001234567',
+    numeroDocumento: `${Date.now()}`.slice(-10),
+    direccion: 'Calle Principal #123',
+    ciudad: 'Bogota',
     password: 'Test123!',
     confirmPassword: 'Test123!'
   },
@@ -165,6 +169,10 @@ async function runRegistrationTest() {
       await fillField('nombres', CONFIG.testUser.nombres, 'Nombres');
       await fillField('apellidos', CONFIG.testUser.apellidos, 'Apellidos');
       await fillField('email', CONFIG.testUser.email, 'Correo electrónico');
+      await fillField('telefono', CONFIG.testUser.telefono, 'Teléfono');
+      await fillField('numeroDocumento', CONFIG.testUser.numeroDocumento, 'Número de documento');
+      await fillField('direccion', CONFIG.testUser.direccion, 'Dirección');
+      await fillField('ciudad', CONFIG.testUser.ciudad, 'Ciudad');
       await fillField('password', CONFIG.testUser.password, 'Contraseña');
       await fillField('confirmPassword', CONFIG.testUser.confirmPassword, 'Confirmar contraseña');
       await sleep(1000);
@@ -190,17 +198,16 @@ async function runRegistrationTest() {
         await driver.executeScript("arguments[0].click();", submitButton);
       }
       
-      // Esperar a que se complete el registro
+      // Esperar a que se complete el registro: tras un registro exitoso, la app
+      // muestra el paso de "Verifica tu identidad" (carga de documento opcional)
       log('⏳ Esperando a que se complete el registro...');
-      await driver.wait(
-        async () => {
-          const currentUrl = await driver.getCurrentUrl();
-          return !currentUrl.includes('register') && !currentUrl.endsWith('register');
-        },
+      const verifyHeading = await driver.wait(
+        until.elementLocated(By.xpath("//h2[contains(text(), 'Verifica tu identidad')]")),
         15000,
-        'No se completó el registro después de 15 segundos'
+        'No se completó el registro después de 15 segundos (no apareció el paso de verificación de identidad)'
       );
-      
+      await driver.wait(until.elementIsVisible(verifyHeading), CONFIG.timeout);
+
       log('✅ Registro completado exitosamente');
       
     } catch (e) {

@@ -35,7 +35,7 @@ const CONFIG = {
   timeout: 30000,
   user: {
     email: 'admin@admin.com',
-    password: 'Admin202602*'
+    password: 'admin123'
   }
 };
 
@@ -116,6 +116,7 @@ async function runLoginTest() {
       // Obtener el HTML de la página para depuración
       try {
         const pageSource = await driver.getPageSource();
+        const fs = require('fs');
         fs.writeFileSync('login-page.html', pageSource);
         log('   • Código fuente de la página guardado como login-page.html');
       } catch (e) {

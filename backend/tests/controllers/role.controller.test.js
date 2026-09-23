@@ -1,5 +1,5 @@
 const roleCtrl = require('../../controllers/role.controller');
-const { mockRequest, mockResponse } = require('../helpers/testHelpers');
+const { mockRequest, mockResponse, createTestRole } = require('../helpers/testHelpers');
 
 describe('Role Controller', () => {
   describe('createRole', () => {
@@ -71,18 +71,15 @@ describe('Role Controller', () => {
   });
 
   describe('getRoles', () => {
+    beforeAll(async () => {
+      // Los nombres de rol están restringidos por enum: sembrar los 4 roles válidos
+      await createTestRole('administrador');
+      await createTestRole('contador');
+      await createTestRole('analista');
+      await createTestRole('auxiliar');
+    });
+
     it('should return all roles', async () => {
-      const rolesData = [
-        { name: `admin-test-${Date.now()}`, nivel: 1, descripcion: 'Admin role' },
-        { name: `contador-test-${Date.now()}`, nivel: 2, descripcion: 'Counter role' }
-      ];
-
-      for (const roleData of rolesData) {
-        const req = mockRequest({ body: roleData });
-        const res = mockResponse();
-        await roleCtrl.createRole(req, res);
-      }
-
       const req = mockRequest({});
       const res = mockResponse();
 
