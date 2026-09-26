@@ -53,12 +53,27 @@ describe('FacturaCartera', () => {
   });
   afterEach(() => confirmSpy.mockRestore());
 
-  test('carga facturas y solo clientes/cuentas activos (hasta 100)', async () => {
+  test('carga la lista sin descargar todo el catálogo de clientes y cuentas', async () => {
+    render(<FacturaCartera userId="u1" />);
+    const row = await rowOf('FAC-001');
+    expect(within(row).getByText('1/3/2026')).toBeInTheDocument();
+    expect(within(row).getAllByText('4135 - Comercio').length).toBeGreaterThan(0);
+    expect(mockApi.mock.calls.some(c => c[0].startsWith('/terceros') || c[0].startsWith('/puc'))).toBe(false);
+  });
+
+  test('los buscadores consultan al backend con lo escrito (solo clientes y cuentas activos)', async () => {
     render(<FacturaCartera userId="u1" />);
     await rowOf('FAC-001');
-    expect(mockApi).toHaveBeenCalledWith('/terceros?tipo=cliente&activo=true&limit=100');
-    expect(mockApi).toHaveBeenCalledWith('/puc?activo=true&limit=100');
-    expect(within(await rowOf('FAC-001')).getByText('1/3/2026')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Nueva Factura/ }));
+
+    // Al abrir el formulario se piden las primeras opciones
+    await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/terceros?tipo=cliente&activo=true&limit=20&search='));
+    await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/puc?activo=true&limit=20&search='));
+
+    const input = screen.getByText('Seleccione cliente...').parentElement!.querySelector('input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'Cliente S' } });
+    await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/terceros?tipo=cliente&activo=true&limit=20&search=Cliente%20S'));
+    expect(await screen.findByText('Cliente SA', { selector: '.react-select__option' })).toBeInTheDocument();
   });
 
   test('acciones por estado: pagada sin botón de pago, anulada sin acciones', async () => {

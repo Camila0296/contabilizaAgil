@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '../api';
 import Paginacion, { PaginationInfo, PAGE_SIZE } from './Paginacion';
 import { formatCurrency, formatFecha } from '../utils/format';
 import { showSuccess, showError } from '../utils/alerts';
 import { hasRole, ROLES_GESTION } from '../utils/session';
-import Select from 'react-select';
+import SelectBusqueda, { Opcion } from './SelectBusqueda';
 import { retefuenteOptions, icaOptions } from '../data/withholdingOptions';
 
 interface FacturaCartera {
@@ -84,8 +84,9 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
   const [facturas, setFacturas] = useState<FacturaCartera[]>([]);
   // El auxiliar solo crea y registra pagos; editar/anular es para roles de gestión
   const canManage = hasRole(...ROLES_GESTION);
-  const [terceros, setTerceros] = useState<Tercero[]>([]);
-  const [pucs, setPucs] = useState<Puc[]>([]);
+  // Opciones elegidas en los buscadores (se guardan con su etiqueta para poder mostrarlas)
+  const [terceroSel, setTerceroSel] = useState<Opcion | null>(null);
+  const [pucSel, setPucSel] = useState<Opcion | null>(null);
   const [form, setForm] = useState<FacturaCartera>(initialForm);
   const [editing, setEditing] = useState<FacturaCartera | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,20 +102,24 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
     cuenta: '1110'
   });
 
-  const terceroOptions = useMemo(
-    () => terceros.map(t => ({ value: t._id, label: t.razonSocial })),
-    [terceros]
-  );
+  const terceroOpcion = (t: Tercero): Opcion => ({ value: t._id, label: t.razonSocial });
+  const pucOpcion = (p: Puc): Opcion => ({ value: p._id, label: `${p.codigo} - ${p.nombre}` });
 
-  const pucOptions = useMemo(
-    () => pucs.map(p => ({ value: p._id, label: `${p.codigo} - ${p.nombre}` })),
-    [pucs]
-  );
+  // La lista de facturas trae la cuenta PUC populada
+  const getPucLabel = (puc: any) => (puc && puc.codigo ? pucOpcion(puc).label : '');
 
-  const getPucLabel = (pucId: string) => {
-    const puc = pucs.find(p => p._id === pucId);
-    return puc ? `${puc.codigo} - ${puc.nombre}` : pucId;
-  };
+  // Solo se consultan los primeros resultados que coinciden con lo escrito
+  const buscarClientes = useCallback(async (texto: string) => {
+    const res = await apiFetch(`/terceros?tipo=cliente&activo=true&limit=20&search=${encodeURIComponent(texto)}`);
+    const response = await res.json();
+    return (response.data || []).map(terceroOpcion);
+  }, []);
+
+  const buscarCuentas = useCallback(async (texto: string) => {
+    const res = await apiFetch(`/puc?activo=true&limit=20&search=${encodeURIComponent(texto)}`);
+    const response = await res.json();
+    return (response.data || []).map(pucOpcion);
+  }, []);
 
   const toInputDate = (isoDate: string) => {
     if (!isoDate) return '';
@@ -122,11 +127,6 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
     if (Number.isNaN(date.getTime())) return '';
     return date.toISOString().split('T')[0];
   };
-
-  useEffect(() => {
-    fetchTerceros();
-    fetchPucs();
-  }, []);
 
   useEffect(() => {
     fetchFacturas();
@@ -146,26 +146,6 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
       showError('No se pudieron cargar las facturas');
     }
     setLoading(false);
-  };
-
-  const fetchTerceros = async () => {
-    try {
-      const res = await apiFetch('/terceros?tipo=cliente&activo=true&limit=100');
-      const response = await res.json();
-      setTerceros(response.data || response);
-    } catch {
-      showError('No se pudieron cargar los terceros');
-    }
-  };
-
-  const fetchPucs = async () => {
-    try {
-      const res = await apiFetch('/puc?activo=true&limit=100');
-      const response = await res.json();
-      setPucs(response.data || response);
-    } catch {
-      showError('No se pudieron cargar las cuentas PUC');
-    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -213,9 +193,13 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
         tercero: factura.tercero?._id || factura.tercero,
         puc: factura.puc?._id || factura.puc
       });
+      setTerceroSel(factura.tercero?._id ? terceroOpcion(factura.tercero) : null);
+      setPucSel(factura.puc?._id ? pucOpcion(factura.puc) : null);
     } else {
       setEditing(null);
       setForm(initialForm);
+      setTerceroSel(null);
+      setPucSel(null);
     }
     setError('');
     setShowModal(true);
@@ -225,6 +209,8 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
     setShowModal(false);
     setEditing(null);
     setForm(initialForm);
+    setTerceroSel(null);
+    setPucSel(null);
     setError('');
   };
 
@@ -364,12 +350,12 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                       <td className="table-cell">
                         <div className="text-sm font-medium">{factura.tercero?.razonSocial}</div>
                         <div className="text-xs text-gray-500 lg:hidden">
-                          {getPucLabel(factura.puc?._id || factura.puc)}
+                          {getPucLabel(factura.puc)}
                         </div>
                       </td>
                       <td className="table-cell hidden lg:table-cell text-sm text-gray-500">
                         <div className="truncate max-w-[200px]">
-                          {getPucLabel(factura.puc?._id || factura.puc)}
+                          {getPucLabel(factura.puc)}
                         </div>
                       </td>
                       <td className="table-cell text-right font-semibold">
@@ -531,16 +517,14 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
 
                   <div className="form-group">
                     <label className="form-label">Cliente</label>
-                    <Select
-                      classNamePrefix="react-select"
-                      options={terceroOptions}
+                    <SelectBusqueda
                       placeholder="Seleccione cliente..."
-                      value={terceroOptions.find(o => o.value === form.tercero) || null}
-                      onChange={option =>
-                        setForm(prev => ({ ...prev, tercero: option ? option.value : '' }))
-                      }
-                      isClearable
-                      className="react-select-container"
+                      buscar={buscarClientes}
+                      value={terceroSel}
+                      onChange={opcion => {
+                        setTerceroSel(opcion);
+                        setForm(prev => ({ ...prev, tercero: opcion ? opcion.value : '' }));
+                      }}
                     />
                   </div>
 
@@ -566,16 +550,14 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
 
                   <div className="form-group">
                     <label className="form-label">Cuenta PUC</label>
-                    <Select
-                      classNamePrefix="react-select"
-                      options={pucOptions}
+                    <SelectBusqueda
                       placeholder="Seleccione cuenta..."
-                      value={pucOptions.find(o => o.value === form.puc) || null}
-                      onChange={option =>
-                        setForm(prev => ({ ...prev, puc: option ? option.value : '' }))
-                      }
-                      isClearable
-                      className="react-select-container"
+                      buscar={buscarCuentas}
+                      value={pucSel}
+                      onChange={opcion => {
+                        setPucSel(opcion);
+                        setForm(prev => ({ ...prev, puc: opcion ? opcion.value : '' }));
+                      }}
                     />
                   </div>
 
