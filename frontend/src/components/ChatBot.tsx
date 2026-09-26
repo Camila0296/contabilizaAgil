@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { apiFetch } from '../api';
+import { hasRole, Role } from '../utils/session';
 import type { ChatMessage, ChatResponse } from '../types/chat';
 
 interface ChatBotProps {
@@ -54,7 +55,28 @@ function renderMarkdown(text: string): React.ReactNode[] {
   });
 }
 
-export default function ChatBot({ onNavigate, isLoggedIn }: ChatBotProps) {
+// Preguntas sugeridas según la sección en la que está el usuario
+const SUGERENCIAS: Record<string, string[]> = {
+  panel: ['¿Cuántas facturas tengo?', '¿Cuánto he facturado este mes?', '¿Cuánto me deben?'],
+  facturacion: ['¿Cuánto es el IVA de 1.000.000?', '¿Qué retención aplico a honorarios?', '¿Qué PUC uso para arriendo?'],
+  'facturacion-cartera': ['¿Cuánto me deben?', '¿Tengo facturas vencidas?', '¿Cómo registro un abono?'],
+  reportes: ['¿Cuánto he facturado este mes?', '¿Cómo exporto a Excel?', 'Mis últimas facturas'],
+  terceros: ['¿Qué retención aplico a un proveedor de servicios?', 'Llévame a Cartera'],
+  puc: ['¿Qué PUC uso para servicios públicos?', '¿Qué es la naturaleza débito?'],
+};
+const SUGERENCIAS_GENERALES = ['¿Qué puedes hacer?', '¿Cuántas facturas tengo?', '¿Cuánto es el IVA de 1.000.000?'];
+
+// Secciones restringidas por rol (misma matriz que el menú de App)
+const SECCIONES_RESTRINGIDAS: Record<string, Role[]> = {
+  panel: ['administrador', 'contador'],
+  usuarios: ['administrador'],
+  aprobaciones: ['administrador'],
+};
+const puedeNavegar = (seccion: string) => !SECCIONES_RESTRINGIDAS[seccion] || hasRole(...SECCIONES_RESTRINGIDAS[seccion]);
+
+const nuevoId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+export default function ChatBot({ currentSection, onNavigate, isLoggedIn }: ChatBotProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [inputValue, setInputValue] = useState('');
@@ -76,65 +98,77 @@ export default function ChatBot({ onNavigate, isLoggedIn }: ChatBotProps) {
     }
   }, [messages, isOpen]);
 
-  const sendMessage = useCallback(async () => {
-    const text = inputValue.trim();
-    if (!text || isLoading) return;
-
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: text,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMsg]);
-    setInputValue('');
+  // Envía el historial (sin mensajes de error) y agrega la respuesta del asistente
+  const consultar = useCallback(async (historial: ChatMessage[]) => {
     setIsLoading(true);
-
     try {
-      const history = [...messages, userMsg]
-        .slice(-10)
-        .map(m => ({ role: m.role, content: m.content }));
-
       const res = await apiFetch('/chat/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
+        body: JSON.stringify({
+          messages: historial
+            .filter(m => !m.error)
+            .slice(-10)
+            .map(m => ({ role: m.role, content: m.content }))
+        })
       });
 
       if (!res.ok) throw new Error('Error del servidor');
 
       const data: ChatResponse = await res.json();
-
-      const assistantMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.reply,
-        timestamp: new Date()
-      };
-
+      const assistantMsg: ChatMessage = { id: nuevoId(), role: 'assistant', content: data.reply, timestamp: new Date() };
       setMessages(prev => [...prev, assistantMsg]);
 
       if (data.action?.type === 'navigate') {
-        setTimeout(() => {
-          onNavigate(data.action!.payload);
-          setIsOpen(false);
-        }, 800);
+        const destino = data.action.payload;
+        if (puedeNavegar(destino)) {
+          setTimeout(() => {
+            onNavigate(destino);
+            setIsOpen(false);
+          }, 800);
+        }
       }
     } catch {
+      const ultimo = historial[historial.length - 1];
       setMessages(prev => [
         ...prev,
         {
-          id: (Date.now() + 1).toString(),
+          id: nuevoId(),
           role: 'assistant',
           content: 'Lo siento, ocurrió un error al procesar tu mensaje. Intenta de nuevo.',
-          timestamp: new Date()
+          timestamp: new Date(),
+          error: true,
+          retryText: ultimo?.content
         }
       ]);
     } finally {
       setIsLoading(false);
     }
-  }, [inputValue, isLoading, messages, onNavigate]);
+  }, [onNavigate]);
+
+  const sendMessage = useCallback(async (textoSugerido?: string) => {
+    const text = (textoSugerido ?? inputValue).trim();
+    if (!text || isLoading) return;
+
+    const userMsg: ChatMessage = { id: nuevoId(), role: 'user', content: text, timestamp: new Date() };
+    setMessages(prev => [...prev, userMsg]);
+    if (textoSugerido === undefined) setInputValue('');
+    await consultar([...messages, userMsg]);
+  }, [inputValue, isLoading, messages, consultar]);
+
+  // Quita el mensaje de error y vuelve a consultar la misma pregunta
+  const reintentar = useCallback(async (errorId: string) => {
+    if (isLoading) return;
+    const sinError = messages.filter(m => m.id !== errorId);
+    setMessages(sinError);
+    await consultar(sinError);
+  }, [isLoading, messages, consultar]);
+
+  const nuevaConversacion = () => {
+    setMessages([{ ...WELCOME_MESSAGE, timestamp: new Date() }]);
+    setInputValue('');
+    inputRef.current?.focus();
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -142,6 +176,9 @@ export default function ChatBot({ onNavigate, isLoggedIn }: ChatBotProps) {
       sendMessage();
     }
   };
+
+  const sugerencias = SUGERENCIAS[currentSection] || SUGERENCIAS_GENERALES;
+  const mostrarSugerencias = !isLoading && messages[messages.length - 1]?.role === 'assistant' && messages.filter(m => m.role === 'user').length === 0;
 
   if (!isLoggedIn) return null;
 
@@ -168,6 +205,15 @@ export default function ChatBot({ onNavigate, isLoggedIn }: ChatBotProps) {
                 <p className="text-xs text-primary-200">Contabiliza Ágil</p>
               </div>
             </div>
+            <div className="flex items-center space-x-1">
+            <button
+              onClick={nuevaConversacion}
+              className="px-2 py-1 text-xs rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
+              aria-label="Nueva conversación"
+              title="Nueva conversación"
+            >
+              Nueva
+            </button>
             <button
               onClick={() => setIsOpen(false)}
               className="p-1 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
@@ -177,6 +223,7 @@ export default function ChatBot({ onNavigate, isLoggedIn }: ChatBotProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+            </div>
           </div>
 
           {/* Mensajes */}
@@ -194,6 +241,16 @@ export default function ChatBot({ onNavigate, isLoggedIn }: ChatBotProps) {
                   }`}
                 >
                   {renderMarkdown(msg.content)}
+                  {msg.error && msg.retryText && (
+                    <button
+                      type="button"
+                      className="block mt-2 text-xs font-semibold text-primary-600 hover:text-primary-800 underline"
+                      onClick={() => reintentar(msg.id)}
+                      disabled={isLoading}
+                    >
+                      Reintentar
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -206,6 +263,21 @@ export default function ChatBot({ onNavigate, isLoggedIn }: ChatBotProps) {
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
+              </div>
+            )}
+
+            {mostrarSugerencias && (
+              <div className="flex flex-wrap gap-2 pt-1" aria-label="Preguntas sugeridas">
+                {sugerencias.map(texto => (
+                  <button
+                    key={texto}
+                    type="button"
+                    onClick={() => sendMessage(texto)}
+                    className="px-3 py-1.5 text-xs bg-white border border-primary-200 text-primary-700 rounded-full hover:bg-primary-50 transition-colors"
+                  >
+                    {texto}
+                  </button>
+                ))}
               </div>
             )}
 
@@ -226,7 +298,7 @@ export default function ChatBot({ onNavigate, isLoggedIn }: ChatBotProps) {
                 className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 bg-gray-50"
               />
               <button
-                onClick={sendMessage}
+                onClick={() => sendMessage()}
                 disabled={isLoading || !inputValue.trim()}
                 className="w-9 h-9 bg-primary-600 text-white rounded-xl flex items-center justify-center hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
                 aria-label="Enviar"

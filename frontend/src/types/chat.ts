@@ -3,6 +3,9 @@ export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  // Mensaje de error del asistente que permite reintentar la última pregunta
+  error?: boolean;
+  retryText?: string;
 };
 
 export type ChatAction = {

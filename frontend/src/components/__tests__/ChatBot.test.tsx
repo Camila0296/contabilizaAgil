@@ -107,4 +107,82 @@ describe('ChatBot', () => {
     expect(await screen.findByText(/ocurrió un error al procesar tu mensaje/)).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Escribe tu pregunta...')).toBeEnabled();
   });
+
+  describe('mejoras del flujo', () => {
+    const getItem = window.localStorage.getItem as jest.Mock;
+    const setRole = (role: string) => getItem.mockImplementation((k: string) => (k === 'role' ? role : null));
+
+    test.each([
+      ['facturacion', '¿Cuánto es el IVA de 1.000.000?'],
+      ['facturacion-cartera', '¿Cuánto me deben?'],
+      ['reportes', '¿Cómo exporto a Excel?'],
+      ['perfil', '¿Qué puedes hacer?'],
+    ])('muestra sugerencias según la sección (%s)', (section, sugerencia) => {
+      render(<ChatBot currentSection={section} onNavigate={jest.fn()} isLoggedIn />);
+      open();
+      expect(screen.getByRole('button', { name: sugerencia })).toBeInTheDocument();
+    });
+
+    test('una sugerencia se envía como pregunta y las sugerencias desaparecen', async () => {
+      mockApi.mockImplementation(() => reply({ reply: 'Tus clientes te deben $ 1.200.000' }));
+      render(<ChatBot currentSection="facturacion-cartera" onNavigate={jest.fn()} isLoggedIn />);
+      open();
+      fireEvent.click(screen.getByRole('button', { name: '¿Cuánto me deben?' }));
+
+      expect(await screen.findByText(/Tus clientes te deben/)).toBeInTheDocument();
+      const { messages } = JSON.parse(mockApi.mock.calls[0][1].body);
+      expect(messages[messages.length - 1]).toEqual({ role: 'user', content: '¿Cuánto me deben?' });
+      expect(screen.queryByRole('button', { name: '¿Tengo facturas vencidas?' })).not.toBeInTheDocument();
+    });
+
+    test('tras un error permite reintentar la misma pregunta sin duplicarla', async () => {
+      mockApi
+        .mockImplementationOnce(() => Promise.reject(new Error('offline')))
+        .mockImplementationOnce(() => reply({ reply: 'Ahora sí respondo' }));
+      render(<ChatBot currentSection="panel" onNavigate={jest.fn()} isLoggedIn />);
+      open();
+      send('¿qué es el PUC?');
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
+      expect(await screen.findByText('Ahora sí respondo')).toBeInTheDocument();
+      expect(screen.queryByText(/ocurrió un error/)).not.toBeInTheDocument();
+      expect(screen.getAllByText('¿qué es el PUC?')).toHaveLength(1);
+
+      const { messages } = JSON.parse(mockApi.mock.calls[1][1].body);
+      expect(messages.filter((m: any) => m.content === '¿qué es el PUC?')).toHaveLength(1);
+      expect(messages.some((m: any) => /ocurrió un error/.test(m.content))).toBe(false);
+    });
+
+    test('nueva conversación limpia el historial y vuelve a mostrar las sugerencias', async () => {
+      mockApi.mockImplementation(() => reply({ reply: 'Respuesta anterior' }));
+      render(<ChatBot currentSection="panel" onNavigate={jest.fn()} isLoggedIn />);
+      open();
+      send('hola');
+      await screen.findByText('Respuesta anterior');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Nueva conversación' }));
+      expect(screen.queryByText('Respuesta anterior')).not.toBeInTheDocument();
+      expect(screen.getByText(/Soy tu asesor contable de/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '¿Cuántas facturas tengo?' })).toBeInTheDocument();
+    });
+
+    test('no navega a una sección que el rol no tiene aunque el backend lo pida', async () => {
+      jest.useFakeTimers();
+      try {
+        setRole('auxiliar');
+        mockApi.mockImplementation(() => reply({ reply: 'Te llevo a Usuarios', action: { type: 'navigate', payload: 'usuarios' } }));
+        const onNavigate = jest.fn();
+        render(<ChatBot currentSection="facturacion" onNavigate={onNavigate} isLoggedIn />);
+        open();
+        send('abre usuarios');
+        await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+        await screen.findByText('Te llevo a Usuarios');
+        act(() => { jest.advanceTimersByTime(1000); });
+        expect(onNavigate).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+        getItem.mockReset();
+      }
+    });
+  });
 });
