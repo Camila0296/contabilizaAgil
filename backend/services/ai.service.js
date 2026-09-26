@@ -18,34 +18,10 @@ function createAIProvider() {
     }
   }
 
-  if (provider === 'claude') {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.warn('[AI] AI_PROVIDER=claude pero ANTHROPIC_API_KEY no está configurada. Usando mock.');
-      return new MockAIProvider();
-    }
-    try {
-      const ClaudeAIProvider = require('./providers/claude.provider');
-      console.log('[AI] Usando provider Claude');
-      return new ClaudeAIProvider();
-    } catch (err) {
-      console.error('[AI] Error cargando Claude provider:', err.message);
-      return new MockAIProvider();
-    }
-  }
-
-  if (provider === 'openai') {
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('[AI] AI_PROVIDER=openai pero OPENAI_API_KEY no está configurada. Usando mock.');
-      return new MockAIProvider();
-    }
-    try {
-      const OpenAIProvider = require('./providers/openai.provider');
-      console.log('[AI] Usando provider OpenAI');
-      return new OpenAIProvider();
-    } catch (err) {
-      console.error('[AI] Error cargando OpenAI provider:', err.message);
-      return new MockAIProvider();
-    }
+  // Claude y OpenAI no tienen implementación: se avisa y se usa el mock en lugar de fallar en cada mensaje
+  if (provider !== 'mock') {
+    console.warn(`[AI] AI_PROVIDER=${provider} no está implementado (disponibles: groq, mock). Usando mock.`);
+    return new MockAIProvider();
   }
 
   console.log('[AI] Usando provider Mock (default)');

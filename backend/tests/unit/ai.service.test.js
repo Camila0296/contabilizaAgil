@@ -1,8 +1,6 @@
 jest.mock('groq-sdk', () => require('../mocks/groq'));
 
 const MockAIProvider = require('../../services/providers/mock.provider');
-const ClaudeAIProvider = require('../../services/providers/claude.provider');
-const OpenAIProvider = require('../../services/providers/openai.provider');
 
 const ENV_KEYS = ['AI_PROVIDER', 'GROQ_API_KEY', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY'];
 
@@ -36,34 +34,25 @@ describe('services/ai.service - createAIProvider', () => {
     expect(createAIProvider().name).toBe('mock');
   });
 
-  test.each([
-    ['groq', 'GROQ_API_KEY'],
-    ['claude', 'ANTHROPIC_API_KEY'],
-    ['openai', 'OPENAI_API_KEY'],
-  ])('AI_PROVIDER=%s sin %s cae a mock', (provider) => {
-    process.env.AI_PROVIDER = provider;
+  test('AI_PROVIDER=groq sin GROQ_API_KEY cae a mock', () => {
+    process.env.AI_PROVIDER = 'groq';
     expect(createAIProvider().name).toBe('mock');
   });
 
+  test('AI_PROVIDER=groq con GROQ_API_KEY selecciona Groq (no distingue mayúsculas)', () => {
+    process.env.AI_PROVIDER = 'GROQ';
+    process.env.GROQ_API_KEY = 'test-key';
+    expect(createAIProvider().name).toBe('groq');
+  });
+
   test.each([
-    ['groq', 'GROQ_API_KEY'],
     ['claude', 'ANTHROPIC_API_KEY'],
     ['openai', 'OPENAI_API_KEY'],
-  ])('AI_PROVIDER=%s con %s selecciona ese provider', (provider, key) => {
-    process.env.AI_PROVIDER = provider.toUpperCase(); // no distingue mayúsculas
+  ])('AI_PROVIDER=%s (no implementado) usa mock y avisa, aunque %s esté configurada', (provider, key) => {
+    process.env.AI_PROVIDER = provider;
     process.env[key] = 'test-key';
-    expect(createAIProvider().name).toBe(provider);
-  });
-});
-
-describe('providers claude/openai (placeholders)', () => {
-  test.each([
-    ['claude', ClaudeAIProvider],
-    ['openai', OpenAIProvider],
-  ])('%s expone su nombre y chat() rechaza con mensaje de no implementado', async (name, Provider) => {
-    const p = new Provider();
-    expect(p.name).toBe(name);
-    await expect(p.chat([{ role: 'user', content: 'hola' }], {})).rejects.toThrow(/no está implementado/);
+    expect(createAIProvider().name).toBe('mock');
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining(`AI_PROVIDER=${provider} no está implementado`));
   });
 });
 
