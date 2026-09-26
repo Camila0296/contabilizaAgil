@@ -51,7 +51,10 @@ terceroCtrl.getTerceros = async (req, res) => {
 
     // Filtros básicos
     if (req.query.tipo) {
-      filter.tipo = req.query.tipo;
+      // Un tercero "ambos" es cliente y proveedor a la vez
+      filter.tipo = ['cliente', 'proveedor'].includes(req.query.tipo)
+        ? { $in: [req.query.tipo, 'ambos'] }
+        : req.query.tipo;
     }
 
     if (req.query.activo === 'true') {

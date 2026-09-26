@@ -255,6 +255,22 @@ describe('Facturas, cartera, PUC y chat - escenarios adicionales', () => {
     });
   });
 
+  describe('GET /api/terceros?tipo=', () => {
+    test('filtrar por cliente o proveedor incluye a los terceros de tipo "ambos"', async () => {
+      const base = { tipoDocumento: 'NIT', activo: true };
+      await Tercero.create([
+        { ...base, tipo: 'cliente', razonSocial: 'Solo Cliente', numeroDocumento: `1${Date.now()}` },
+        { ...base, tipo: 'proveedor', razonSocial: 'Solo Proveedor', numeroDocumento: `2${Date.now()}` },
+        { ...base, tipo: 'ambos', razonSocial: 'Cliente y Proveedor', numeroDocumento: `3${Date.now()}` },
+      ]);
+      const nombres = async (tipo) =>
+        (await as(auxiliar)(request(app).get(`/api/terceros?tipo=${tipo}`))).body.data.map(t => t.razonSocial).sort();
+      expect(await nombres('cliente')).toEqual(['Cliente y Proveedor', 'Solo Cliente']);
+      expect(await nombres('proveedor')).toEqual(['Cliente y Proveedor', 'Solo Proveedor']);
+      expect(await nombres('ambos')).toEqual(['Cliente y Proveedor']);
+    });
+  });
+
   describe('GET /api/terceros/:id', () => {
     test('devuelve el tercero o 404', async () => {
       const t = await Tercero.create({ tipo: 'proveedor', razonSocial: 'Prov SAS', tipoDocumento: 'NIT', numeroDocumento: `8${Date.now()}` });
