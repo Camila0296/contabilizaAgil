@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import { showSuccess, showError } from '../utils/alerts';
+import { hasRole, ROLES_CATALOGO } from '../utils/session';
 
 interface Tercero {
   _id?: string;
@@ -35,7 +36,7 @@ const Terceros: React.FC = () => {
   const [editing, setEditing] = useState<Tercero | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const isAdmin = localStorage.getItem('roles') ? JSON.parse(localStorage.getItem('roles') || '[]').includes('admin') : false;
+  const canManage = hasRole(...ROLES_CATALOGO);
 
   useEffect(() => {
     fetchTerceros();
@@ -44,7 +45,7 @@ const Terceros: React.FC = () => {
   const fetchTerceros = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch('/terceros');
+      const res = await apiFetch('/terceros?limit=100');
       const response = await res.json();
       setTerceros(response.data || response);
     } catch {
@@ -90,7 +91,8 @@ const Terceros: React.FC = () => {
         closeModal();
         fetchTerceros();
       } else {
-        showError('No se pudo guardar el tercero');
+        const data = await res.json().catch(() => ({}));
+        showError(data.error || 'No se pudo guardar el tercero');
       }
     } catch {
       showError('Error de conexión al guardar');
@@ -172,10 +174,11 @@ const Terceros: React.FC = () => {
                     <td className="table-cell hidden md:table-cell text-sm text-gray-500">{tercero.email}</td>
                     <td className="table-cell hidden lg:table-cell text-sm text-gray-500">{tercero.telefono}</td>
                     <td className="table-cell text-right space-x-2">
-                      {isAdmin && (
+                      {canManage && (
                         <>
                           <button
                             className="text-primary-600 hover:text-primary-900 p-1"
+                            aria-label="Editar"
                             onClick={() => openModal(tercero)}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,6 +187,7 @@ const Terceros: React.FC = () => {
                           </button>
                           <button
                             className="text-danger-600 hover:text-danger-900 p-1"
+                            aria-label="Deshabilitar"
                             onClick={() => handleDelete(tercero._id!)}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

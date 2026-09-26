@@ -68,7 +68,7 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
       
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cargar el perfil');
+        throw new Error(errorData.error || errorData.message || 'Error al cargar el perfil');
       }
       
       const data = await res.json();
@@ -133,8 +133,9 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
       }
       case 'newPassword': {
         if (value) {
+          // validatePassword reporta el campo como "password"; en este formulario es "newPassword"
           const error = validatePassword(value);
-          if (error) newErrors.push(error);
+          if (error) newErrors.push({ ...error, field: 'newPassword' });
           if (form.confirmPassword && form.confirmPassword !== value) {
             const matchError = errors.find(e => e.field === 'confirmPassword');
             if (!matchError) {
@@ -176,7 +177,7 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
 
     if (form.newPassword) {
       const passwordError = validatePassword(form.newPassword);
-      if (passwordError) newErrors.push(passwordError);
+      if (passwordError) newErrors.push({ ...passwordError, field: 'newPassword' });
 
       const matchError = validatePasswordMatch(form.newPassword, form.confirmPassword);
       if (matchError) newErrors.push(matchError);
@@ -472,7 +473,7 @@ const Perfil: React.FC<PerfilProps> = ({ onLogout }) => {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-500">Rol</span>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  profile.role?.name === 'admin' 
+                  profile.role?.name === 'administrador' 
                     ? 'bg-primary-100 text-primary-800' 
                     : 'bg-gray-100 text-gray-800'
                 }`}>

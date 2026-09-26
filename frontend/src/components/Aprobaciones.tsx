@@ -1,6 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import { showSuccess, showError } from '../utils/alerts';
+import { TIPOS_DOCUMENTO_PERMITIDOS } from '../utils/fileUpload';
+
+// Reconstruye el data URI a partir de un tipo permitido y el contenido base64, para no
+// incrustar tal cual un valor cargado por el usuario (p. ej. data:text/html,...)
+export function documentoSrc(doc: { tipo?: string; datos?: string }): string | null {
+  if (!doc.tipo || !TIPOS_DOCUMENTO_PERMITIDOS.includes(doc.tipo) || !doc.datos) return null;
+  const base64 = doc.datos.includes(',') ? doc.datos.split(',').pop() : doc.datos;
+  if (!base64 || !/^[A-Za-z0-9+/=s]+$/.test(base64)) return null;
+  return `data:${doc.tipo};base64,${base64}`;
+}
 
 interface User {
   _id: string;
@@ -41,12 +51,10 @@ const Aprobaciones: React.FC = () => {
 
   const fetchUsuarios = async () => {
     try {
-      const res = await apiFetch('/users');
+      // El backend devuelve solo las cuentas pendientes (no depende de la paginación de /users)
+      const res = await apiFetch('/aprobaciones/pendientes?limit=100');
       const response = await res.json();
-      const usuarios = response.data || response;
-      // Filtrar solo usuarios pendientes de aprobación
-      const pendientes = usuarios.filter((user: User) => !user.approved);
-      setUsuarios(pendientes);
+      setUsuarios(response.data || []);
     } catch {
       showError('No se pudieron cargar las solicitudes');
     } finally {
@@ -56,17 +64,15 @@ const Aprobaciones: React.FC = () => {
 
   const handleAprobar = async (id: string) => {
     try {
-      const res = await apiFetch(`/users/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved: true })
-      });
+      // Aprueba y reactiva la cuenta (approved + activo)
+      const res = await apiFetch(`/aprobaciones/${id}/aprobar`, { method: 'PUT' });
 
       if (res.ok) {
         showSuccess('Usuario aprobado exitosamente');
         fetchUsuarios(); // Recargar la lista
       } else {
-        showError('Error al aprobar usuario');
+        const data = await res.json().catch(() => ({}));
+        showError(data.error || 'Error al aprobar usuario');
       }
     } catch {
       showError('Error de conexión');
@@ -118,16 +124,17 @@ const Aprobaciones: React.FC = () => {
     }
 
     try {
-      const promises = usuarios.map(user => 
-        apiFetch(`/users/${user._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ approved: true })
-        })
-      );
+      const res = await apiFetch('/aprobaciones/batch/aprobar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: usuarios.map(user => user._id) })
+      });
 
-      await Promise.all(promises);
-      showSuccess('Todas las solicitudes han sido aprobadas');
+      if (res.ok) {
+        showSuccess('Todas las solicitudes han sido aprobadas');
+      } else {
+        showError('Error al aprobar solicitudes');
+      }
       fetchUsuarios();
     } catch {
       showError('Error al aprobar solicitudes');
@@ -326,6 +333,7 @@ const Aprobaciones: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900">Documento de identidad</h3>
               <button
                 className="text-gray-400 hover:text-gray-600"
+                aria-label="Cerrar"
                 onClick={() => setDocumentoModal(null)}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,15 +342,17 @@ const Aprobaciones: React.FC = () => {
               </button>
             </div>
             <div className="p-4">
-              {documentoModal.tipo?.startsWith('image/') ? (
+              {!documentoSrc(documentoModal) ? (
+                <p className="text-center text-gray-500">El documento no tiene un formato válido</p>
+              ) : documentoModal.tipo.startsWith('image/') ? (
                 <img
-                  src={documentoModal.datos}
+                  src={documentoSrc(documentoModal) as string}
                   alt="Documento de identidad"
                   className="max-w-full max-h-[70vh] mx-auto rounded-lg"
                 />
               ) : (
                 <embed
-                  src={documentoModal.datos}
+                  src={documentoSrc(documentoModal) as string}
                   type="application/pdf"
                   className="w-full h-[70vh] rounded-lg"
                 />

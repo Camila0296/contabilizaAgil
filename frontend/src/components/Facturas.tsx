@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { apiFetch } from '../api';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatFecha } from '../utils/format';
 import { showSuccess, showError } from '../utils/alerts';
+import { hasRole, ROLES_GESTION } from '../utils/session';
 import Select from 'react-select';
 import { retefuenteOptions, icaOptions } from '../data/withholdingOptions';
 import { getRecommendedRetention, retentionGuide } from '../data/retentionGuide';
@@ -83,6 +84,8 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   };
 
   const [facturas, setFacturas] = useState<Factura[]>([]);
+  // El auxiliar solo crea facturas; editar/eliminar es para roles de gestión
+  const canManage = hasRole(...ROLES_GESTION);
   const [form, setForm] = useState<Factura>(initialForm);
   const [editing, setEditing] = useState<Factura | null>(null);
   const [loading, setLoading] = useState(true);
@@ -144,7 +147,8 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   const fetchFacturas = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch('/facturas');
+      // El backend pagina de a 10 por defecto; se piden hasta 100 (su máximo)
+      const res = await apiFetch('/facturas?limit=100');
       const response = await res.json();
       setFacturas(response.data || response);
     } catch {
@@ -364,8 +368,10 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
     try {
       const method = editing ? 'PUT' : 'POST';
       const url = editing ? `/facturas/${editing._id}` : '/facturas';
+      // Al editar no se envían campos que calcula o controla el backend (dueño, impuestos, metadatos)
+      const { _id, usuario, impuestos, createdAt, updatedAt, __v, ...editable } = form as any;
       const facturaData = editing
-        ? { ...form }
+        ? editable
         : { ...form, usuario: userId };
       const res = await apiFetch(url, {
         method,
@@ -379,7 +385,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
       } else {
         try {
           const errorData = await res.json();
-          const errorMsg = errorData.error || errorData.message || 'No se pudo guardar la factura';
+          const errorMsg = errorData.details?.join(', ') || errorData.error || errorData.message || 'No se pudo guardar la factura';
           showError(errorMsg);
           setError(errorMsg);
         } catch {
@@ -393,13 +399,15 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('¿Eliminar esta factura? Esta acción no se puede deshacer.')) return;
     try {
       const res = await apiFetch(`/facturas/${id}`, { method: 'DELETE' });
       if (res.ok) {
         showSuccess('Factura eliminada');
         setFacturas(facturas.filter(f => f._id !== id));
       } else {
-        showError('No se pudo eliminar la factura');
+        const data = await res.json().catch(() => ({}));
+        showError(data.error || 'No se pudo eliminar la factura');
       }
     } catch {
       showError('Error de conexión al eliminar');
@@ -475,11 +483,11 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{factura.numero}</div>
                   <div className="text-xs text-gray-500 sm:hidden">
-                    {new Date(factura.fecha).toLocaleDateString()}
+                    {formatFecha(factura.fecha)}
                   </div>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
-                  {new Date(factura.fecha).toLocaleDateString()}
+                  {formatFecha(factura.fecha)}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{factura.proveedor}</div>
@@ -505,6 +513,8 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end space-x-2">
+                    {canManage && (
+                    <>
                     <button
                       className="text-primary-600 hover:text-primary-900 p-1 rounded-md hover:bg-primary-50 transition-colors duration-200"
                       title="Editar"
@@ -523,6 +533,8 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
+                    </>
+                    )}
                   </div>
                   </td>
                 </tr>
@@ -757,7 +769,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       aria-invalid={hasFieldError(errors, 'retefuentePct')}
                     >
                         {retefuenteOptions.map(o => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
+                          <option key={o.label} value={o.value}>{o.label}</option>
                         ))}
                       </select>
                     <p className="text-xs text-gray-500 mt-1">
@@ -780,7 +792,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
                       aria-invalid={hasFieldError(errors, 'icaPct')}
                     >
                         {icaOptions.map(o => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
+                          <option key={o.label} value={o.value}>{o.label}</option>
                         ))}
                       </select>
                     <p className="text-xs text-gray-500 mt-1">

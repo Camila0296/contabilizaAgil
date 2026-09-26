@@ -73,7 +73,8 @@ const Usuarios: React.FC = () => {
 
   const fetchUsuarios = async () => {
     try {
-      const res = await apiFetch('/users');
+      // El backend pagina de a 10 por defecto; se piden hasta 100 (su máximo)
+      const res = await apiFetch('/users?limit=100');
       const response = await res.json();
       setUsuarios(response.data || response);
     } catch {
@@ -337,15 +338,17 @@ const Usuarios: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('¿Estás seguro de que quieres eliminar este usuario?')) return;
+    // DELETE /users/:id no borra: deshabilita la cuenta (activo=false)
+    if (!window.confirm('¿Estás seguro de que quieres deshabilitar este usuario? No podrá iniciar sesión.')) return;
 
     try {
       const res = await apiFetch(`/users/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        showSuccess('Usuario eliminado');
-        setUsuarios(usuarios.filter(u => u._id !== id));
+        showSuccess('Usuario deshabilitado');
+        fetchUsuarios();
       } else {
-        showError('No se pudo eliminar el usuario');
+        const data = await res.json().catch(() => ({}));
+        showError(data.error || 'No se pudo deshabilitar el usuario');
       }
     } catch {
       showError('Error de conexión');
@@ -500,7 +503,7 @@ const Usuarios: React.FC = () => {
                     <td className="table-cell text-gray-600">{usuario.email}</td>
                     <td className="table-cell">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        usuario.role.name === 'admin' 
+                        usuario.role.name === 'administrador' 
                           ? 'bg-primary-100 text-primary-800' 
                           : 'bg-gray-100 text-gray-800'
                       }`}>

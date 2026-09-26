@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { apiFetch } from '../api';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatFecha } from '../utils/format';
 import { showSuccess, showError } from '../utils/alerts';
+import { hasRole, ROLES_GESTION } from '../utils/session';
 import Select from 'react-select';
 import { retefuenteOptions, icaOptions } from '../data/withholdingOptions';
 
@@ -36,6 +37,7 @@ interface FacturaCartera {
     totalAPagar?: number;
   };
   usuario?: any;
+  estado?: 'activa' | 'anulada';
 }
 
 interface Tercero {
@@ -79,6 +81,8 @@ interface FacturaCarteraProps {
 
 const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
   const [facturas, setFacturas] = useState<FacturaCartera[]>([]);
+  // El auxiliar solo crea y registra pagos; editar/anular es para roles de gestión
+  const canManage = hasRole(...ROLES_GESTION);
   const [terceros, setTerceros] = useState<Tercero[]>([]);
   const [pucs, setPucs] = useState<Puc[]>([]);
   const [form, setForm] = useState<FacturaCartera>(initialForm);
@@ -136,7 +140,7 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
 
   const fetchTerceros = async () => {
     try {
-      const res = await apiFetch('/terceros?tipo=cliente');
+      const res = await apiFetch('/terceros?tipo=cliente&activo=true&limit=100');
       const response = await res.json();
       setTerceros(response.data || response);
     } catch {
@@ -146,7 +150,7 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
 
   const fetchPucs = async () => {
     try {
-      const res = await apiFetch('/puc');
+      const res = await apiFetch('/puc?activo=true&limit=100');
       const response = await res.json();
       setPucs(response.data || response);
     } catch {
@@ -192,7 +196,13 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
   const openModal = (factura?: FacturaCartera) => {
     if (factura) {
       setEditing(factura);
-      setForm({ ...factura, fecha: toInputDate(factura.fecha) });
+      // La lista trae tercero/puc populados: el formulario (y el backend) trabajan con sus ids
+      setForm({
+        ...factura,
+        fecha: toInputDate(factura.fecha),
+        tercero: factura.tercero?._id || factura.tercero,
+        puc: factura.puc?._id || factura.puc
+      });
     } else {
       setEditing(null);
       setForm(initialForm);
@@ -252,13 +262,15 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('¿Anular esta factura? Quedará registrada como anulada y no admitirá pagos.')) return;
     try {
       const res = await apiFetch(`/facturas-cartera/${id}`, { method: 'DELETE' });
       if (res.ok) {
         showSuccess('Factura anulada');
-        setFacturas(facturas.filter(f => f._id !== id));
+        fetchFacturas();
       } else {
-        showError('No se pudo anular la factura');
+        const data = await res.json().catch(() => ({}));
+        showError(data.error || 'No se pudo anular la factura');
       }
     } catch {
       showError('Error de conexión al anular');
@@ -337,7 +349,7 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                         </span>
                       </td>
                       <td className="table-cell hidden sm:table-cell text-sm">
-                        {new Date(factura.fecha).toLocaleDateString()}
+                        {formatFecha(factura.fecha)}
                       </td>
                       <td className="table-cell">
                         <div className="text-sm font-medium">{factura.tercero?.razonSocial}</div>
@@ -354,8 +366,28 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                         {formatCurrency(factura.monto)}
                       </td>
                       <td className="table-cell text-right space-x-2">
+                        {factura.estado === 'anulada' ? (
+                          <span className="inline-block px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">Anulada</span>
+                        ) : (
+                        <>
+                        {factura.estadoPago !== 'Pagada' && (
+                          <button
+                            className="text-success-600 hover:text-success-900 p-1 text-sm font-semibold"
+                            aria-label="Registrar pago"
+                            title="Registrar pago"
+                            onClick={() => {
+                              setSelectedFactura(factura);
+                              setShowPaymentModal(true);
+                            }}
+                          >
+                            $
+                          </button>
+                        )}
+                        {canManage && (
+                        <>
                         <button
                           className="text-primary-600 hover:text-primary-900 p-1"
+                          aria-label="Editar"
                           onClick={() => openModal(factura)}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -364,12 +396,17 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                         </button>
                         <button
                           className="text-danger-600 hover:text-danger-900 p-1"
+                          aria-label="Anular"
                           onClick={() => handleDelete(factura._id!)}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
+                        </>
+                        )}
+                        </>
+                        )}
                       </td>
                     </tr>
                   );
@@ -584,7 +621,7 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Pendiente</p>
-                          <p className="text-sm font-semibold text-red-600">{formatCurrency(form.saldoPendiente || form.monto)}</p>
+                          <p className="text-sm font-semibold text-red-600">{formatCurrency(form.saldoPendiente ?? form.monto)}</p>
                         </div>
                       </div>
                       <button
@@ -624,7 +661,7 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                       onChange={handleChange}
                     >
                       {retefuenteOptions.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
+                        <option key={o.label} value={o.value}>{o.label}</option>
                       ))}
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
@@ -641,7 +678,7 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                       onChange={handleChange}
                     >
                       {icaOptions.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
+                        <option key={o.label} value={o.value}>{o.label}</option>
                       ))}
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
@@ -702,7 +739,7 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Saldo Pendiente</p>
-                    <p className="text-lg font-bold text-red-600">{formatCurrency(selectedFactura.saldoPendiente || selectedFactura.monto)}</p>
+                    <p className="text-lg font-bold text-red-600">{formatCurrency(selectedFactura.saldoPendiente ?? selectedFactura.monto)}</p>
                   </div>
                 </div>
               </div>
@@ -721,7 +758,8 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                     setShowPaymentModal(false);
                     setPaymentForm({ monto: 0, referencia: '', cuenta: '1110' });
                   } else {
-                    showError('Error al registrar el pago');
+                    const data = await res.json().catch(() => ({}));
+                    showError(data.error || 'Error al registrar el pago');
                   }
                 } catch {
                   showError('Error de conexión');
@@ -742,7 +780,7 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                         required
                         step="0.01"
                         min="0"
-                        max={selectedFactura.saldoPendiente || selectedFactura.monto}
+                        max={selectedFactura.saldoPendiente ?? selectedFactura.monto}
                         placeholder="0.00"
                       />
                     </div>
@@ -766,8 +804,8 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
                       value={paymentForm.cuenta}
                       onChange={(e) => setPaymentForm(prev => ({ ...prev, cuenta: e.target.value }))}
                     >
-                      <option value="1110">1110 - Caja</option>
-                      <option value="1105">1105 - Bancos</option>
+                      <option value="1105">1105 - Caja</option>
+                      <option value="1110">1110 - Bancos</option>
                     </select>
                     <p className="text-xs text-gray-500 mt-1">Cuenta donde se recibió el pago</p>
                   </div>

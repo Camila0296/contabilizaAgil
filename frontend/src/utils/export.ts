@@ -2,7 +2,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { formatCurrency } from './format';
+import { formatCurrency, formatFecha } from './format';
+
+// Porcentaje de una parte sobre el total, sin NaN/Infinity cuando el total es 0
+const pct = (parte: number, total: number) => `${(total ? (parte / total) * 100 : 0).toFixed(1)}%`;
 
 interface Factura {
   _id: string;
@@ -62,7 +65,7 @@ export const exportarPDF = (reporteData: ReporteData, mes?: string) => {
     
     const tableData = reporteData.facturasRecientes.map(factura => [
       factura.numero,
-      new Date(factura.fecha).toLocaleDateString(),
+      formatFecha(factura.fecha),
       factura.proveedor,
       formatCurrency(factura.monto),
       formatCurrency(factura.impuestos.iva),
@@ -123,7 +126,7 @@ export const exportarPDF = (reporteData: ReporteData, mes?: string) => {
       item.mes,
       item.cantidad,
       formatCurrency(item.monto),
-      `${((item.monto / reporteData.totalMonto) * 100).toFixed(1)}%`
+      pct(item.monto, reporteData.totalMonto)
     ]);
     
     autoTable(doc, {
@@ -164,9 +167,9 @@ export const exportarExcel = (reporteData: ReporteData, mes?: string) => {
     ['Total ICA:', reporteData.totalIca],
     [''],
     ['DISTRIBUCIÓN POR IMPUESTOS'],
-    ['IVA:', `${((reporteData.totalIva / reporteData.totalMonto) * 100).toFixed(1)}%`],
-    ['ReteFuente:', `${((reporteData.totalReteFuente / reporteData.totalMonto) * 100).toFixed(1)}%`],
-    ['ICA:', `${((reporteData.totalIca / reporteData.totalMonto) * 100).toFixed(1)}%`]
+    ['IVA:', pct(reporteData.totalIva, reporteData.totalMonto)],
+    ['ReteFuente:', pct(reporteData.totalReteFuente, reporteData.totalMonto)],
+    ['ICA:', pct(reporteData.totalIca, reporteData.totalMonto)]
   ];
   
   const resumenSheet = XLSX.utils.aoa_to_sheet(resumenData);
@@ -181,7 +184,7 @@ export const exportarExcel = (reporteData: ReporteData, mes?: string) => {
          reporteData.facturasRecientes.forEach(factura => {
        facturasData.push([
          factura.numero,
-         new Date(factura.fecha).toLocaleDateString(),
+         formatFecha(factura.fecha),
          factura.proveedor,
          factura.monto.toString(),
          factura.impuestos.iva.toString(),
@@ -209,7 +212,7 @@ export const exportarExcel = (reporteData: ReporteData, mes?: string) => {
          proveedor.proveedor,
          proveedor.cantidad.toString(),
          proveedor.monto.toString(),
-         `${((proveedor.monto / reporteData.totalMonto) * 100).toFixed(1)}%`
+         pct(proveedor.monto, reporteData.totalMonto)
        ]);
      });
     
@@ -228,7 +231,7 @@ export const exportarExcel = (reporteData: ReporteData, mes?: string) => {
          item.mes,
          item.cantidad.toString(),
          item.monto.toString(),
-         `${((item.monto / reporteData.totalMonto) * 100).toFixed(1)}%`
+         pct(item.monto, reporteData.totalMonto)
        ]);
      });
     

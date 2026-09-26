@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatFecha } from '../utils/format';
 import { showError } from '../utils/alerts';
+import { hasRole } from '../utils/session';
 
 interface HomeProps {
   onSectionChange?: (section: 'panel' | 'facturacion' | 'reportes' | 'usuarios' | 'aprobaciones' | 'perfil') => void;
@@ -34,6 +35,10 @@ const Home: React.FC<HomeProps> = ({ onSectionChange }) => {
     try {
       const res = await apiFetch('/facturas/dashboard/stats');
       const data = await res.json();
+      if (!res.ok) {
+        showError(data.error || 'Error al cargar las estadísticas del dashboard');
+        return;
+      }
       setStats(data);
     } catch (error) {
       showError('Error al cargar las estadísticas del dashboard');
@@ -132,7 +137,7 @@ const Home: React.FC<HomeProps> = ({ onSectionChange }) => {
     id: index + 1,
     action: 'Nueva factura creada',
     description: `Factura #${factura?.numero || 'N/A'} por ${formatCurrency(factura?.monto || 0)}`,
-    time: factura?.fecha ? new Date(factura.fecha).toLocaleDateString('es-ES') : 'Fecha no disponible',
+    time: factura?.fecha ? formatFecha(factura.fecha, {}, 'es-ES') : 'Fecha no disponible',
     type: 'factura' as const
   }));
 
@@ -281,19 +286,22 @@ const Home: React.FC<HomeProps> = ({ onSectionChange }) => {
           </div>
         </div>
 
-        <div className="card group cursor-pointer" onClick={handleGestionarUsuarios}>
-          <div className="card-body text-center">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-transform group-hover:scale-110"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 8px 24px rgba(245,158,11,0.35)' }}>
-              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
+        {/* Solo el administrador gestiona usuarios */}
+        {hasRole('administrador') && (
+          <div className="card group cursor-pointer" onClick={handleGestionarUsuarios}>
+            <div className="card-body text-center">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-transform group-hover:scale-110"
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 8px 24px rgba(245,158,11,0.35)' }}>
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-1 font-display">Gestionar Usuarios</h3>
+              <p className="text-gray-500 text-sm mb-4">Administrar usuarios y permisos</p>
+              <button className="btn btn-secondary w-full">Gestionar</button>
             </div>
-            <h3 className="text-base font-bold text-gray-900 mb-1 font-display">Gestionar Usuarios</h3>
-            <p className="text-gray-500 text-sm mb-4">Administrar usuarios y permisos</p>
-            <button className="btn btn-secondary w-full">Gestionar</button>
           </div>
-        </div>
+        )}
 
       </div>
     </div>

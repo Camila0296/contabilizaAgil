@@ -20,7 +20,7 @@ const localStorageMock = {
   removeItem: jest.fn(),
   clear: jest.fn(),
 };
-global.localStorage = localStorageMock;
+global.localStorage = localStorageMock as unknown as Storage;
 
 // Mock de sessionStorage
 const sessionStorageMock = {
@@ -29,7 +29,7 @@ const sessionStorageMock = {
   removeItem: jest.fn(),
   clear: jest.fn(),
 };
-global.sessionStorage = sessionStorageMock;
+global.sessionStorage = sessionStorageMock as unknown as Storage;
 
 // Limpiar mocks después de cada prueba
 afterEach(() => {

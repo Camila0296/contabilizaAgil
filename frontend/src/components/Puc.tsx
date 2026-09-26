@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
 import { showSuccess, showError } from '../utils/alerts';
+import { hasRole, ROLES_CATALOGO } from '../utils/session';
 
 interface Puc {
   _id?: string;
@@ -23,7 +24,7 @@ const Puc: React.FC = () => {
   const [editing, setEditing] = useState<Puc | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const isAdmin = localStorage.getItem('roles') ? JSON.parse(localStorage.getItem('roles') || '[]').includes('admin') : false;
+  const canManage = hasRole(...ROLES_CATALOGO);
 
   useEffect(() => {
     fetchPucs();
@@ -32,7 +33,7 @@ const Puc: React.FC = () => {
   const fetchPucs = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch('/puc');
+      const res = await apiFetch('/puc?limit=100');
       const response = await res.json();
       setPucs(response.data || response);
     } catch {
@@ -78,7 +79,8 @@ const Puc: React.FC = () => {
         closeModal();
         fetchPucs();
       } else {
-        showError('No se pudo guardar la cuenta');
+        const data = await res.json().catch(() => ({}));
+        showError(data.error || 'No se pudo guardar la cuenta');
       }
     } catch {
       showError('Error de conexión al guardar');
@@ -106,15 +108,17 @@ const Puc: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Plan Único de Cuentas</h1>
           <p className="text-gray-600 mt-1 text-sm md:text-base">Administra el catálogo de cuentas contables</p>
         </div>
-        <button
-          className="w-full md:w-auto btn btn-primary flex items-center justify-center space-x-2 py-2.5 px-4"
-          onClick={() => openModal()}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          <span>Nueva Cuenta</span>
-        </button>
+        {canManage && (
+          <button
+            className="w-full md:w-auto btn btn-primary flex items-center justify-center space-x-2 py-2.5 px-4"
+            onClick={() => openModal()}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Nueva Cuenta</span>
+          </button>
+        )}
       </div>
 
       <div className="card p-0 overflow-hidden">
@@ -160,10 +164,11 @@ const Puc: React.FC = () => {
                       </span>
                     </td>
                     <td className="table-cell text-right space-x-2">
-                      {isAdmin && (
+                      {canManage && (
                         <>
                           <button
                             className="text-primary-600 hover:text-primary-900 p-1"
+                            aria-label="Editar"
                             onClick={() => openModal(puc)}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,6 +177,7 @@ const Puc: React.FC = () => {
                           </button>
                           <button
                             className="text-danger-600 hover:text-danger-900 p-1"
+                            aria-label="Deshabilitar"
                             onClick={() => handleDelete(puc._id!)}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

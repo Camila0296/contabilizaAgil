@@ -150,12 +150,6 @@ export const getRecommendedRetention = (keyword: string): number | null => {
     'licencia software': 3.5,
     'derecho de uso': 3.5,
 
-    // SERVICIOS GENERALES - 4% (declarantes) o 6% (no declarantes)
-    'servicio': 4,
-    'servicios': 4,
-    'asesoría': 4,
-    'asesor': 4,
-
     // TRANSPORTE - 1% o 3.5%
     'transporte de carga': 1,
     'flete': 1,
@@ -186,23 +180,16 @@ export const getRecommendedRetention = (keyword: string): number | null => {
     'urbanización': 2,
 
     // ARRENDAMIENTO - 3.5% (inmuebles) o 4% (muebles)
+    'arriendo muebles': 4,
     'arriendo': 3.5,
     'arrendamiento': 3.5,
     'alquiler': 3.5,
-    'arriendo muebles': 4,
 
     // COMBUSTIBLES - 0.1% (BAJA RETENCIÓN)
     'combustible': 0.1,
     'gasolina': 0.1,
     'diésel': 0.1,
     'acpm': 0.1,
-
-    // COMPRA DE BIENES GENERALES - 2.5% (declarantes) o 3.5% (no declarantes)
-    'compra': 2.5,
-    'mercancía': 2.5,
-    'material': 2.5,
-    'bien': 2.5,
-    'producto': 2.5,
 
     // COMPRA CON TARJETA - 1.5%
     'tarjeta': 1.5,
@@ -232,13 +219,26 @@ export const getRecommendedRetention = (keyword: string): number | null => {
     // OTROS
     'temporales': 1,
     'servicios temporales': 1,
+
+    // Genéricos al final: solo aplican si no hubo una coincidencia más específica
+    // SERVICIOS GENERALES - 4% (declarantes) o 6% (no declarantes)
+    'servicio': 4,
+    'servicios': 4,
+    'asesoría': 4,
+    'asesor': 4,
+    // COMPRA DE BIENES GENERALES - 2.5% (declarantes) o 3.5% (no declarantes)
+    'compra': 2.5,
+    'mercancía': 2.5,
+    'material': 2.5,
+    'bien': 2.5,
+    'producto': 2.5,
   };
 
-  for (const [key, value] of Object.entries(retentionMap)) {
-    if (keyword_lower.includes(key)) {
-      return value;
-    }
-  }
+  // La clave debe ser una palabra completa, admitiendo plural (evita "cobranza" → "obra" o "autorización" → "auto")
+  const matchesWord = (key: string) =>
+    new RegExp(`(^|[^a-z0-9áéíóúüñ])${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(e?s)?(?![a-z0-9áéíóúüñ])`).test(keyword_lower);
 
-  return null;
+  // El orden del mapa define la prioridad: primero lo específico, al final lo genérico
+  const match = Object.keys(retentionMap).find(matchesWord);
+  return match !== undefined ? retentionMap[match] : null;
 };

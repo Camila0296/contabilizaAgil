@@ -11,6 +11,10 @@ import Logo from './components/Logo';
 import Terceros from './components/Terceros';
 import Puc from './components/Puc';
 import FacturaCartera from './components/FacturaCartera';
+import { apiFetch } from './api';
+
+const SESSION_KEYS = ['token', 'userId', 'role', 'roles'];
+const clearSession = () => SESSION_KEYS.forEach(k => localStorage.removeItem(k));
 
 type Section = 'panel' | 'facturacion' | 'facturacion-cartera' | 'reportes' | 'usuarios' | 'aprobaciones' | 'terceros' | 'puc' | 'perfil';
 
@@ -252,10 +256,7 @@ function App() {
 
   const handleLogout = () => {
     // Limpiar localStorage al cerrar sesión
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('role');
-    localStorage.removeItem('roles');
+    clearSession();
     // Resetear estado
     setIsLoggedIn(false);
     setRole(null);
@@ -268,8 +269,6 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('role');
-    const userRoles = JSON.parse(localStorage.getItem('roles') || '[]');
-    
     const validateToken = async () => {
       // Si no hay token o rol, marcar como no autenticado
       if (!token || !userRole) {
@@ -286,11 +285,7 @@ function App() {
       
       // Validar el token en segundo plano
       try {
-        const response = await fetch('http://localhost:3000/api/auth/verify', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await apiFetch('/auth/verify');
         
         if (!response.ok) {
           throw new Error('Token inválido');
@@ -299,9 +294,7 @@ function App() {
         console.error('Error al validar el token:', error);
         // Solo limpiar si hay un error de autenticación específico
         if (error instanceof Error && error.message === 'Token inválido') {
-          localStorage.removeItem('token');
-          localStorage.removeItem('role');
-          localStorage.removeItem('userId');
+          clearSession();
           setIsLoggedIn(false);
           setRole(null);
         }

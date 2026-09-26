@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatFecha } from '../utils/format';
 import { showError } from '../utils/alerts';
 import { exportarPDF, exportarExcel } from '../utils/export';
 
@@ -182,12 +182,7 @@ const Reportes: React.FC = () => {
   };
 
   const formatearFecha = (fecha: string) => {
-    if (!fecha) return '';
-    return new Date(fecha).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    return formatFecha(fecha, { year: 'numeric', month: 'long', day: 'numeric' }, 'es-ES');
   };
 
   const generarReportePDF = () => {
@@ -206,7 +201,11 @@ const Reportes: React.FC = () => {
     }
   };
 
-  if (loading) {
+  const hayFiltros = Object.values(filtros).some(v => v !== '');
+
+  // Spinner de página completa solo en la primera carga: si ya hay datos, se mantienen
+  // los filtros montados (si no, escribir en un filtro de texto perdía el foco)
+  if (loading && !reporteData) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="flex items-center space-x-2">
@@ -243,6 +242,14 @@ const Reportes: React.FC = () => {
         >
           Reintentar
         </button>
+        {hayFiltros && (
+          <button
+            onClick={limpiarFiltros}
+            className="mt-4 ml-3 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+          >
+            Limpiar filtros
+          </button>
+        )}
       </div>
     );
   }
@@ -606,7 +613,7 @@ const Reportes: React.FC = () => {
                     <tr key={factura._id} className="table-row">
                       <td className="table-cell font-medium">{factura.numero}</td>
                       <td className="table-cell text-sm text-gray-500">
-                        {new Date(factura.fecha).toLocaleDateString()}
+                        {formatFecha(factura.fecha)}
                       </td>
                       <td className="table-cell">{factura.proveedor}</td>
                       <td className="table-cell font-semibold">{formatCurrency(factura.monto)}</td>

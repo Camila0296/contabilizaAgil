@@ -9,9 +9,10 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   const defaultHeaders: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
   const mergedOptions: RequestInit = {
     ...options,
+    // Un Authorization explícito (p. ej. el token recién emitido en el registro) tiene prioridad
     headers: {
-      ...(options.headers || {}),
-      ...defaultHeaders
+      ...defaultHeaders,
+      ...(options.headers || {})
     }
   };
   const res = await fetch(`${API_URL}${path}`, mergedOptions);

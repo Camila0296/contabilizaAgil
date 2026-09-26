@@ -1,3 +1,6 @@
+// Zona horaria de Colombia (UTC-5): hace visibles errores de fechas corridas un día
+process.env.TZ = 'America/Bogota';
+
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
