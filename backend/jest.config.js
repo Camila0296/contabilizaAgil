@@ -6,6 +6,9 @@ module.exports = {
     'controllers/**/*.js',
     'models/**/*.js',
     'middleware/**/*.js',
+    'routes/**/*.js',
+    'services/**/*.js',
+    'utils/**/*.js',
     '!**/node_modules/**',
     '!**/coverage/**'
   ],

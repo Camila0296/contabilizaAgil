@@ -81,6 +81,21 @@ const createTestAdmin = async () => {
   });
 };
 
+// Crear un usuario aprobado con el rol indicado y devolver { user, token }
+let userCounter = 0;
+const createUserWithToken = async (roleName = 'auxiliar', overrides = {}) => {
+  const role = await createTestRole(roleName);
+  const n = `${Date.now()}${userCounter++}`;
+  const user = await createTestUser({
+    email: `${roleName}-${n}@test.com`,
+    numeroDocumento: n.slice(-10),
+    role: role._id,
+    ...overrides
+  });
+  const token = jwt.sign({ id: user._id, role: role.name }, process.env.JWT_SECRET || 'test-secret-key', { expiresIn: '1h' });
+  return { user, token, role };
+};
+
 // Mock de respuesta HTTP
 const mockResponse = () => {
   const res = {};
@@ -118,6 +133,7 @@ module.exports = {
   createTestUser,
   createTestToken,
   createTestAdmin,
+  createUserWithToken,
   mockResponse,
   mockRequest,
   // Funciones mock (cuando se ejecuta con jest.config.mocks.js)
