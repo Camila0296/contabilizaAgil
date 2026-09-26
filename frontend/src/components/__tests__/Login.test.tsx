@@ -160,7 +160,7 @@ describe('Login Component', () => {
     });
 
     it.each([
-      ['credenciales inválidas', 'Contraseña incorrecta'],
+      ['credenciales inválidas', 'Credenciales inválidas'],
       ['cuenta pendiente', 'Cuenta pendiente de aprobación'],
       ['cuenta deshabilitada', 'Cuenta deshabilitada'],
     ])('muestra el error del backend: %s', async (_caso, mensaje) => {

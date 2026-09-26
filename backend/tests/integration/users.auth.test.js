@@ -43,6 +43,16 @@ describe('Auth y Usuarios - escenarios adicionales', () => {
       expect(res.body.error).toMatch(/requeridos/);
     });
 
+    test('correo inexistente y contraseña incorrecta dan la misma respuesta (no revela cuentas)', async () => {
+      const { user } = await createUserWithToken('contador', { password: 'Clave#123' });
+      const noExiste = await request(app).post('/api/auth/login').send({ email: 'nadie@test.com', password: 'Clave#123' });
+      const malaClave = await request(app).post('/api/auth/login').send({ email: user.email, password: 'Otra#1234' });
+      expect(noExiste.status).toBe(400);
+      expect(malaClave.status).toBe(400);
+      expect(noExiste.body).toEqual({ error: 'Credenciales inválidas' });
+      expect(malaClave.body).toEqual(noExiste.body);
+    });
+
     test('403 si la cuenta está deshabilitada', async () => {
       const { user } = await createUserWithToken('contador', { activo: false, password: 'Clave#123' });
       const res = await request(app).post('/api/auth/login').send({ email: user.email, password: 'Clave#123' });

@@ -98,7 +98,7 @@ describe('Auth Controller - Con Mocks', () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe('Usuario no encontrado');
+      expect(res.body.error).toBe('Credenciales inválidas');
     });
 
     it('should return error for invalid password', async () => {
@@ -120,7 +120,7 @@ describe('Auth Controller - Con Mocks', () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe('Contraseña incorrecta');
+      expect(res.body.error).toBe('Credenciales inválidas');
     });
 
     it('should return error for unapproved user', async () => {

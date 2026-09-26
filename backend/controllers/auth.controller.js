@@ -6,6 +6,9 @@ const { isStrongPassword, PASSWORD_ERROR, BCRYPT_ROUNDS } = require('../utils/pa
 
 const authCtrl = {};
 
+// Hash de relleno para comparar cuando el email no existe (mismo tiempo de respuesta)
+const DUMMY_HASH = bcrypt.hashSync('contraseña-inexistente', BCRYPT_ROUNDS);
+
 // Validar formato de email
 function isValidEmail(email) {
   if (!email || typeof email !== 'string') return false;
@@ -160,9 +163,9 @@ authCtrl.login = async (req, res) => {
     return res.status(400).json({ error: 'Email y contraseña son requeridos' });
   }
   let user = await User.findOne({ email: email.toLowerCase() }).populate('role');
-  if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta' });
+  // Mismo mensaje y mismo costo (bcrypt) exista o no el usuario: no revela qué correos están registrados
+  const valid = await bcrypt.compare(password, user ? user.password : DUMMY_HASH);
+  if (!user || !valid) return res.status(400).json({ error: 'Credenciales inválidas' });
   if (user.activo === false) return res.status(403).json({ error: 'Cuenta deshabilitada' });
   // Generar token JWT
   if (!user.approved) return res.status(403).json({ error: 'Cuenta pendiente de aprobación' });

@@ -10,7 +10,7 @@ async function runLoginTest() {
     await (await waitVisible(driver, By.id('email'))).sendKeys(CONFIG.admin.email);
     await (await waitVisible(driver, By.id('password'))).sendKeys('ClaveIncorrecta#1');
     await clickButton(driver, 'Iniciar sesión');
-    await waitForText(driver, 'Contraseña incorrecta');
+    await waitForText(driver, 'Credenciales inválidas');
     const token = await driver.executeScript('return window.localStorage.getItem("token")');
     if (token) throw new Error('Se guardó un token con credenciales inválidas');
 
