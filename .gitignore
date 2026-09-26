@@ -34,3 +34,26 @@ chatbot-*.png
 /*.jpeg
 verify-*.png
 vcheck*.png
+
+# Builds
+build/
+dist/
+
+# Documentación: solo README.md en raíz; el resto va en docs/
+/*.md
+!/README.md
+/*.txt
+# Notas de sesión / reportes de trabajo (solo locales)
+docs/notas/
+
+# Salidas sueltas de scripts / diagnósticos
+/*.html
+
+# Plugins / config local de herramientas de IA
+.claude-plugin/
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

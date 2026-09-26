@@ -138,6 +138,7 @@ proyecto-final/
 │   ├── e2e/            # Pruebas de extremo a extremo
 │   ├── unit/           # Pruebas unitarias
 │   └── integration/    # Pruebas de integración
+├── docs/                # Documentación del proyecto (requisitos, roles, guías)
 ├── .gitignore
 ├── package.json
 └── README.md

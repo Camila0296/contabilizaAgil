@@ -25,3 +25,6 @@ report/
 
 # Ignore TypeScript build info
 tsconfig.*.tsbuildinfo
+
+# HTML de página que guardan los scripts de e2e al fallar (p. ej. login-page.html)
+*.html
