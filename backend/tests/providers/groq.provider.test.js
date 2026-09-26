@@ -170,7 +170,7 @@ describe('GroqAIProvider - Validación de Respuestas', () => {
   });
 
   describe('Manejo de errores', () => {
-    test('Retorna mensaje de error si messages está vacío', async () => {
+    test('Rechaza un historial de mensajes vacío', async () => {
       const messages = [];
       const context = {
         user: { nombres: 'Test', role: 'user' },
@@ -178,12 +178,8 @@ describe('GroqAIProvider - Validación de Respuestas', () => {
         facturas: []
       };
 
-      const result = await provider.chat(messages, context);
-
-      expect(result.reply).toBeDefined();
-      // Debería retornar algún mensaje de error
-      expect(result.reply.length).toBeGreaterThan(10);
-      expect(result.reply.toLowerCase()).toMatch(/error|problema|intenta/i);
+      // El controlador valida antes; el provider rechaza un historial vacío
+      await expect(provider.chat(messages, context)).rejects.toThrow(/empty or invalid/);
     }, 30000);
 
     test('Retorna respuesta fallback si hay error en Groq', async () => {

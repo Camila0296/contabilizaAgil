@@ -152,3 +152,54 @@ describe('providers/mock.provider', () => {
     expect(r.reply).toMatch(/Plan Único de Cuentas/);
   });
 });
+
+describe('services/ai.service - responder (enrutador del chat)', () => {
+  const { responder } = require('../../services/ai.service');
+  const ctx = { user: { nombres: 'Ana', role: 'auxiliar' }, stats: { totalFacturas: 12 }, cartera: {}, facturas: [] };
+  const msgs = (content) => [{ role: 'assistant', content: 'Hola' }, { role: 'user', content }];
+  const llm = (impl) => ({ name: 'groq', chat: jest.fn(impl) });
+
+  beforeAll(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(global, 'setTimeout').mockImplementation((fn) => { fn(); return 0; });
+  });
+  afterAll(() => jest.restoreAllMocks());
+
+  test('las intenciones locales no llaman a la IA', async () => {
+    const provider = llm(async () => ({ reply: 'IA' }));
+    const r = await responder(msgs('¿cuántas facturas tengo?'), ctx, provider);
+    expect(r).toEqual({ reply: expect.stringMatching(/12 facturas/), source: 'local' });
+    expect(provider.chat).not.toHaveBeenCalled();
+  });
+
+  test('usa el último mensaje del usuario, no el del asistente', async () => {
+    const r = await responder([{ role: 'user', content: 'hola' }, { role: 'assistant', content: 'llévame a cartera' }, { role: 'user', content: 'abre reportes' }], ctx, llm());
+    expect(r.action.payload).toBe('reportes');
+  });
+
+  test('las preguntas abiertas van a la IA con el historial y el contexto', async () => {
+    const provider = llm(async () => ({ reply: 'Usa la cuenta 5120' }));
+    const historial = msgs('¿qué PUC uso para arriendo?');
+    const r = await responder(historial, ctx, provider);
+    expect(r).toEqual({ reply: 'Usa la cuenta 5120', source: 'groq' });
+    expect(provider.chat).toHaveBeenCalledWith(historial, ctx);
+  });
+
+  test.each([
+    ['modelo inexistente', Object.assign(new Error('404 model_not_found'), { status: 404 })],
+    ['límite de peticiones', Object.assign(new Error('429'), { status: 429 })],
+    ['caída del servicio', Object.assign(new Error('500'), { status: 500 })],
+    ['sin red', new TypeError('fetch failed')],
+  ])('si la IA falla (%s) responde con reglas locales, nunca con un error genérico', async (_caso, error) => {
+    const r = await responder(msgs('¿qué es el PUC?'), ctx, llm(async () => { throw error; }));
+    expect(r.source).toBe('mock');
+    expect(r.reply).toMatch(/Plan Único de Cuentas/);
+    expect(r.reply).not.toMatch(/problema con el servicio de IA/);
+  });
+
+  test('con el proveedor mock no intenta llamar a una IA', async () => {
+    const r = await responder(msgs('¿qué es el IVA?'), ctx, { name: 'mock', chat: jest.fn() });
+    expect(r.source).toBe('mock');
+    expect(r.reply).toMatch(/19%/);
+  });
+});

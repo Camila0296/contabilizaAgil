@@ -8,6 +8,7 @@ const Factura = require('../../models/factura');
 const Tercero = require('../../models/tercero');
 const Puc = require('../../models/puc');
 const Sequence = require('../../models/sequence');
+const FacturaCartera = require('../../models/facturaCartera');
 const { createUserWithToken } = require('../helpers/testHelpers');
 
 let n = 0;
@@ -329,10 +330,60 @@ describe('Facturas, cartera, PUC y chat - escenarios adicionales', () => {
       expect(res.body.action).toEqual({ type: 'navigate', payload: 'reportes' });
     });
 
-    test('500 controlado si un mensaje tiene contenido no textual', async () => {
-      const res = await as(auxiliar)(request(app).post('/api/chat/message').send({ messages: [{ role: 'user', content: 42 }] }));
-      expect(res.status).toBe(500);
-      expect(res.body.error).toBe('Error al procesar el mensaje');
+    test('400 si ningún mensaje tiene texto', async () => {
+      const res = await as(auxiliar)(request(app).post('/api/chat/message').send({ messages: [{ role: 'user', content: 42 }, { role: 'user', content: '  ' }] }));
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('El mensaje está vacío');
+    });
+
+    test('cuenta TODAS las facturas del usuario (no solo las 10 más recientes) y las del mes', async () => {
+      const haceUnAno = new Date(Date.now() - 365 * 86400000);
+      await Factura.create([
+        ...Array.from({ length: 12 }, () => facturaData(auxiliar.user._id, { fecha: haceUnAno, monto: 1000 })),
+        facturaData(auxiliar.user._id, { fecha: new Date(), monto: 5000 }),
+      ]);
+      const pregunta = async (content) => (await as(auxiliar)(request(app).post('/api/chat/message')
+        .send({ messages: [{ role: 'user', content }] }))).body.reply;
+      expect(await pregunta('¿cuántas facturas tengo?')).toMatch(/13 facturas.*\*\*1\*\* este mes/);
+      expect(await pregunta('¿cuánto he facturado?')).toMatch(/17\.000/);
+    });
+
+    test('responde el saldo de cartera y las facturas vencidas del usuario', async () => {
+      const tercero = await Tercero.create({ tipo: 'cliente', razonSocial: 'Cliente', tipoDocumento: 'NIT', numeroDocumento: `c${Date.now()}` });
+      const puc = await Puc.create({ codigo: `p${Date.now()}`, nombre: 'Ingresos', naturaleza: 'credito' });
+      const base = { tercero: tercero._id, puc: puc._id, detalle: 'Venta', naturaleza: 'credito', usuario: auxiliar.user._id };
+      await FacturaCartera.create([
+        { ...base, consecutivo: 1, numeroDocumento: `CH-${Date.now()}-1`, fecha: new Date('2025-01-01'), monto: 1000 },
+        { ...base, consecutivo: 2, numeroDocumento: `CH-${Date.now()}-2`, fecha: new Date(), monto: 500, totalPagado: 200 },
+        { ...base, consecutivo: 3, numeroDocumento: `CH-${Date.now()}-3`, fecha: new Date(), monto: 9000, estado: 'anulada' },
+        { ...base, consecutivo: 4, numeroDocumento: `CH-${Date.now()}-4`, fecha: new Date(), monto: 700, totalPagado: 700 },
+      ]);
+      const pregunta = async (content) => (await as(auxiliar)(request(app).post('/api/chat/message')
+        .send({ messages: [{ role: 'user', content }] }))).body.reply;
+      expect(await pregunta('¿cuánto me deben?')).toMatch(/1\.300.*2 facturas pendientes/);
+      expect(await pregunta('¿tengo facturas vencidas?')).toMatch(/1 factura vencida/);
+    });
+
+    test('no navega a secciones que el rol no tiene', async () => {
+      const res = await as(auxiliar)(request(app).post('/api/chat/message')
+        .send({ messages: [{ role: 'user', content: 'abre usuarios' }] }));
+      expect(res.body.action).toBeUndefined();
+      expect(res.body.reply).toMatch(/no está disponible para tu rol \(auxiliar\)/);
+    });
+
+    test('calcula impuestos sin llamar a la IA', async () => {
+      const res = await as(auxiliar)(request(app).post('/api/chat/message')
+        .send({ messages: [{ role: 'user', content: '¿cuánto es el IVA de 1.500.000?' }] }));
+      expect(res.body.reply).toMatch(/285\.000/);
+    });
+
+    test('un historial largo responde al último mensaje y no expone datos internos', async () => {
+      const historial = Array.from({ length: 15 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: `mensaje ${i}` }));
+      historial.push({ role: 'user', content: '¿qué es el PUC?' });
+      const res = await as(auxiliar)(request(app).post('/api/chat/message').send({ messages: historial }));
+      expect(res.status).toBe(200);
+      expect(res.body.reply).toMatch(/Plan Único de Cuentas/);
+      expect(res.body).not.toHaveProperty('source');
     });
   });
 });

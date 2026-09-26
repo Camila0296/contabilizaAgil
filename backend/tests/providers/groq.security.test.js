@@ -7,6 +7,7 @@ jest.mock('groq-sdk', () => ({
 }));
 
 const GroqAIProvider = require('../../services/providers/groq.provider');
+const { AIProviderError } = GroqAIProvider;
 
 const reply = (content) => ({ choices: [{ message: { content } }] });
 const sentMessages = () => mockCreate.mock.calls[0][0].messages;
@@ -50,8 +51,17 @@ describe('GroqAIProvider - Seguridad y límites', () => {
   test('estadísticas negativas o no numéricas se normalizan a 0', async () => {
     await provider.chat([{ role: 'user', content: 'hola' }], { ...ctx, stats: { totalFacturas: -5, totalMonto: 'abc' } });
     const system = sentMessages().find(m => m.content.startsWith('CONTEXTO ACTUAL'));
-    expect(system.content).toContain('Total de facturas: 0');
-    expect(system.content).toContain('Monto total: $0');
+    expect(system.content).toContain('Facturas de compra: 0 en total');
+    expect(system.content).toContain('Monto total facturado: $0');
+  });
+
+  test('el contexto incluye las últimas 5 facturas y la cartera, sanitizadas', async () => {
+    const facturas = Array.from({ length: 7 }, (_, i) => ({ numero: `F-${i}`, proveedor: 'ACME "SAS"', monto: 1000 * (i + 1), fecha: '2026-03-01T00:00:00Z' }));
+    await provider.chat([{ role: 'user', content: 'hola' }], { ...ctx, facturas, cartera: { saldoPendiente: 5000, facturasPendientes: 2, facturasVencidas: 1 } });
+    const system = sentMessages().find(m => m.content.startsWith('CONTEXTO ACTUAL')).content;
+    expect(system).toContain('F-4 — ACME _SAS_ — $5.000 (2026-03-01)');
+    expect(system).not.toContain('F-5');
+    expect(system).toContain('2 facturas por cobrar, saldo pendiente $5.000, 1 vencidas');
   });
 
   test('mensajes vacíos tras sanitizar no llaman al SDK', async () => {
@@ -72,19 +82,42 @@ describe('GroqAIProvider - Seguridad y límites', () => {
     expect((await provider.chat([{ role: 'user', content: 'hola' }], ctx)).reply).toBe('Respuesta final');
   });
 
-  test('agrega acción de navegación cuando se detecta la intención', async () => {
-    const r = await provider.chat([{ role: 'user', content: 'llevar a reportes' }], ctx);
-    expect(r.action).toEqual({ type: 'navigate', payload: 'reportes' });
+  test('usa openai/gpt-oss-120b por defecto con esfuerzo de razonamiento bajo', async () => {
+    await provider.chat([{ role: 'user', content: 'hola' }], ctx);
+    expect(mockCreate.mock.calls[0][0]).toEqual(expect.objectContaining({ model: 'openai/gpt-oss-120b', reasoning_effort: 'low' }));
   });
 
-  test.each([
-    [{ status: 401, message: 'Unauthorized' }, /autenticación/],
-    [{ status: 429, message: 'rate limit' }, /muchas solicitudes/],
-    [{ status: 500, message: 'Internal Server Error' }, /experimentando problemas/],
-  ])('mapea errores del SDK a mensajes amigables (%p)', async (err, expected) => {
-    mockCreate.mockRejectedValue(Object.assign(new Error(err.message), { status: err.status }));
+  test('GROQ_MODEL permite cambiar el modelo', async () => {
+    process.env.GROQ_MODEL = 'qwen/qwen3.8-27b';
+    try {
+      await provider.chat([{ role: 'user', content: 'hola' }], ctx);
+      expect(mockCreate.mock.calls[0][0].model).toBe('qwen/qwen3.8-27b');
+      expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('reasoning_effort');
+    } finally {
+      delete process.env.GROQ_MODEL;
+    }
+  });
+
+  test('si el modelo no existe (404) reintenta con el modelo de respaldo', async () => {
+    mockCreate
+      .mockRejectedValueOnce(Object.assign(new Error('404 model_not_found'), { status: 404 }))
+      .mockResolvedValueOnce(reply('Respuesta del respaldo'));
     const r = await provider.chat([{ role: 'user', content: 'hola' }], ctx);
-    expect(r.reply).toMatch(expected);
-    expect(r.reply).not.toContain('mock-key');
+    expect(r.reply).toBe('Respuesta del respaldo');
+    expect(mockCreate.mock.calls.map(c => c[0].model)).toEqual(['openai/gpt-oss-120b', 'openai/gpt-oss-20b']);
+  });
+
+  test('una respuesta vacía se trata como error del proveedor', async () => {
+    mockCreate.mockResolvedValue(reply(''));
+    await expect(provider.chat([{ role: 'user', content: 'hola' }], ctx)).rejects.toMatchObject({ name: 'AIProviderError', code: 'empty_response' });
+  });
+
+  test.each([401, 429, 500])('un error %s del SDK se propaga como AIProviderError (sin exponer la clave)', async (status) => {
+    mockCreate.mockRejectedValue(Object.assign(new Error('fallo'), { status }));
+    const err = await provider.chat([{ role: 'user', content: 'hola' }], ctx).catch(e => e);
+    expect(err).toBeInstanceOf(AIProviderError);
+    expect(err.status).toBe(status);
+    expect(err.message).not.toContain('mock-key');
+    expect(mockCreate).toHaveBeenCalledTimes(1); // solo el 404 activa el modelo de respaldo
   });
 });
