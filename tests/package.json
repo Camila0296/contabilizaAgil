@@ -7,12 +7,14 @@
     "test:e2e": "node e2e/all-tests.js",
     "test:login": "node e2e/login.test.js",
     "test:register": "node e2e/register.test.js",
-    "test:headless": "set HEADLESS=true && npm run test:login && npm run test:register",
-    "test:debug": "set DEBUG=true && npm run test",
-    "test:visual": "node vcheck.js"
+    "test:headless": "node e2e/all-tests.js --headless",
+    "test:debug": "node e2e/all-tests.js",
+    "test:visual": "node vcheck.js",
+    "test:facturas": "node e2e/facturas.test.js",
+    "test:cartera": "node e2e/terceros-cartera.test.js",
+    "test:roles": "node e2e/roles.test.js"
   },
   "dependencies": {
-    "@cucumber/cucumber": "^9.6.0",
     "chai": "^4.5.0",
     "selenium-webdriver": "^4.35.0"
   },

@@ -2,74 +2,70 @@ name: Tests Automatizados
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    services:
-      mongodb:
-        image: mongo:5.0
-        ports:
-          - 27017:27017
 
     steps:
-    - uses: actions/checkout@v3
-    
+    - uses: actions/checkout@v4
+
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
-    
+        cache-dependency-path: |
+          package-lock.json
+          backend/package-lock.json
+          frontend/package-lock.json
+          tests/package-lock.json
+
     - name: Install dependencies
       run: npm run install:all
-    
-    - name: Start MongoDB
-      run: |
-        sudo systemctl start mongod
-        sudo systemctl status mongod
-    
+
+    - name: Run Unit Tests
+      run: npm run test:unit
+
+    # Backend con MongoDB en memoria (siembra roles, admin y PUC) y proveedor de IA simulado
     - name: Start Backend
       run: |
         cd backend
-        npm run dev &
-        sleep 10
-        curl -f http://localhost:3000/api/health || exit 1
-    
+        USE_MEM_MONGO=true AI_PROVIDER=mock node index.js &
+        for i in $(seq 1 30); do curl -sf http://localhost:3000/api/health && break; sleep 2; done
+        curl -f http://localhost:3000/api/health
+
     - name: Start Frontend
       run: |
         cd frontend
-        npm start &
-        sleep 30
-        curl -f http://localhost:4200 || exit 1
-    
-    - name: Run Unit Tests
-      run: npm run test:unit
-    
+        BROWSER=none PORT=4200 npx react-scripts start &
+        for i in $(seq 1 60); do curl -sf http://localhost:4200 > /dev/null && break; sleep 3; done
+        curl -f http://localhost:4200 > /dev/null
+
     - name: Run E2E Tests
       run: |
         cd tests
         npm run test:e2e
       env:
         CI: true
-    
-    - name: Upload test results
-      uses: actions/upload-artifact@v3
+
+    - name: Upload coverage
+      uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results
+        name: coverage
         path: |
-          tests/reports/
           backend/coverage/
           frontend/coverage/
-    
+        if-no-files-found: ignore
+
     - name: Upload screenshots
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: failed-screenshots
-        path: tests/screenshots/ 
+        path: tests/*.png
+        if-no-files-found: ignore
