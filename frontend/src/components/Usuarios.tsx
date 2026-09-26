@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
+import Paginacion, { PaginationInfo, PAGE_SIZE } from './Paginacion';
 import { showSuccess, showError } from '../utils/alerts';
 import {
   validateNombres,
@@ -38,6 +39,8 @@ const Usuarios: React.FC = () => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [roles, setRoles] = useState<{ _id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [errors, setErrors] = useState<ValidationError[]>([]);
@@ -67,16 +70,22 @@ const Usuarios: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchUsuarios();
     fetchRoles();
   }, []);
 
+  useEffect(() => {
+    fetchUsuarios();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
   const fetchUsuarios = async () => {
     try {
-      // El backend pagina de a 10 por defecto; se piden hasta 100 (su máximo)
-      const res = await apiFetch('/users?limit=100');
+      const res = await apiFetch(`/users?page=${page}&limit=${PAGE_SIZE}`);
       const response = await res.json();
       setUsuarios(response.data || response);
+      setPagination(response.pagination || null);
+      // Si se eliminó el último registro de la página, volver a la anterior
+      if (Array.isArray(response.data) && response.data.length === 0 && page > 1) setPage(page - 1);
     } catch {
       showError('No se pudieron cargar los usuarios');
     } finally {
@@ -587,6 +596,7 @@ const Usuarios: React.FC = () => {
           </tbody>
         </table>
         </div>
+        <Paginacion pagination={pagination} onPageChange={setPage} />
       </div>
 
       {/* Modal */}

@@ -30,7 +30,7 @@ describe('Terceros', () => {
     render(<Terceros />);
     expect(screen.getByText('Cargando terceros...')).toBeInTheDocument();
     expect(await screen.findByText('Cliente SA')).toBeInTheDocument();
-    expect(mockApi).toHaveBeenCalledWith('/terceros?limit=100');
+    expect(mockApi).toHaveBeenCalledWith('/terceros?page=1&limit=20');
   });
 
   test('muestra estado vacío', async () => {

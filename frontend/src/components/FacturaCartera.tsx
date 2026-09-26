@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { apiFetch } from '../api';
+import Paginacion, { PaginationInfo, PAGE_SIZE } from './Paginacion';
 import { formatCurrency, formatFecha } from '../utils/format';
 import { showSuccess, showError } from '../utils/alerts';
 import { hasRole, ROLES_GESTION } from '../utils/session';
@@ -88,6 +89,8 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
   const [form, setForm] = useState<FacturaCartera>(initialForm);
   const [editing, setEditing] = useState<FacturaCartera | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -121,17 +124,24 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
   };
 
   useEffect(() => {
-    fetchFacturas();
     fetchTerceros();
     fetchPucs();
   }, []);
 
+  useEffect(() => {
+    fetchFacturas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
   const fetchFacturas = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch('/facturas-cartera');
+      const res = await apiFetch(`/facturas-cartera?page=${page}&limit=${PAGE_SIZE}`);
       const response = await res.json();
       setFacturas(response.data || response);
+      setPagination(response.pagination || null);
+      // Si se eliminó el último registro de la página, volver a la anterior
+      if (Array.isArray(response.data) && response.data.length === 0 && page > 1) setPage(page - 1);
     } catch {
       showError('No se pudieron cargar las facturas');
     }
@@ -415,6 +425,7 @@ const FacturaCartera: React.FC<FacturaCarteraProps> = ({ userId }) => {
             </tbody>
           </table>
         </div>
+        <Paginacion pagination={pagination} onPageChange={setPage} />
       </div>
 
       {showModal && (

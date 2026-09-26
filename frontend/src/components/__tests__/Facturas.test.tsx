@@ -60,10 +60,10 @@ describe('Facturas', () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  test('lista hasta 100 facturas con impuestos, total y fecha real', async () => {
+  test('lista la primera página de facturas con impuestos, total y fecha real', async () => {
     render(<Facturas userId="u1" />);
     const row = await rowOf('FAC-2026-001');
-    expect(mockApi).toHaveBeenCalledWith('/facturas?limit=100');
+    expect(mockApi).toHaveBeenCalledWith('/facturas?page=1&limit=20');
     expect(within(row).getAllByText('1/3/2026').length).toBeGreaterThan(0);
     expect(within(row).getByText(/Base:/)).toHaveTextContent('1.000,00');
     expect(within(row).getByText(/-ReteFte:/)).toHaveTextContent('100,00');

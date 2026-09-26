@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { apiFetch } from '../api';
+import Paginacion, { PaginationInfo, PAGE_SIZE } from './Paginacion';
 import { formatCurrency, formatFecha } from '../utils/format';
 import { showSuccess, showError } from '../utils/alerts';
 import { hasRole, ROLES_GESTION } from '../utils/session';
@@ -89,6 +90,8 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   const [form, setForm] = useState<Factura>(initialForm);
   const [editing, setEditing] = useState<Factura | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [touched, setTouched] = useState({
@@ -108,9 +111,13 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   const [consecutivoMessage, setConsecutivoMessage] = useState<string>('');
 
   useEffect(() => {
-    fetchFacturas();
     fetchNextConsecutivo();
   }, []);
+
+  useEffect(() => {
+    fetchFacturas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const fetchNextConsecutivo = async () => {
     try {
@@ -147,10 +154,12 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
   const fetchFacturas = async () => {
     setLoading(true);
     try {
-      // El backend pagina de a 10 por defecto; se piden hasta 100 (su máximo)
-      const res = await apiFetch('/facturas?limit=100');
+      const res = await apiFetch(`/facturas?page=${page}&limit=${PAGE_SIZE}`);
       const response = await res.json();
       setFacturas(response.data || response);
+      setPagination(response.pagination || null);
+      // Si se eliminó el último registro de la página, volver a la anterior
+      if (Array.isArray(response.data) && response.data.length === 0 && page > 1) setPage(page - 1);
     } catch {
       showError('No se pudieron cargar las facturas');
     }
@@ -543,6 +552,7 @@ const Facturas: React.FC<FacturasProps> = ({ userId }) => {
           </tbody>
         </table>
         </div>
+        <Paginacion pagination={pagination} onPageChange={setPage} />
       </div>
 
       {/* Modal */}

@@ -50,11 +50,11 @@ describe('Usuarios', () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  test('lista hasta 100 usuarios con su rol, estado y aprobación', async () => {
+  test('lista la primera página de usuarios con su rol, estado y aprobación', async () => {
     render(<Usuarios />);
     const ana = await rowOf('Ana Admin');
     const luis = await rowOf('Luis Pendiente');
-    expect(mockApi).toHaveBeenCalledWith('/users?limit=100');
+    expect(mockApi).toHaveBeenCalledWith('/users?page=1&limit=20');
     expect(within(ana).getByText('administrador')).toHaveClass('bg-primary-100');
     expect(within(ana).getByText('Activo')).toBeInTheDocument();
     expect(within(luis).getByText('Inactivo')).toBeInTheDocument();
@@ -135,7 +135,7 @@ describe('Usuarios', () => {
 
   test('deshabilitar pide confirmación, recarga la lista y no dice "eliminado"', async () => {
     render(<Usuarios />);
-    const callsBefore = () => mockApi.mock.calls.filter(c => c[0] === '/users?limit=100').length;
+    const callsBefore = () => mockApi.mock.calls.filter(c => c[0] === '/users?page=1&limit=20').length;
     fireEvent.click(within(await rowOf('Luis Pendiente')).getByTitle('Eliminar'));
     await waitFor(() => expect(showSuccess).toHaveBeenCalledWith('Usuario deshabilitado'));
     expect(confirmSpy.mock.calls[0][0]).toMatch(/deshabilitar/);

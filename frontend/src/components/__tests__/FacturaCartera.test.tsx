@@ -26,7 +26,7 @@ const facturas = [
 const route = (overrides: Record<string, () => any> = {}) => (url: string, opts?: any) => {
   const key = `${opts?.method || 'GET'} ${url}`;
   if (overrides[key]) return overrides[key]();
-  if (url === '/facturas-cartera') return res({ data: facturas });
+  if (url.startsWith('/facturas-cartera?')) return res({ data: facturas });
   if (url.startsWith('/terceros')) return res({ data: [tercero] });
   if (url.startsWith('/puc')) return res({ data: [puc] });
   return res({});
@@ -141,7 +141,7 @@ describe('FacturaCartera', () => {
     fireEvent.click(within(row).getByRole('button', { name: 'Anular' }));
     await waitFor(() => expect(showSuccess).toHaveBeenCalledWith('Factura anulada'));
     expect(mockApi).toHaveBeenCalledWith('/facturas-cartera/c1', { method: 'DELETE' });
-    expect(mockApi.mock.calls.filter(c => c[0] === '/facturas-cartera' && !c[1]).length).toBe(2);
+    expect(mockApi.mock.calls.filter(c => c[0].startsWith('/facturas-cartera?') && !c[1]).length).toBe(2);
   });
 
   describe('registro de pagos', () => {
@@ -182,7 +182,7 @@ describe('FacturaCartera', () => {
 
     test('una factura con saldo 0 no se muestra con el monto completo como pendiente', async () => {
       const parcial = { ...facturas[0], _id: 'c4', numeroDocumento: 'FAC-004', estadoPago: 'Parcialmente Pagada', saldoPendiente: 0, monto: 1000 };
-      mockApi.mockImplementation(route({ 'GET /facturas-cartera': () => res({ data: [parcial] }) }));
+      mockApi.mockImplementation(route({ 'GET /facturas-cartera?page=1&limit=20': () => res({ data: [parcial] }) }));
       render(<FacturaCartera userId="u1" />);
       const form = (await openPago('FAC-004')).closest('form') as HTMLFormElement;
       expect(within(form).getByPlaceholderText('0.00')).toHaveAttribute('max', '0');

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api';
+import Paginacion, { PaginationInfo, PAGE_SIZE } from './Paginacion';
 import { showSuccess, showError } from '../utils/alerts';
 import { hasRole, ROLES_CATALOGO } from '../utils/session';
 
@@ -35,19 +36,25 @@ const Terceros: React.FC = () => {
   const [form, setForm] = useState<Tercero>(initialForm);
   const [editing, setEditing] = useState<Tercero | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [showModal, setShowModal] = useState(false);
   const canManage = hasRole(...ROLES_CATALOGO);
 
   useEffect(() => {
     fetchTerceros();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const fetchTerceros = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch('/terceros?limit=100');
+      const res = await apiFetch(`/terceros?page=${page}&limit=${PAGE_SIZE}`);
       const response = await res.json();
       setTerceros(response.data || response);
+      setPagination(response.pagination || null);
+      // Si se eliminó el último registro de la página, volver a la anterior
+      if (Array.isArray(response.data) && response.data.length === 0 && page > 1) setPage(page - 1);
     } catch {
       showError('No se pudieron cargar los terceros');
     }
@@ -203,6 +210,7 @@ const Terceros: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <Paginacion pagination={pagination} onPageChange={setPage} />
       </div>
 
       {showModal && (
