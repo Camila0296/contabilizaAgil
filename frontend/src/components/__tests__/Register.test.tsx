@@ -224,4 +224,55 @@ describe('Register Component', () => {
       expect(showError).toHaveBeenCalledWith(errorMessage);
     });
   });
+
+  describe('carga del documento tras registrarse', () => {
+    const registrar = async () => {
+      mockApiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'token-nuevo' }) } as Response);
+      render(<Register onRegisterSuccess={mockOnRegisterSuccess} />);
+      fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Juan' } });
+      fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'Pérez' } });
+      fireEvent.change(screen.getByLabelText('Correo electrónico'), { target: { value: 'juan@example.com' } });
+      await fillSecurityFields();
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'Password123!' } });
+      fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'Password123!' } });
+      fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
+      await screen.findByRole('heading', { name: /verifica tu identidad/i });
+    };
+    const subirCedula = () => {
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [new File(['x'], 'cedula.png', { type: 'image/png' })] } });
+      fireEvent.click(screen.getByRole('button', { name: 'Cargar documento' }));
+    };
+
+    it('sube el documento con el token recién emitido y completa el registro', async () => {
+      await registrar();
+      mockApiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) } as Response);
+      subirCedula();
+
+      await waitFor(() => expect(mockOnRegisterSuccess).toHaveBeenCalled());
+      const [path, opts] = mockApiFetch.mock.calls[1];
+      expect(path).toBe('/users/me/documento');
+      expect((opts as RequestInit).method).toBe('PUT');
+      expect(((opts as RequestInit).headers as Record<string, string>).Authorization).toBe('Bearer token-nuevo');
+      expect(JSON.parse((opts as RequestInit).body as string)).toEqual(expect.objectContaining({ tipo: 'image/png' }));
+    });
+
+    it('si la carga falla muestra el error y permanece en el paso', async () => {
+      await registrar();
+      mockApiFetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'datos: archivo vacío' }) } as Response);
+      subirCedula();
+
+      await waitFor(() => expect(showError).toHaveBeenCalledWith('datos: archivo vacío'));
+      expect(mockOnRegisterSuccess).not.toHaveBeenCalled();
+      expect(screen.getByRole('heading', { name: /verifica tu identidad/i })).toBeInTheDocument();
+    });
+
+    it('el teléfono y el número de documento solo aceptan dígitos', async () => {
+      render(<Register onRegisterSuccess={mockOnRegisterSuccess} />);
+      fireEvent.change(screen.getByLabelText(/teléfono/i), { target: { value: '300-123 4567' } });
+      fireEvent.change(screen.getByLabelText(/número de documento/i), { target: { value: '1.234.567' } });
+      expect(screen.getByLabelText(/teléfono/i)).toHaveValue('3001234567');
+      expect(screen.getByLabelText(/número de documento/i)).toHaveValue('1234567');
+    });
+  });
 });

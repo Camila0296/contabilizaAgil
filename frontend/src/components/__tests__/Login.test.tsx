@@ -15,6 +15,8 @@ jest.mock('../../api', () => ({
   apiFetch: jest.fn(),
 }));
 
+jest.mock('../../utils/alerts', () => ({ showSuccess: jest.fn(), showError: jest.fn() }));
+
 describe('Login Component', () => {
   const mockOnLogin = jest.fn();
 
@@ -121,8 +123,80 @@ describe('Login Component', () => {
 
   it('should have password field with correct type', () => {
     render(<Login onLogin={mockOnLogin} />);
-    
+
     const passwordInput = screen.getByLabelText(/contraseña/i);
     expect(passwordInput).toHaveAttribute('type', 'password');
+  });
+
+  describe('escenarios de sesión', () => {
+    const { apiFetch } = require('../../api');
+    const { showSuccess, showError } = require('../../utils/alerts');
+    const submit = () => fireEvent.submit(screen.getByRole('button', { name: /iniciar sesión/i }).closest('form') as HTMLFormElement);
+    const fill = (email: string, password: string) => {
+      fireEvent.change(screen.getByLabelText(/correo electrónico/i), { target: { value: email } });
+      fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: password } });
+    };
+
+    it('guarda la sesión y notifica el rol al iniciar sesión', async () => {
+      apiFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ token: 'tok', user: { id: 'u1', role: 'contador' } }) });
+      render(<Login onLogin={mockOnLogin} />);
+      fill('ana@test.com', 'Clave#123');
+      submit();
+
+      await waitFor(() => expect(mockOnLogin).toHaveBeenCalledWith('contador'));
+      expect(localStorage.setItem).toHaveBeenCalledWith('token', 'tok');
+      expect(localStorage.setItem).toHaveBeenCalledWith('userId', 'u1');
+      expect(localStorage.setItem).toHaveBeenCalledWith('role', 'contador');
+      expect(localStorage.setItem).toHaveBeenCalledWith('roles', JSON.stringify(['contador']));
+      expect(showSuccess).toHaveBeenCalledWith('Inicio de sesión exitoso');
+    });
+
+    it('acepta el rol como objeto { name }', async () => {
+      apiFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ token: 'tok', user: { id: 'u1', role: { name: 'analista' } } }) });
+      render(<Login onLogin={mockOnLogin} />);
+      fill('ana@test.com', 'Clave#123');
+      submit();
+      await waitFor(() => expect(mockOnLogin).toHaveBeenCalledWith('analista'));
+    });
+
+    it.each([
+      ['credenciales inválidas', 'Contraseña incorrecta'],
+      ['cuenta pendiente', 'Cuenta pendiente de aprobación'],
+      ['cuenta deshabilitada', 'Cuenta deshabilitada'],
+    ])('muestra el error del backend: %s', async (_caso, mensaje) => {
+      apiFetch.mockResolvedValue({ ok: false, json: () => Promise.resolve({ error: mensaje }) });
+      render(<Login onLogin={mockOnLogin} />);
+      fill('ana@test.com', 'Clave#123');
+      submit();
+      await waitFor(() => expect(showError).toHaveBeenCalledWith(mensaje));
+      expect(mockOnLogin).not.toHaveBeenCalled();
+      expect(localStorage.setItem).not.toHaveBeenCalled();
+    });
+
+    it('error de red', async () => {
+      apiFetch.mockRejectedValue(new Error('offline'));
+      render(<Login onLogin={mockOnLogin} />);
+      fill('ana@test.com', 'Clave#123');
+      submit();
+      await waitFor(() => expect(showError).toHaveBeenCalledWith('Error de conexión'));
+    });
+
+    it('valida email y contraseña antes de llamar al backend', async () => {
+      render(<Login onLogin={mockOnLogin} />);
+      fill('no-es-email', '');
+      submit();
+      expect(await screen.findByText('El correo electrónico no es válido')).toBeInTheDocument();
+      expect(screen.getByText('La contraseña es requerida')).toBeInTheDocument();
+      expect(apiFetch).not.toHaveBeenCalled();
+    });
+
+    it('valida el email al salir del campo', async () => {
+      render(<Login onLogin={mockOnLogin} />);
+      const email = screen.getByLabelText(/correo electrónico/i);
+      fireEvent.change(email, { target: { value: 'malo' } });
+      fireEvent.blur(email);
+      expect(await screen.findByText('El correo electrónico no es válido')).toBeInTheDocument();
+      expect(email).toHaveAttribute('aria-invalid', 'true');
+    });
   });
 }); 
