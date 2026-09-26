@@ -1,4 +1,5 @@
 const Puc = require('../models/puc');
+const { escapeRegex } = require('../utils/regex');
 
 const pucCtrl = {};
 
@@ -49,7 +50,7 @@ pucCtrl.getPucs = async (req, res) => {
     if (req.query.search) {
       const term = req.query.search.trim();
       if (term.length > 0) {
-        const regex = new RegExp(term, 'i');
+        const regex = new RegExp(escapeRegex(term), 'i');
         filter.$or = [
           { codigo: regex },
           { nombre: regex },

@@ -1,4 +1,5 @@
 const Tercero = require('../models/tercero');
+const { escapeRegex } = require('../utils/regex');
 
 const terceroCtrl = {};
 
@@ -63,7 +64,7 @@ terceroCtrl.getTerceros = async (req, res) => {
     if (req.query.search) {
       const term = req.query.search.trim();
       if (term.length > 0) {
-        const regex = new RegExp(term, 'i');
+        const regex = new RegExp(escapeRegex(term), 'i');
         filter.$or = [
           { razonSocial: regex },
           { numeroDocumento: regex },

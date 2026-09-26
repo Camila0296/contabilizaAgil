@@ -2,6 +2,10 @@ const User = require('../models/user');
 const Role = require('../models/role');
 const bcrypt = require('bcryptjs');
 const { isStrongPassword, PASSWORD_ERROR, BCRYPT_ROUNDS, generateTempPassword } = require('../utils/passwordPolicy');
+const { escapeRegex } = require('../utils/regex');
+
+// Campos que nunca se devuelven al cliente
+const PRIVATE_FIELDS = '-password -documentoIdentidad.datos';
 
 const userCtrl = {};
 
@@ -184,7 +188,7 @@ userCtrl.getUsers = async (req, res) => {
     if (req.query.search) {
       const term = req.query.search.trim();
       if (term.length > 0) {
-        const regex = new RegExp(term, 'i');
+        const regex = new RegExp(escapeRegex(term), 'i');
         filter.$or = filter.$or || [];
         filter.$or = [
           { nombres: regex },
@@ -204,7 +208,7 @@ userCtrl.getUsers = async (req, res) => {
 
     const users = await User
       .find(filter)
-      .select('-documentoIdentidad.datos')
+      .select(PRIVATE_FIELDS)
       .populate('role', 'name')
       .sort({ _id: -1 })
       .skip(skip)
@@ -226,8 +230,16 @@ userCtrl.getUsers = async (req, res) => {
 };
 
 userCtrl.getUser = async (req, res) => {
-  const user = await User.findById(req.params.id).select('-documentoIdentidad.datos').populate('role');
-  res.json(user);
+  try {
+    const user = await User.findById(req.params.id).select(PRIVATE_FIELDS).populate('role');
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json(user);
+  } catch (error) {
+    console.error('Error al obtener usuario:', error);
+    res.status(400).json({ error: 'Id de usuario inválido' });
+  }
 };
 
 // Obtener el documento de identidad de un usuario (solo admin)
@@ -264,7 +276,7 @@ userCtrl.uploadMyDocumento = async (req, res) => {
         }
       },
       { new: true }
-    ).select('-documentoIdentidad.datos');
+    ).select(PRIVATE_FIELDS);
 
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -304,7 +316,7 @@ userCtrl.updateUser = async (req, res) => {
       update.password = await bcrypt.hash(update.password, BCRYPT_ROUNDS);
     }
 
-    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true }).populate('role');
+    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true }).select(PRIVATE_FIELDS).populate('role');
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
@@ -317,8 +329,13 @@ userCtrl.updateUser = async (req, res) => {
 };
 
 userCtrl.getMe = async (req, res) => {
-  const user = await User.findById(req.user.id).populate('role', 'name');
-  res.json(user);
+  try {
+    const user = await User.findById(req.user.id).select(PRIVATE_FIELDS).populate('role', 'name');
+    res.json(user);
+  } catch (error) {
+    console.error('Error al obtener perfil:', error);
+    res.status(500).json({ error: 'Error al obtener perfil' });
+  }
 };
 
 userCtrl.updateMe = async (req, res) => {
@@ -364,7 +381,7 @@ userCtrl.updateMe = async (req, res) => {
       update.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
     }
 
-    const updated = await User.findByIdAndUpdate(req.user.id, update, { new: true }).populate('role');
+    const updated = await User.findByIdAndUpdate(req.user.id, update, { new: true }).select(PRIVATE_FIELDS).populate('role');
     res.json({ status: 'Perfil actualizado', user: updated });
   } catch (error) {
     console.error('Error al actualizar perfil:', error);
@@ -373,8 +390,16 @@ userCtrl.updateMe = async (req, res) => {
 };
 
 userCtrl.approveUser = async (req, res) => {
-  await User.findByIdAndUpdate(req.params.id, { approved: true, activo: true });
-  res.json({ status: 'Usuario aprobado' });
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, { approved: true, activo: true });
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json({ status: 'Usuario aprobado' });
+  } catch (error) {
+    console.error('Error al aprobar usuario:', error);
+    res.status(400).json({ error: 'Id de usuario inválido' });
+  }
 };
 
 // Rechaza una solicitud de registro pendiente: elimina el usuario permanentemente.
@@ -397,8 +422,19 @@ userCtrl.rejectUser = async (req, res) => {
 };
 
 userCtrl.deleteUser = async (req, res) => {
-  await User.findByIdAndUpdate(req.params.id, { activo: false });
-  res.json({ status: 'Usuario deshabilitado' });
+  try {
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ error: 'No puedes deshabilitar tu propia cuenta' });
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, { activo: false });
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json({ status: 'Usuario deshabilitado' });
+  } catch (error) {
+    console.error('Error al deshabilitar usuario:', error);
+    res.status(400).json({ error: 'Id de usuario inválido' });
+  }
 };
 
 module.exports = userCtrl;

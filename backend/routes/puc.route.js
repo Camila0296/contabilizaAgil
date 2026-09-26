@@ -8,7 +8,7 @@ router.use(auth);
 
 router.get('/', pucCtrl.getPucs);
 router.get('/:id', pucCtrl.getPuc);
-router.post('/', pucCtrl.createPuc);
+router.post('/', role('administrador', 'contador'), pucCtrl.createPuc);
 router.put('/:id', role('administrador', 'contador'), pucCtrl.updatePuc);
 router.delete('/:id', role('administrador', 'contador'), pucCtrl.deletePuc);
 

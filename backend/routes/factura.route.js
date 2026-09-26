@@ -135,6 +135,9 @@ const role = require('../middleware/role');
 // Aplicar middleware de autenticación a todas las rutas
 router.use(auth);
 
+// El auxiliar solo puede crear; editar/eliminar queda para roles de gestión
+const ROLES_GESTION = ['administrador', 'contador', 'analista'];
+
 // Ruta para crear una factura - cualquier usuario autenticado puede crear facturas
 router.post('/', facturaCtrl.createFactura);
 
@@ -152,10 +155,10 @@ router.get('/', facturaCtrl.getFacturas);
 router.get('/:id', facturaCtrl.getFactura);
 
 // Ruta para actualizar una factura (solo admin o el dueño)
-router.put('/:id', facturaCtrl.updateFactura);
+router.put('/:id', role(...ROLES_GESTION), facturaCtrl.updateFactura);
 
 // Ruta para eliminar una factura (solo admin o el dueño)
-router.delete('/:id', facturaCtrl.deleteFactura);
+router.delete('/:id', role(...ROLES_GESTION), facturaCtrl.deleteFactura);
 
 // Rutas solo para administradores
 const adminOnlyRoutes = ['/dashboard/stats'];

@@ -1,4 +1,9 @@
+const mongoose = require('mongoose');
 const User = require('../models/user');
+const { escapeRegex } = require('../utils/regex');
+
+// Campos que nunca se devuelven al cliente
+const PRIVATE_FIELDS = '-password -documentoIdentidad.datos';
 
 const aprobacionesCtrl = {};
 
@@ -17,7 +22,7 @@ aprobacionesCtrl.getPendientes = async (req, res) => {
     if (req.query.search) {
       const term = req.query.search.trim();
       if (term.length > 0) {
-        const regex = new RegExp(term, 'i');
+        const regex = new RegExp(escapeRegex(term), 'i');
         filter.$or = [
           { nombres: regex },
           { apellidos: regex },
@@ -32,6 +37,7 @@ aprobacionesCtrl.getPendientes = async (req, res) => {
     // Obtener usuarios pendientes
     const usuarios = await User
       .find(filter)
+      .select(PRIVATE_FIELDS)
       .populate('role', 'name')
       .sort({ createdAt: 1 }) // Primero los más antiguos
       .skip(skip)
@@ -67,6 +73,7 @@ aprobacionesCtrl.getHistorial = async (req, res) => {
 
     const usuarios = await User
       .find(filter)
+      .select(PRIVATE_FIELDS)
       .populate('role', 'name')
       .sort({ updatedAt: -1 }) // Más recientes primero
       .skip(skip)
@@ -108,7 +115,8 @@ aprobacionesCtrl.aprobarUsuario = async (req, res) => {
         activo: true
       },
       { new: true }
-    ).populate('role', 'name');
+    ).select(PRIVATE_FIELDS)
+      .populate('role', 'name');
 
     res.json({
       status: 'Usuario aprobado',
@@ -138,7 +146,8 @@ aprobacionesCtrl.rechazarUsuario = async (req, res) => {
       id,
       { activo: false },
       { new: true }
-    ).populate('role', 'name');
+    ).select(PRIVATE_FIELDS)
+      .populate('role', 'name');
 
     res.json({
       status: 'Usuario rechazado',
@@ -161,6 +170,10 @@ aprobacionesCtrl.aprobarMultiples = async (req, res) => {
 
     if (ids.length > 100) {
       return res.status(400).json({ error: 'No se pueden aprobar más de 100 usuarios a la vez' });
+    }
+
+    if (!ids.every(id => mongoose.Types.ObjectId.isValid(id))) {
+      return res.status(400).json({ error: 'ids: todos deben ser ObjectId válidos' });
     }
 
     const result = await User.updateMany(

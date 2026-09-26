@@ -21,8 +21,12 @@ roleCtrl.createRole = async (req, res) => {
 };
 
 roleCtrl.getRoles = async (req, res) => {
-  const roles = await Role.find();
-  res.json(roles);
+  try {
+    const roles = await Role.find();
+    res.json(roles);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener los roles' });
+  }
 };
 
 module.exports = roleCtrl;

@@ -203,16 +203,24 @@ facturaCarteraCtrl.updateFacturaCartera = async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso para editar esta factura' });
     }
 
-    const updateData = { ...req.body };
-    delete updateData.numeroDocumento;
-    delete updateData.consecutivo;
-    delete updateData.tipo;
+    if (factura.estado === 'anulada') {
+      return res.status(400).json({ error: 'No se puede editar una factura anulada' });
+    }
 
-    const updated = await FacturaCartera.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('tercero').populate('puc').populate('usuario', 'nombres apellidos');
+    const updateData = { ...req.body };
+    // Campos que no se editan directamente: identificación y estado de pagos
+    ['numeroDocumento', 'consecutivo', 'tipo', 'usuario', 'pagos', 'totalPagado',
+      'saldoPendiente', 'estadoPago', 'impuestos', 'estado'].forEach(k => delete updateData[k]);
+
+    if (updateData.monto < (factura.totalPagado || 0)) {
+      return res.status(400).json({ error: `El monto no puede ser menor a lo ya pagado (${factura.totalPagado})` });
+    }
+
+    // save() ejecuta el pre-save: recalcula impuestos, saldo pendiente y estado de pago
+    factura.set(updateData);
+    await factura.save();
+    const updated = await FacturaCartera.findById(factura._id)
+      .populate('tercero').populate('puc').populate('usuario', 'nombres apellidos');
 
     res.json({ status: 'Factura actualizada', factura: updated });
   } catch (error) {
@@ -225,7 +233,7 @@ facturaCarteraCtrl.registrarPago = async (req, res) => {
   try {
     const { monto, referencia, cuenta } = req.body;
 
-    if (!monto || monto <= 0) {
+    if (typeof monto !== 'number' || !Number.isFinite(monto) || monto <= 0) {
       return res.status(400).json({ error: 'Monto debe ser mayor a 0' });
     }
 
@@ -237,6 +245,10 @@ facturaCarteraCtrl.registrarPago = async (req, res) => {
     // Validar que el usuario sea propietario o admin
     if (factura.usuario.toString() !== req.user.id && !req.user.roles.includes('administrador') && !req.user.roles.includes('contador')) {
       return res.status(403).json({ error: 'No tienes permiso para registrar pagos en esta factura' });
+    }
+
+    if (factura.estado === 'anulada') {
+      return res.status(400).json({ error: 'No se pueden registrar pagos en una factura anulada' });
     }
 
     // Validar que el monto no exceda el saldo pendiente

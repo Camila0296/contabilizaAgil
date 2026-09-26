@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Factura = require('../models/factura');
+const { escapeRegex } = require('../utils/regex');
 
 const facturaCtrl = {};
 
@@ -65,7 +66,7 @@ facturaCtrl.getFacturas = async (req, res) => {
 
     // Filtros opcionales
     if (req.query.proveedor) {
-      query.proveedor = { $regex: req.query.proveedor, $options: 'i' };
+      query.proveedor = { $regex: escapeRegex(req.query.proveedor), $options: 'i' };
     }
     if (req.query.naturaleza && ['credito', 'debito'].includes(req.query.naturaleza.toLowerCase())) {
       query.naturaleza = req.query.naturaleza.toLowerCase();
@@ -249,7 +250,7 @@ facturaCtrl.getDashboardStats = async (req, res) => {
     // Crear filtro basado en el rol del usuario
     let matchFilter = {};
     if (!req.user || !Array.isArray(req.user.roles) || !(req.user.roles.includes('administrador') || req.user.roles.includes('contador'))) {
-      matchFilter.usuario = req.user?.id;
+      matchFilter.usuario = new mongoose.Types.ObjectId(req.user?.id);
     }
 
     // Obtener estadísticas generales
@@ -262,13 +263,10 @@ facturaCtrl.getDashboardStats = async (req, res) => {
     // Calcular ingresos del mes actual
     const mesActual = new Date();
     const primerDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
-    const ultimoDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0);
+    const primerDiaMesSiguiente = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 1);
     
     const matchMesActual = {
-      fecha: { 
-        $gte: primerDiaMes.toISOString().split('T')[0],
-        $lte: ultimoDiaMes.toISOString().split('T')[0]
-      }
+      fecha: { $gte: primerDiaMes, $lt: primerDiaMesSiguiente }
     };
     
     // Aplicar filtro de usuario si no es admin
@@ -283,13 +281,9 @@ facturaCtrl.getDashboardStats = async (req, res) => {
     
     // Calcular cambio porcentual vs mes anterior
     const mesAnterior = new Date(mesActual.getFullYear(), mesActual.getMonth() - 1, 1);
-    const ultimoDiaMesAnterior = new Date(mesActual.getFullYear(), mesActual.getMonth(), 0);
     
     const matchMesAnterior = {
-      fecha: { 
-        $gte: mesAnterior.toISOString().split('T')[0],
-        $lte: ultimoDiaMesAnterior.toISOString().split('T')[0]
-      }
+      fecha: { $gte: mesAnterior, $lt: primerDiaMes }
     };
     
     // Aplicar filtro de usuario si no es admin
@@ -317,7 +311,7 @@ facturaCtrl.getDashboardStats = async (req, res) => {
     const facturasRecientes = await Factura.find(matchFilter)
       .sort({ _id: -1 })
       .limit(5)
-      .populate('usuario', 'nombre email');
+      .populate('usuario', 'nombres apellidos email');
     
     res.json({
       totalFacturas,
@@ -353,35 +347,37 @@ facturaCtrl.getReportes = async (req, res) => {
     // Aplicar filtro de mes si está presente
     if (mes) {
       const [year, month] = mes.split('-');
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
-      
       baseMatch.fecha = {
-        $gte: startDate.toISOString().split('T')[0],
-        $lte: endDate.toISOString().split('T')[0]
+        $gte: new Date(Date.UTC(year, month - 1, 1)),
+        $lt: new Date(Date.UTC(year, month, 1))
       };
       console.log('Filtro por mes aplicado:', mes);
     }
     
     // Aplicar filtro de rango de fechas si está presente
     if (fechaInicio && fechaFin) {
-      baseMatch.fecha = {
-        ...baseMatch.fecha,
-        $gte: new Date(fechaInicio).toISOString().split('T')[0],
-        $lte: new Date(fechaFin).toISOString().split('T')[0]
-      };
+      const inicio = new Date(fechaInicio);
+      const finExclusivo = new Date(fechaFin);
+      if (isNaN(inicio.getTime()) || isNaN(finExclusivo.getTime())) {
+        return res.status(400).json({ error: 'fechaInicio/fechaFin: deben ser fechas válidas' });
+      }
+      finExclusivo.setUTCDate(finExclusivo.getUTCDate() + 1); // incluir todo el día final
+      baseMatch.fecha = { $gte: inicio, $lt: finExclusivo };
       console.log('Filtro por rango de fechas aplicado:', fechaInicio, 'a', fechaFin);
     }
     
     // Aplicar filtro de usuario si está presente
     if (usuarioId) {
-      baseMatch.usuario = usuarioId;
+      if (!mongoose.Types.ObjectId.isValid(usuarioId)) {
+        return res.status(400).json({ error: 'usuarioId: debe ser un ObjectId válido' });
+      }
+      baseMatch.usuario = new mongoose.Types.ObjectId(usuarioId);
       console.log('Filtro por usuario aplicado:', usuarioId);
     }
     
     // Aplicar filtro de proveedor si está presente
     if (proveedor) {
-      baseMatch.proveedor = { $regex: proveedor, $options: 'i' };
+      baseMatch.proveedor = { $regex: escapeRegex(proveedor), $options: 'i' };
       console.log('Filtro por proveedor aplicado:', proveedor);
     }
     
@@ -441,12 +437,12 @@ facturaCtrl.getReportes = async (req, res) => {
       { 
         $match: { 
           ...baseMatch,
-          fecha: { $gte: doceMesesAtras.toISOString().split('T')[0] } 
+          fecha: { $gte: doceMesesAtras } 
         } 
       },
       { 
         $group: { 
-          _id: { $substr: ['$fecha', 0, 7] },
+          _id: { $dateToString: { format: '%Y-%m', date: '$fecha' } },
           minDate: { $min: '$fecha' },
           maxDate: { $max: '$fecha' }
         } 
@@ -461,7 +457,7 @@ facturaCtrl.getReportes = async (req, res) => {
       },
       { 
         $group: { 
-          _id: { $substr: ['$fecha', 0, 7] }, 
+          _id: { $dateToString: { format: '%Y-%m', date: '$fecha' } }, 
           count: { $sum: 1 }, 
           total: { $sum: '$monto' } 
         }
@@ -483,7 +479,7 @@ facturaCtrl.getReportes = async (req, res) => {
     const facturasRecientes = await Factura.find(baseMatch)
       .sort({ _id: -1 })
       .limit(10)
-      .populate('usuario', 'nombre email');
+      .populate('usuario', 'nombres apellidos email');
     
     // Transformar datos para el frontend
     const facturasPorMes = porMes.map(item => ({
@@ -504,7 +500,7 @@ facturaCtrl.getReportes = async (req, res) => {
     // Obtener lista de usuarios para el filtro
     const usuarios = await Factura.aggregate([
       { $match: baseMatch },
-      { $lookup: { from: 'usuarios', localField: 'usuario', foreignField: '_id', as: 'usuarioInfo' } },
+      { $lookup: { from: 'users', localField: 'usuario', foreignField: '_id', as: 'usuarioInfo' } },
       { $unwind: '$usuarioInfo' },
       { $group: { _id: '$usuario', nombre: { $first: { $concat: ['$usuarioInfo.nombres', ' ', '$usuarioInfo.apellidos'] } } } },
       { $project: { _id: 1, nombre: 1 } }

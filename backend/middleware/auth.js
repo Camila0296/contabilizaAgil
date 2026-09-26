@@ -1,6 +1,16 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 
+const PENDING_ALLOWED = [
+  ['GET', '/api/users/me'],
+  ['PUT', '/api/users/me/documento']
+];
+
+function isAllowedWhilePending(req) {
+  const path = (req.originalUrl || '').split('?')[0].replace(/\/+$/, '');
+  return PENDING_ALLOWED.some(([method, p]) => req.method === method && path === p);
+}
+
 // Middleware para verificar token JWT y adjuntar usuario a la petición
 module.exports = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -20,7 +30,16 @@ module.exports = async (req, res, next) => {
       console.log('[AUTH] ERROR: Usuario no encontrado para ID:', decoded.id);
       return res.status(401).json({ error: 'Usuario no encontrado' });
     }
-    
+
+    if (user.activo === false) {
+      return res.status(401).json({ error: 'Cuenta deshabilitada' });
+    }
+
+    // Una cuenta pendiente de aprobación solo puede consultar su perfil y cargar su documento
+    if (!user.approved && !isAllowedWhilePending(req)) {
+      return res.status(403).json({ error: 'Cuenta pendiente de aprobación' });
+    }
+
     // Asegurarse de que el rol sea un array
     let userRoles = [];
     if (user.role && user.role.name) {

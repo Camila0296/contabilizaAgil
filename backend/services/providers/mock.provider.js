@@ -27,7 +27,7 @@ const RULES = [
   // Navegación — reportes
   {
     test: (msg) =>
-      /(ir|abrir|mostrar|ver|navegar|llevar).*(reporte|reportes)|(reporte|reportes).*(ir|abrir|mostrar|ver)/.test(msg) ||
+      /(ir|abrir|mostrar|ver|navegar|llevar|ll[eé]vame).*(reporte|reportes)|(reporte|reportes).*(ir|abrir|mostrar|ver)/.test(msg) ||
       /^reportes?$/.test(msg.trim()),
     handler: () => ({
       reply: 'Te llevo a la sección de **Reportes** ahora mismo.',
@@ -37,7 +37,7 @@ const RULES = [
   // Navegación — panel
   {
     test: (msg) =>
-      /(ir|abrir|mostrar|ver|navegar).*(panel|dashboard|inicio)|(panel|dashboard|inicio).*(ir|abrir|mostrar|ver)/.test(msg) ||
+      /(ir|abrir|mostrar|ver|navegar|llevar|ll[eé]vame).*(panel|dashboard|inicio)|(panel|dashboard|inicio).*(ir|abrir|mostrar|ver)/.test(msg) ||
       /^(panel|inicio|dashboard)$/.test(msg.trim()),
     handler: () => ({
       reply: 'Te llevo al **Panel de control**.',
@@ -47,7 +47,7 @@ const RULES = [
   // Navegación — perfil
   {
     test: (msg) =>
-      /(ir|abrir|mostrar|ver|navegar|editar|cambiar).*(perfil|cuenta|mi\s+perfil)|(perfil|cuenta).*(ir|abrir|mostrar|ver)/.test(msg) ||
+      /(ir|abrir|mostrar|ver|navegar|ll[eé]vame|editar|cambiar).*(perfil|cuenta|mi\s+perfil)|(perfil|cuenta).*(ir|abrir|mostrar|ver)/.test(msg) ||
       /^perfil$/.test(msg.trim()),
     handler: () => ({
       reply: 'Te llevo a tu **Perfil**.',
@@ -57,7 +57,7 @@ const RULES = [
   // Navegación — usuarios
   {
     test: (msg) =>
-      /(ir|abrir|mostrar|ver|navegar|gestionar).*(usuarios?)|(usuarios?).*(ir|abrir|mostrar|ver)/.test(msg),
+      /(ir|abrir|mostrar|ver|navegar|ll[eé]vame|gestionar).*(usuarios?)|(usuarios?).*(ir|abrir|mostrar|ver)/.test(msg),
     handler: () => ({
       reply: 'Te llevo a la sección de **Usuarios**.',
       action: { type: 'navigate', payload: 'usuarios' }
@@ -66,7 +66,7 @@ const RULES = [
   // Navegación — aprobaciones
   {
     test: (msg) =>
-      /(ir|abrir|mostrar|ver|navegar).*(aprobaci[oó]n|aprobaciones)/.test(msg),
+      /(ir|abrir|mostrar|ver|navegar|llevar|ll[eé]vame).*(aprobaci[oó]n|aprobaciones)/.test(msg),
     handler: () => ({
       reply: 'Te llevo a la sección de **Aprobaciones**.',
       action: { type: 'navigate', payload: 'aprobaciones' }

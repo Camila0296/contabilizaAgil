@@ -309,18 +309,29 @@ describe('User Controller - Validaciones y Paginación', () => {
         .post('/api/auth/register')
         .send(validRegisterPayload({ nombres: 'Other', email: otherEmail }));
 
+      // Solo una cuenta aprobada puede editar su perfil
+      await User.findByIdAndUpdate(otherRes.body.user._id, { approved: true });
       const otherToken = otherRes.body.token;
 
-      // Intentar usar email del primer usuario
-      const res = await request(app)
+      // Un tercer usuario cuyo email ya está tomado
+      const takenEmail = `taken-${Date.now()}@test.com`;
+      await request(app)
+        .post('/api/auth/register')
+        .send(validRegisterPayload({ nombres: 'Taken', email: takenEmail }));
+
+      const dup = await request(app)
         .put('/api/users/me')
         .set('Authorization', `Bearer ${otherToken}`)
-        .send({
-          email: otherEmail // Ya usado
-        });
+        .send({ email: takenEmail });
+      expect(dup.status).toBe(400);
+      expect(dup.body.error).toBe('Email ya registrado');
 
-      // Debería aceptar su propio email
-      expect(res.status).toBe(200);
+      // Su propio email sí se acepta
+      const own = await request(app)
+        .put('/api/users/me')
+        .set('Authorization', `Bearer ${otherToken}`)
+        .send({ email: otherEmail });
+      expect(own.status).toBe(200);
     });
   });
 

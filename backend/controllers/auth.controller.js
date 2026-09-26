@@ -156,10 +156,14 @@ authCtrl.register = async (req, res) => {
 // Login de usuario
 authCtrl.login = async (req, res) => {
   const { email, password } = req.body;
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+    return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+  }
   let user = await User.findOne({ email: email.toLowerCase() }).populate('role');
   if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta' });
+  if (user.activo === false) return res.status(403).json({ error: 'Cuenta deshabilitada' });
   // Generar token JWT
   if (!user.approved) return res.status(403).json({ error: 'Cuenta pendiente de aprobación' });
 

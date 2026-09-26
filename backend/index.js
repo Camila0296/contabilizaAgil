@@ -27,6 +27,8 @@ app.use(cors({
 }));
 // rutas de nuestro servidor
 
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
 // Importa y usa las rutas
 app.use('/api/auth', require('./routes/auth.route'));
 app.use('/api/users', require('./routes/user.route'));

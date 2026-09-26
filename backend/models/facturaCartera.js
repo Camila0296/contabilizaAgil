@@ -64,13 +64,19 @@ FacturaCarteraSchema.pre('save', function(next) {
   next();
 });
 
-FacturaCarteraSchema.pre('findOneAndUpdate', function(next) {
+FacturaCarteraSchema.pre('findOneAndUpdate', async function() {
   const update = this.getUpdate();
   if (update?.monto != null) {
-    update.impuestos = calcularImpuestos(update.monto, update.retefuentePct || this.retefuentePct, update.icaPct || this.icaPct);
+    // Los % no vienen en la actualización: tomarlos del documento guardado
+    let { retefuentePct, icaPct } = update;
+    if (retefuentePct == null || icaPct == null) {
+      const actual = await this.model.findOne(this.getQuery()).select('retefuentePct icaPct').lean();
+      retefuentePct = retefuentePct ?? actual?.retefuentePct;
+      icaPct = icaPct ?? actual?.icaPct;
+    }
+    update.impuestos = calcularImpuestos(update.monto, retefuentePct, icaPct);
     this.setUpdate(update);
   }
-  next();
 });
 
 module.exports = mongoose.model('FacturaCartera', FacturaCarteraSchema);
