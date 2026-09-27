@@ -262,7 +262,7 @@ function App() {
     setRole(null);
     setSection('panel');
     // Redirigir a la página de login
-    window.location.href = '/';
+    window.location.href = '/app';
   };
 
   // Verificar autenticación al cargar
